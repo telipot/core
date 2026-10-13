@@ -1,0 +1,7 @@
+platforms:
+  web: The web at large
+  acme: Acme
+  social: Social networks
+capabilities:
+  web.page.text: The readable text of a web page
+  social.page.insights: Reach and engagement of a social page

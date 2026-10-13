@@ -1,0 +1,27 @@
+{
+  "id": "agent_run_2064f73e278349d6a73f56733b4665ec",
+  "object": "agent_run",
+  "status": "running",
+  "stopReason": null,
+  "createdAt": "2026-10-05T17:44:44.142Z",
+  "completedAt": null,
+  "request": {},
+  "output": {
+    "text": "",
+    "structured": null,
+    "grounding": []
+  },
+  "usage": {
+    "agentComputeUnits": 0,
+    "searches": 3,
+    "emails": 0,
+    "phoneNumbers": 0
+  },
+  "costDollars": {
+    "total": 0.012,
+    "agentCompute": 0,
+    "search": 0.012,
+    "emails": 0,
+    "phoneNumbers": 0
+  }
+}

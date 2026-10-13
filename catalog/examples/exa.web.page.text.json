@@ -1,0 +1,27 @@
+{
+  "requestId": "ec0c917e43b5c249b30a1839ea761835",
+  "results": [
+    {
+      "id": "https://example.com",
+      "title": "Example Domain",
+      "url": "https://example.com",
+      "author": null,
+      "text": "Example Domain\n\nThis domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes.\n\nهذا النطاق مُخصص للاستخدام…",
+      "entities": [{}]
+    }
+  ],
+  "statuses": [
+    {
+      "id": "https://example.com",
+      "status": "success",
+      "source": "cached"
+    }
+  ],
+  "costDollars": {
+    "total": 0.001,
+    "contents": {
+      "text": 0.001
+    }
+  },
+  "searchTime": 6.0309359999373555
+}

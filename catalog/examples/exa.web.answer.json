@@ -1,0 +1,22 @@
+{
+  "requestId": "c178943a8165d7ce25595eca437939ce",
+  "answer": "Paris is the capital of France [1].",
+  "citations": [
+    {
+      "id": "https://www.britannica.com/place/Paris",
+      "title": "Paris | Definition, Map, Population, Facts, & History | Britannica",
+      "url": "https://www.britannica.com/place/Paris",
+      "publishedDate": "1998-07-20T00:00:00.000Z",
+      "image": "https://cdn.britannica.com/36/135436-050-ED1D0FCE/skyline-Eiffel-Tower-France-Paris.jpg"
+    },
+    {
+      "id": "https://en.wikipedia.org/wiki/Paris",
+      "title": "",
+      "url": "https://en.wikipedia.org/wiki/Paris",
+      "author": "user"
+    }
+  ],
+  "costDollars": {
+    "total": 0.005
+  }
+}

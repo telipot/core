@@ -1,0 +1,19 @@
+{
+  "requestId": "2b29b669e9b8fc7c24055fcdb003cefb",
+  "results": [
+    {
+      "id": "https://example.re/",
+      "title": "Hello World!",
+      "url": "https://example.re/",
+      "author": null,
+      "score": 0.8696224689483643
+    }
+  ],
+  "costDollars": {
+    "total": 0.004,
+    "search": {
+      "neural": 0.004
+    }
+  },
+  "searchTime": 186.05773100000806
+}

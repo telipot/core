@@ -1,0 +1,22 @@
+provider: graph
+source:
+  {
+    docs: https://docs.graph.example,
+    openapi: https://graph.example.com/openapi.json,
+    curated: 2026-10-04,
+  }
+version: 2026-10-04
+digest: sha256:370ea5bbec3276818100ba05e0f5d0208765e2ae802820e408cd8274ea45605a
+endpoints:
+  # A reviewer set the capability in place; the task names no platform, so it
+  # sits on the capability's first segment.
+  - id: graph.x.post-insights
+    capability: social.page.insights
+    auth: public
+    method: GET
+    path: /{post_id}/insights
+    name: Post insights
+    summary: Insights for a post
+    input:
+      pathParams:
+        post_id: { type: string, required: true }

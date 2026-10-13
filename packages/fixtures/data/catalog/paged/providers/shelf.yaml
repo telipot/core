@@ -1,0 +1,622 @@
+provider: shelf
+display_name: Shelf
+base_url: https://api.shelf.example
+docs_url: https://docs.shelf.example
+source: { docs: https://docs.shelf.example, openapi: null, curated: 2026-10-13 }
+version: 2026-10-13
+# One more public task than a page of `GET /v1/tasks` holds.
+auth:
+  schemes: {}
+endpoints:
+  - id: shelf.shelf-01.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/01/books
+    name: Books on shelf 01
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-02.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/02/books
+    name: Books on shelf 02
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-03.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/03/books
+    name: Books on shelf 03
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-04.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/04/books
+    name: Books on shelf 04
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-05.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/05/books
+    name: Books on shelf 05
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-06.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/06/books
+    name: Books on shelf 06
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-07.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/07/books
+    name: Books on shelf 07
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-08.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/08/books
+    name: Books on shelf 08
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-09.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/09/books
+    name: Books on shelf 09
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-10.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/10/books
+    name: Books on shelf 10
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-11.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/11/books
+    name: Books on shelf 11
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-12.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/12/books
+    name: Books on shelf 12
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-13.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/13/books
+    name: Books on shelf 13
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-14.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/14/books
+    name: Books on shelf 14
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-15.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/15/books
+    name: Books on shelf 15
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-16.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/16/books
+    name: Books on shelf 16
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-17.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/17/books
+    name: Books on shelf 17
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-18.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/18/books
+    name: Books on shelf 18
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-19.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/19/books
+    name: Books on shelf 19
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-20.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/20/books
+    name: Books on shelf 20
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-21.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/21/books
+    name: Books on shelf 21
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-22.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/22/books
+    name: Books on shelf 22
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-23.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/23/books
+    name: Books on shelf 23
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-24.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/24/books
+    name: Books on shelf 24
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-25.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/25/books
+    name: Books on shelf 25
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-26.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/26/books
+    name: Books on shelf 26
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-27.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/27/books
+    name: Books on shelf 27
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-28.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/28/books
+    name: Books on shelf 28
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-29.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/29/books
+    name: Books on shelf 29
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-30.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/30/books
+    name: Books on shelf 30
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-31.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/31/books
+    name: Books on shelf 31
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-32.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/32/books
+    name: Books on shelf 32
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-33.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/33/books
+    name: Books on shelf 33
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-34.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/34/books
+    name: Books on shelf 34
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-35.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/35/books
+    name: Books on shelf 35
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-36.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/36/books
+    name: Books on shelf 36
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-37.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/37/books
+    name: Books on shelf 37
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-38.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/38/books
+    name: Books on shelf 38
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-39.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/39/books
+    name: Books on shelf 39
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-40.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/40/books
+    name: Books on shelf 40
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-41.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/41/books
+    name: Books on shelf 41
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-42.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/42/books
+    name: Books on shelf 42
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-43.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/43/books
+    name: Books on shelf 43
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-44.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/44/books
+    name: Books on shelf 44
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-45.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/45/books
+    name: Books on shelf 45
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-46.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/46/books
+    name: Books on shelf 46
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-47.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/47/books
+    name: Books on shelf 47
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-48.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/48/books
+    name: Books on shelf 48
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-49.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/49/books
+    name: Books on shelf 49
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-50.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/50/books
+    name: Books on shelf 50
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }
+  - id: shelf.shelf-51.list
+    capability: shelf.books.list
+    platform: shelf
+    auth: public
+    method: GET
+    path: /shelves/51/books
+    name: Books on shelf 51
+    summary: Lists the books on one shelf
+    input: {}
+    untestable: a stand-in shelf with no vendor behind it
+    output: { type: object }
+    cost: { type: free }

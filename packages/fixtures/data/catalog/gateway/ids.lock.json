@@ -1,0 +1,15 @@
+[
+  "acme.account.get",
+  "acme.page.cached",
+  "acme.page.old",
+  "acme.page.text",
+  "fetcher.page.send",
+  "fetcher.page.text",
+  "helpdesk.me.get",
+  "helpdesk.tickets.list",
+  "mailbox.messages.list",
+  "notebook.me.get",
+  "notebook.pages.list",
+  "tracker.issues.list",
+  "tracker.myself.get"
+]

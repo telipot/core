@@ -1,0 +1,1382 @@
+provider: apollo
+display_name: Apollo
+base_url: https://api.apollo.io/api/v1
+docs_url: https://docs.apollo.io/reference/apollo-api
+source:
+  {
+    docs: https://docs.apollo.io/reference/apollo-api,
+    openapi: https://docs.apollo.io/openapi/apollo-rest-api.json,
+    curated: 2026-10-05,
+  }
+version: 2026-10-05
+pricing_url: https://www.apollo.io/pricing
+limits: "Per team and per endpoint, in minute, hour and day windows that depend on the plan (Free 50/min, 200/hour, 600/day; paid plans 200/min on most routes and 1,000/min on enrichment); a breach returns 429 with a retry-after header."
+auth:
+  schemes:
+    api_key: { type: api_key, in: header, name: x-api-key, principals: [organization] }
+identity:
+  task: apollo.account.profile
+  account_path: team_id
+  label_path: email
+probe:
+  path: /auth/health
+  expect: { json_path: is_logged_in, equals: true }
+proposed_capabilities:
+  people.search: "People who match title, seniority and company filters"
+  people.enrich: "A person's profile from a name, email or LinkedIn URL"
+  company.search: "Companies that match industry, size and location filters"
+  company.enrich: "A company's profile from its domain"
+  account.usage: "Credits or units used and left on the credential's account"
+  people.enrich.bulk: "Profiles of up to ten people from names, emails or LinkedIn URLs in one call"
+  company.enrich.bulk: "Profiles of up to ten companies from their domains in one call"
+  company.jobs: "Job postings a company currently has open"
+  company.news: "News articles about a company"
+  account.profile: "The user and team a credential acts as"
+  people.contacts.search: "Contacts saved in the credential's own account that match a keyword, stage or label"
+  people.contacts.create: "Save a person as a contact in the credential's own account"
+  email.sequences.search: "Email outreach sequences in the credential's own account that match a name"
+endpoints:
+  - id: apollo.people.search
+    capability: people.search
+    platform: people
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: data
+    method: POST
+    path: "/mixed_people/api_search"
+    name: "People's titles and employers by role, company, location"
+    summary: "Use the people API search endpoint to find new prospects."
+    input:
+      queryParams:
+        "person_titles[]":
+          type: array
+          required: false
+          example: ["marketing manager"]
+          note: "Job titles to find; a person matches any one of them, and similar titles are included unless include_similar_titles is false. Pair with person_seniorities[]. Examples: sales development representative; marketing manager; research analyst."
+        include_similar_titles:
+          {
+            type: boolean,
+            required: false,
+            note: "Set false to return only strict matches for person_titles[].",
+          }
+        q_keywords: { type: string, required: false, note: "Words to filter the results over." }
+        q_person_name:
+          type: string
+          required: false
+          note: "Name of the person. Matches people whose name contains every word given, independent of other filters."
+        "person_locations[]":
+          type: array
+          required: false
+          note: "Where people live: cities, US states or countries. Examples: california; ireland; chicago."
+        "person_seniorities[]":
+          type: array
+          required: false
+          note: "Seniority of the person's current title; a person matches any one given. Options: owner, founder, c_suite, partner, vp, head, director, manager, senior, entry, intern."
+        "organization_locations[]":
+          type: array
+          required: false
+          note: "Headquarters location of the person's current employer: cities, US states or countries. Examples: texas; tokyo; spain."
+        "q_organization_domains_list[]":
+          type: array
+          required: false
+          example: [stripe.com]
+          note: "Employer domains, current or previous, without www. or @; up to 1,000. Examples: apollo.io; microsoft.com."
+          max: 1000
+        "contact_email_status[]":
+          type: array
+          required: false
+          note: "Email statuses to include: verified, unverified, likely to engage, unavailable."
+        "organization_ids[]":
+          type: array
+          required: false
+          note: "Apollo IDs of employers to include; organization search returns them as id."
+        "organization_num_employees_ranges[]":
+          type: array
+          required: false
+          note: "Employer headcount ranges as lower,upper strings. Examples: 1,10; 250,500; 10000,20000."
+        "revenue_range[min]":
+          type: integer
+          required: false
+          note: "Minimum employer revenue, digits only (no currency symbol, comma or decimal point). Pair with revenue_range[max]."
+        "revenue_range[max]":
+          type: integer
+          required: false
+          note: "Maximum employer revenue, digits only. Pair with revenue_range[min]."
+        "currently_using_all_of_technology_uids[]":
+          type: array
+          required: false
+          note: "Employer must use all of these. Technology uids; replace spaces and periods with underscores. Apollo filters on 1,500+ technologies. Examples: salesforce; google_analytics; wordpress_org."
+        "currently_using_any_of_technology_uids[]":
+          type: array
+          required: false
+          note: "Employer must use any of these. Technology uids; replace spaces and periods with underscores. Apollo filters on 1,500+ technologies. Examples: salesforce; google_analytics; wordpress_org."
+        "currently_not_using_any_of_technology_uids[]":
+          type: array
+          required: false
+          note: "Exclude people whose employer uses any of these. Technology uids; replace spaces and periods with underscores. Apollo filters on 1,500+ technologies. Examples: salesforce; google_analytics; wordpress_org."
+        "q_organization_job_titles[]":
+          type: array
+          required: false
+          note: "Job titles in active job postings at the person's current employer. Examples: sales manager; research analyst."
+        "organization_job_locations[]":
+          type: array
+          required: false
+          note: "Locations of the jobs the person's employer is recruiting for. Examples: atlanta; japan."
+        "organization_num_jobs_range[min]":
+          type: integer
+          required: false
+          note: "Minimum number of active job postings at the employer. Pair with organization_num_jobs_range[max]."
+        "organization_num_jobs_range[max]":
+          {
+            type: integer,
+            required: false,
+            note: "Maximum number of active job postings at the employer.",
+          }
+        "organization_job_posted_at_range[min]":
+          type: string
+          required: false
+          example: "2025-07-25"
+          note: "Earliest date the employer posted jobs, YYYY-MM-DD. Pair with organization_job_posted_at_range[max]."
+        "organization_job_posted_at_range[max]":
+          type: string
+          required: false
+          example: "2025-09-25"
+          note: "Latest date the employer posted jobs, YYYY-MM-DD."
+        organization_headcount_growth_past_n_months:
+          type: integer
+          required: false
+          note: "Trailing window in months for employer headcount growth. Has no effect unless sent with organization_headcount_growth_range[min] or [max]."
+          enum: [6, 12, 24]
+        "organization_headcount_growth_range[min]":
+          type: integer
+          required: false
+          note: "Minimum employer headcount growth as a whole-number percentage over the window; 10 means 10%. Needs organization_headcount_growth_past_n_months."
+        "organization_headcount_growth_range[max]":
+          type: integer
+          required: false
+          note: "Maximum employer headcount growth as a whole-number percentage over the window. Needs organization_headcount_growth_past_n_months."
+        "lookalike_organization_ids[]":
+          type: array
+          required: false
+          note: "Apollo IDs of up to 5 seed companies; results narrow to people at similar companies and exclude the seeds. A seed with no lookalike data returns no results."
+          max: 5
+        "not_organization_websites_list[]":
+          type: array
+          required: false
+          note: "Exclude people whose current employer matches any of these domains, including the company's other known domains."
+        page:
+          type: integer
+          required: false
+          example: 1
+          note: "Page to return, up to 500 pages of 100; use with per_page."
+          min: 1
+          max: 500
+        per_page:
+          type: integer
+          required: false
+          example: 10
+          note: "Results per page, up to 100. Apollo caps a search at 50,000 records."
+          min: 1
+          max: 100
+    untestable: "Answers with named people, their titles and employers; a contact lookup, so it has no test request."
+    cost: { type: free }
+    docs_url: "https://docs.apollo.io/reference/people-api-search"
+    output:
+      type: object
+      properties:
+        total_entries:
+          {
+            type: integer,
+            description: "The total number of people that match your search criteria.",
+          }
+        people:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              first_name: { type: string }
+              last_name_obfuscated:
+                {
+                  type: string,
+                  description: "First 2 characters, asterisks, then the last character.",
+                }
+              title: { type: [string, "null"] }
+              last_refreshed_at: { type: string }
+              has_email: { type: boolean }
+              has_city: { type: boolean }
+              has_state: { type: boolean }
+              has_country: { type: boolean }
+              has_direct_phone:
+                { type: string, description: "Yes, or a Maybe note when Apollo is uncertain." }
+              organization:
+                type: object
+                properties:
+                  name: { type: string }
+                  has_industry: { type: boolean }
+                  has_phone: { type: boolean }
+                  has_city: { type: boolean }
+                  has_state: { type: boolean }
+                  has_country: { type: boolean }
+                  has_zip_code: { type: boolean }
+                  has_revenue: { type: boolean }
+                  has_employee_count: { type: boolean }
+  - id: apollo.people.enrich
+    capability: people.enrich
+    platform: people
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: data
+    method: POST
+    path: "/people/match"
+    name: "Person's title, work email from email, LinkedIn URL or name"
+    summary: "Use the people enrichment endpoint to enrich data for one person."
+    input:
+      queryParams:
+        first_name: { type: string, required: false, note: "First name; use with last_name." }
+        last_name: { type: string, required: false, note: "Last name; use with first_name." }
+        name:
+          type: string
+          required: false
+          note: "Full name; replaces first_name and last_name. Identify the person with an email, a LinkedIn URL, an Apollo ID, or a name plus employer domain; a name alone may return a 200 with no match (check match_confidence)."
+        email: { type: string, required: false, note: "Email address of the person." }
+        hashed_email:
+          { type: string, required: false, note: "MD5 or SHA-256 hash of the person's email." }
+        organization_name:
+          {
+            type: string,
+            required: false,
+            note: "Name of the person's employer, current or previous.",
+          }
+        domain:
+          type: string
+          required: false
+          example: apollo.io
+          note: "Domain of the person's employer, current or previous, without www. or @."
+        id:
+          {
+            type: string,
+            required: false,
+            note: "Apollo ID of the person, as people search returns it.",
+          }
+        linkedin_url:
+          { type: string, required: false, note: "URL of the person's LinkedIn profile." }
+    untestable: "Needs a specific person and answers with that person's profile and work email; a contact lookup, so it has no test request."
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      source: docs
+      source_url: "https://docs.apollo.io/docs/api-pricing"
+      checked: "2026-10-05"
+      confidence: documented
+      note: "1 credit when credit-consuming data (demographics or email) is found, 0 when none is. The docs give 1-9 credits per person: +8 when a mobile phone is returned, and waterfall enrichment costs more. This task sends no phone, personal-email or waterfall option, so it is priced at the 1-credit base."
+    docs_url: "https://docs.apollo.io/reference/people-enrichment"
+    output:
+      type: object
+      properties:
+        request_id:
+          {
+            type: integer,
+            description: "Save to map this request to a webhook result; this task sends no webhook.",
+          }
+        person:
+          type: object
+          properties:
+            id: { type: string }
+            first_name: { type: string }
+            last_name: { type: string }
+            name: { type: string }
+            linkedin_url: { type: string }
+            title: { type: string }
+            headline: { type: string }
+            email: { type: string }
+            email_status: { type: string }
+            organization_id: { type: string }
+            match_confidence: { type: string, enum: [high, medium, low, none] }
+            employment_history:
+              type: array
+              items:
+                type: object
+                properties:
+                  organization_id: { type: string }
+                  organization_name: { type: string }
+                  title: { type: string }
+                  start_date: { type: string }
+                  current: { type: boolean }
+            state: { type: string }
+            city: { type: string }
+            country: { type: string }
+            seniority: { type: string }
+            departments:
+              type: array
+              items: { type: string }
+            subdepartments:
+              type: array
+              items: { type: string }
+            functions:
+              type: array
+              items: { type: string }
+            organization:
+              type: object
+              properties:
+                id: { type: string }
+                name: { type: string }
+                website_url: { type: string }
+                primary_domain: { type: string }
+                industry: { type: string }
+                estimated_num_employees: { type: integer }
+  - id: apollo.people.enrich.bulk
+    capability: people.enrich.bulk
+    platform: people
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: data
+    method: POST
+    path: "/people/bulk_match"
+    name: "Up to 10 people's titles, work emails from emails or names"
+    summary: "Use the bulk people enrichment endpoint to enrich data for up to ten people with a single API call."
+    input:
+      body:
+        details:
+          type: array
+          required: true
+          note: "One object per person, up to 10, each with any of first_name, last_name, name, email, hashed_email, organization_name, domain, id, linkedin_url. More fields improve the match; a name without a domain or email may match nothing."
+          min: 1
+          max: 10
+      bodyType: json
+    untestable: "Needs specific people and answers with their profiles and work emails; a contact lookup, so it has no test request."
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      source: docs
+      source_url: "https://docs.apollo.io/docs/api-pricing"
+      checked: "2026-10-05"
+      confidence: documented
+      settle: { type: reported_charge, path: credits_consumed }
+      note: "1 credit per person when credit-consuming data (demographics or email) is found, 0 for an unmatched person. The docs give 1-9 credits per person: +8 when a mobile phone is returned, and waterfall enrichment costs more. This task sends no phone, personal-email or waterfall option, so it is priced at the 1-credit base per person. credits_consumed reports what the call used and can be a decimal."
+    docs_url: "https://docs.apollo.io/reference/bulk-people-enrichment"
+    output:
+      type: object
+      required: [status, total_requested_enrichments]
+      properties:
+        request_id: { type: integer, description: "A signed 64-bit integer that may be negative." }
+        status:
+          {
+            type: string,
+            description: "success for any 200 response, even when not every person matched.",
+          }
+        error_code: { type: [string, "null"] }
+        error_message: { type: [string, "null"] }
+        total_requested_enrichments:
+          { type: integer, description: "The number of objects sent in details. Always returned." }
+        unique_enriched_records:
+          type: integer
+          description: "Distinct people whose enrichment consumed credits; a billing count, not a match count."
+        missing_records:
+          { type: integer, description: "Entries in details that Apollo could not match." }
+        credits_consumed:
+          { type: number, description: "Credits the request consumed; can be a decimal." }
+        matches:
+          type: array
+          items:
+            type: [object, "null"]
+            description: "One entry per person; an unmatched person is null."
+            properties:
+              id: { type: string }
+              first_name: { type: string }
+              last_name: { type: string }
+              name: { type: string }
+              linkedin_url: { type: string }
+              title: { type: string }
+              headline: { type: string }
+              email: { type: string }
+              email_status: { type: string }
+              organization_id: { type: string }
+              match_confidence: { type: string, enum: [high, medium, low, none] }
+              employment_history:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    organization_id: { type: string }
+                    organization_name: { type: string }
+                    title: { type: string }
+                    start_date: { type: string }
+                    current: { type: boolean }
+              state: { type: string }
+              city: { type: string }
+              country: { type: string }
+              seniority: { type: string }
+              departments:
+                type: array
+                items: { type: string }
+              functions:
+                type: array
+                items: { type: string }
+              organization:
+                type: object
+                properties:
+                  id: { type: string }
+                  name: { type: string }
+                  website_url: { type: string }
+                  primary_domain: { type: string }
+                  industry: { type: string }
+                  estimated_num_employees: { type: integer }
+  - id: apollo.company.search
+    capability: company.search
+    platform: company
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: data
+    method: POST
+    path: "/mixed_companies/search"
+    name: "Companies by domain, size, location, funding, tech filters"
+    summary: "Use the organization search endpoint to find companies in the Apollo database."
+    input:
+      queryParams:
+        "q_organization_domains_list[]":
+          type: array
+          required: false
+          example: [stripe.com]
+          note: "Company domains, without www. or @; up to 1,000. Examples: apollo.io; microsoft.com."
+          max: 1000
+        "organization_num_employees_ranges[]":
+          type: array
+          required: false
+          note: "Headcount ranges as lower,upper strings. Examples: 1,10; 250,500; 10000,20000."
+        "organization_locations[]":
+          type: array
+          required: false
+          note: "Headquarters location: cities, US states or countries. Examples: texas; tokyo; spain."
+        "organization_not_locations[]":
+          type: array
+          required: false
+          note: "Exclude companies by headquarters location: cities, US states or countries. Examples: minnesota; ireland."
+        "revenue_range[min]":
+          type: integer
+          required: false
+          note: "Minimum revenue, digits only (no currency symbol, comma or decimal point). Pair with revenue_range[max]."
+        "revenue_range[max]":
+          {
+            type: integer,
+            required: false,
+            note: "Maximum revenue, digits only. Pair with revenue_range[min].",
+          }
+        "currently_using_any_of_technology_uids[]":
+          type: array
+          required: false
+          note: "Company must use any of these. Technology uids; replace spaces and periods with underscores. Apollo filters on 1,500+ technologies. Examples: salesforce; google_analytics; wordpress_org."
+        "q_organization_keyword_tags[]":
+          type: array
+          required: false
+          note: "Keywords associated with companies. Examples: mining; sales strategy; consulting."
+        q_organization_name:
+          type: string
+          required: false
+          note: "Company name; partial matches are accepted, so marketing matches NY Marketing Unlimited."
+        "organization_ids[]":
+          {
+            type: array,
+            required: false,
+            note: "Apollo IDs of companies to include; this route returns them as id.",
+          }
+        "latest_funding_amount_range[min]":
+          type: integer
+          required: false
+          note: "Minimum amount of the most recent funding round, digits only. Pair with latest_funding_amount_range[max]."
+        "latest_funding_amount_range[max]":
+          {
+            type: integer,
+            required: false,
+            note: "Maximum amount of the most recent funding round, digits only.",
+          }
+        "total_funding_range[min]":
+          type: integer
+          required: false
+          note: "Minimum total funding across all rounds, digits only. Pair with total_funding_range[max]."
+        "total_funding_range[max]":
+          {
+            type: integer,
+            required: false,
+            note: "Maximum total funding across all rounds, digits only.",
+          }
+        "latest_funding_date_range[min]":
+          type: string
+          required: false
+          example: "2025-07-25"
+          note: "Earliest date of the most recent funding round, YYYY-MM-DD. Pair with latest_funding_date_range[max]."
+        "latest_funding_date_range[max]":
+          type: string
+          required: false
+          example: "2025-09-25"
+          note: "Latest date of the most recent funding round, YYYY-MM-DD."
+        "q_organization_job_titles[]":
+          type: array
+          required: false
+          note: "Job titles in the company's active job postings. Examples: sales manager; research analyst."
+        "organization_job_locations[]":
+          type: array
+          required: false
+          note: "Locations of the jobs the company is recruiting for. Examples: atlanta; japan."
+        "organization_num_jobs_range[min]":
+          type: integer
+          required: false
+          note: "Minimum number of active job postings. Pair with organization_num_jobs_range[max]."
+        "organization_num_jobs_range[max]":
+          { type: integer, required: false, note: "Maximum number of active job postings." }
+        "organization_job_posted_at_range[min]":
+          type: string
+          required: false
+          example: "2025-07-25"
+          note: "Earliest date the company posted jobs, YYYY-MM-DD. Pair with organization_job_posted_at_range[max]."
+        "organization_job_posted_at_range[max]":
+          type: string
+          required: false
+          example: "2025-09-25"
+          note: "Latest date the company posted jobs, YYYY-MM-DD."
+        organization_headcount_growth_past_n_months:
+          type: integer
+          required: false
+          note: "Trailing window in months for headcount growth. Has no effect unless sent with organization_headcount_growth_range[min] or [max]."
+          enum: [6, 12, 24]
+        "organization_headcount_growth_range[min]":
+          type: integer
+          required: false
+          note: "Minimum headcount growth as a whole-number percentage over the window; 10 means 10%. Needs organization_headcount_growth_past_n_months."
+        "organization_headcount_growth_range[max]":
+          type: integer
+          required: false
+          note: "Maximum headcount growth as a whole-number percentage over the window. Needs organization_headcount_growth_past_n_months."
+        "lookalike_organization_ids[]":
+          type: array
+          required: false
+          note: "Apollo IDs of up to 5 seed companies; results are narrowed and ranked by similarity and exclude the seeds."
+          max: 5
+        "not_organization_websites_list[]":
+          type: array
+          required: false
+          note: "Exclude companies that match any of these domains, including the company's other known domains."
+        page:
+          type: integer
+          required: false
+          example: 1
+          note: "Page to return, up to 500 pages of 100; use with per_page. Each page costs 1 credit."
+          min: 1
+          max: 500
+        per_page:
+          type: integer
+          required: false
+          example: 10
+          note: "Results per page, up to 100. Apollo caps a search at 50,000 records."
+          min: 1
+          max: 100
+    test_request:
+      queryParams: { "q_organization_domains_list[]": [stripe.com], per_page: 1 }
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      source: docs
+      source_url: "https://docs.apollo.io/docs/api-pricing"
+      checked: "2026-10-05"
+      confidence: documented
+      note: "1 credit per page, up to 100 results per page; per_page does not change the charge."
+    docs_url: "https://docs.apollo.io/reference/organization-search"
+    output:
+      type: object
+      properties:
+        pagination:
+          type: object
+          properties:
+            page: { type: integer }
+            per_page: { type: integer }
+            total_entries: { type: integer }
+            total_pages: { type: integer }
+        partial_results_only: { type: boolean }
+        partial_results_limit: { type: integer }
+        organizations:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+              website_url: { type: string }
+              linkedin_url: { type: string }
+              twitter_url: { type: string }
+              facebook_url: { type: string }
+              primary_domain: { type: string }
+              founded_year: { type: integer }
+              alexa_ranking: { type: integer }
+              logo_url: { type: string }
+              languages:
+                type: array
+                items: { type: string }
+              phone: { type: string }
+        accounts: { type: array }
+  - id: apollo.company.enrich
+    capability: company.enrich
+    platform: company
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: data
+    method: GET
+    path: "/organizations/enrich"
+    name: "Company's industry, size, revenue, funding from its domain"
+    summary: "Use the organization enrichment endpoint to enrich data for one company."
+    input:
+      queryParams:
+        domain:
+          type: string
+          required: false
+          example: stripe.com
+          note: "Domain of the company, without www. or @. Identify the company with domain, linkedin_url or website."
+        linkedin_url:
+          type: string
+          required: false
+          example: "https://www.linkedin.com/company/apolloio"
+          note: "URL of the company's LinkedIn profile."
+        name:
+          type: string
+          required: false
+          example: apollo
+          note: "Company name; improves a match, but name alone is not supported."
+        website:
+          {
+            type: string,
+            required: false,
+            example: "http://www.apollo.io",
+            note: "Full website URL of the company.",
+          }
+    test_request:
+      queryParams: { domain: stripe.com }
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      source: docs
+      source_url: "https://docs.apollo.io/docs/api-pricing"
+      checked: "2026-10-05"
+      confidence: documented
+      note: "1 credit per organization."
+    docs_url: "https://docs.apollo.io/reference/organization-enrichment"
+    output:
+      type: object
+      properties:
+        organization:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+            website_url: { type: string }
+            linkedin_url: { type: string }
+            twitter_url: { type: string }
+            facebook_url: { type: string }
+            primary_domain: { type: string }
+            founded_year: { type: integer }
+            alexa_ranking: { type: integer }
+            logo_url: { type: string }
+            languages:
+              type: array
+              items: { type: string }
+            industry: { type: string }
+            industries:
+              type: array
+              items: { type: string }
+            keywords:
+              type: array
+              items: { type: string }
+            estimated_num_employees: { type: integer }
+            short_description: { type: string }
+            seo_description: { type: string }
+            raw_address: { type: string }
+            street_address: { type: string }
+            city: { type: string }
+            state: { type: string }
+            postal_code: { type: string }
+            country: { type: string }
+            annual_revenue: { type: integer }
+            annual_revenue_printed: { type: string }
+            total_funding: { type: integer }
+            total_funding_printed: { type: string }
+            latest_funding_round_date: { type: string }
+            latest_funding_stage: { type: string }
+            funding_events:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: { type: string }
+                  date: { type: string }
+                  type: { type: string }
+                  investors: { type: string }
+                  amount: { type: string }
+                  currency: { type: string }
+            technology_names:
+              type: array
+              items: { type: string }
+            current_technologies:
+              type: array
+              items:
+                type: object
+                properties:
+                  uid: { type: string }
+                  name: { type: string }
+                  category: { type: string }
+            departmental_head_count: { type: object }
+            num_suborganizations: { type: integer }
+            organization_headcount_six_month_growth: { type: [number, "null"] }
+            organization_headcount_twelve_month_growth: { type: [number, "null"] }
+            organization_headcount_twenty_four_month_growth: { type: [number, "null"] }
+  - id: apollo.company.enrich.bulk
+    capability: company.enrich.bulk
+    platform: company
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: data
+    method: POST
+    path: "/organizations/bulk_enrich"
+    name: "Up to 10 companies' industry, size and revenue from domains"
+    summary: "Use the bulk organization enrichment endpoint to enrich data for up to ten companies with a single API call."
+    input:
+      queryParams:
+        "domains[]":
+          type: array
+          required: false
+          example: [stripe.com, apollo.io]
+          note: "Domains of the companies, without www. or @; up to 10. Required unless details is sent; matches by domain only."
+          max: 10
+      body:
+        details:
+          type: array
+          required: false
+          example:
+            - domain: apollo.io
+              name: apollo
+          note: "One object per company, up to 10, each with any of domain, linkedin_url, name, website. Takes precedence over domains[]; more fields improve the match."
+          max: 10
+      bodyType: json
+    test_request:
+      queryParams: { "domains[]": [stripe.com] }
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      source: docs
+      source_url: "https://docs.apollo.io/docs/api-pricing"
+      checked: "2026-10-05"
+      confidence: documented
+      note: "1 credit per organization."
+    docs_url: "https://docs.apollo.io/reference/bulk-organization-enrichment"
+    output:
+      type: object
+      properties:
+        status: { type: string }
+        error_code: { type: [string, "null"] }
+        error_message: { type: [string, "null"] }
+        total_requested_records:
+          type: [integer, "null"]
+          description: "Companies submitted in details, duplicates included; null for domains[] requests."
+        total_requested_domains:
+          type: [integer, "null"]
+          description: "Domains submitted in domains[], duplicates included; null for details requests."
+        unique_domains:
+          {
+            type: [integer, "null"],
+            description: "Unique domains in domains[]; null for details requests.",
+          }
+        unique_records:
+          type: [integer, "null"]
+          description: "Unique companies in details after de-duplication; null for domains[] requests."
+        unique_enriched_records: { type: integer }
+        missing_records: { type: integer }
+        organizations:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+              website_url: { type: string }
+              linkedin_url: { type: string }
+              twitter_url: { type: string }
+              facebook_url: { type: string }
+              primary_domain: { type: string }
+              founded_year: { type: integer }
+              alexa_ranking: { type: integer }
+              logo_url: { type: string }
+              languages:
+                type: array
+                items: { type: string }
+              industry: { type: string }
+              industries:
+                type: array
+                items: { type: string }
+              keywords:
+                type: array
+                items: { type: string }
+              estimated_num_employees: { type: integer }
+              short_description: { type: string }
+              seo_description: { type: string }
+              raw_address: { type: string }
+              street_address: { type: string }
+              city: { type: string }
+              state: { type: string }
+              postal_code: { type: string }
+              country: { type: string }
+              annual_revenue: { type: integer }
+              annual_revenue_printed: { type: string }
+              total_funding: { type: integer }
+              total_funding_printed: { type: string }
+              latest_funding_round_date: { type: string }
+              latest_funding_stage: { type: string }
+              funding_events:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    date: { type: string }
+                    type: { type: string }
+                    investors: { type: string }
+                    amount: { type: string }
+                    currency: { type: string }
+              technology_names:
+                type: array
+                items: { type: string }
+              current_technologies:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    uid: { type: string }
+                    name: { type: string }
+                    category: { type: string }
+              departmental_head_count: { type: object }
+              num_suborganizations: { type: integer }
+              organization_headcount_six_month_growth: { type: [number, "null"] }
+              organization_headcount_twelve_month_growth: { type: [number, "null"] }
+              organization_headcount_twenty_four_month_growth: { type: [number, "null"] }
+  - id: apollo.company.jobs
+    capability: company.jobs
+    platform: company
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: data
+    method: GET
+    path: "/organizations/{organization_id}/job_postings"
+    name: "Open job postings of a company by its Apollo ID"
+    summary: "Use the organization job postings endpoint to retrieve the current job postings for companies."
+    input:
+      pathParams:
+        organization_id:
+          type: string
+          required: true
+          example: "5e66b6381e05b4008c8331b8"
+          note: "Apollo ID of the company; company search returns it as id."
+      queryParams:
+        page:
+          type: integer
+          required: false
+          example: 1
+          note: "Page to return; use with per_page. Each page costs 1 credit."
+          min: 1
+        per_page:
+          type: integer
+          required: false
+          example: 10
+          note: "Results per page, up to 10,000; Apollo caps this route at 10,000 records."
+          min: 1
+          max: 10000
+    test_request:
+      pathParams: { organization_id: "5e66b6381e05b4008c8331b8" }
+      queryParams: { per_page: 1 }
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      source: docs
+      source_url: "https://docs.apollo.io/docs/api-pricing"
+      checked: "2026-10-05"
+      confidence: documented
+      note: "1 credit per page, up to 10,000 results per page; per_page does not change the charge."
+    docs_url: "https://docs.apollo.io/reference/organization-jobs-postings"
+    output:
+      type: object
+      properties:
+        organization_job_postings:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              title: { type: string }
+              url: { type: string }
+              city: { type: [string, "null"] }
+              state: { type: [string, "null"] }
+              country: { type: string }
+              last_seen_at: { type: string }
+              posted_at: { type: string }
+  - id: apollo.company.news
+    capability: company.news
+    platform: company
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: data
+    method: POST
+    path: "/news_articles/search"
+    name: "News articles about companies from their Apollo IDs"
+    summary: "Use the news articles search endpoint to find news articles related to specific companies."
+    input:
+      queryParams:
+        "organization_ids[]":
+          type: array
+          required: true
+          example: ["5e66b6381e05b4008c8331b8"]
+          note: "Apollo IDs of the companies; company search returns them as id."
+          min: 1
+        "categories[]":
+          type: array
+          required: false
+          note: "Only these news categories or sub-categories. Examples: hires; investment; contract."
+        "published_at[min]":
+          type: string
+          required: false
+          example: "2025-02-15"
+          note: "Earliest publication date, YYYY-MM-DD; before published_at[max]."
+        "published_at[max]":
+          type: string
+          required: false
+          example: "2025-05-15"
+          note: "Latest publication date, YYYY-MM-DD; after published_at[min]."
+        page:
+          type: integer
+          required: false
+          example: 1
+          note: "Page to return; use with per_page. Each page costs 1 credit."
+          min: 1
+        per_page:
+          {
+            type: integer,
+            required: false,
+            example: 10,
+            note: "Results per page, up to 25.",
+            min: 1,
+            max: 25,
+          }
+    test_request:
+      queryParams: { "organization_ids[]": ["5e66b6381e05b4008c8331b8"], per_page: 1 }
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      source: docs
+      source_url: "https://docs.apollo.io/docs/api-pricing"
+      checked: "2026-10-05"
+      confidence: documented
+      note: "1 credit per page, up to 25 results per page; per_page does not change the charge."
+    docs_url: "https://docs.apollo.io/reference/news-articles-search"
+    output:
+      type: object
+      properties:
+        pagination:
+          type: object
+          properties:
+            page: { type: integer }
+            per_page: { type: integer }
+            total_entries: { type: integer }
+            total_pages: { type: integer }
+        news_articles:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              url: { type: string }
+              domain: { type: string }
+              title: { type: string }
+              snippet: { type: string }
+              organization_ids:
+                type: array
+                items: { type: string }
+              published_at: { type: string }
+              event_categories:
+                type: array
+                items: { type: string }
+  - id: apollo.account.usage
+    capability: account.usage
+    platform: account
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: account
+    method: POST
+    path: "/usage_stats/credit_usage_stats"
+    name: "Credits used and left this billing cycle by credit type"
+    summary: "Use the view credit usage stats endpoint to monitor your team's credit balance across every credit type in the current billing cycle."
+    input: {}
+    test_request: {}
+    cost: { type: free }
+    docs_url: "https://docs.apollo.io/reference/view-credit-usage-stats"
+    output:
+      type: object
+      required: [credit_usage_stats]
+      properties:
+        credit_usage_stats:
+          type: object
+          description: "Per credit type: limit, consumed and left_over. Credits, except dialer, which is minutes."
+          required:
+            - lead_credit
+            - direct_dial_credit
+            - export_credit
+            - conversation_credit
+            - ai_credit
+            - power_up_credit
+            - inbound_website_visitor_credit
+            - contact_website_visitor_credit
+            - web_search_record_credit
+            - dialer
+          properties:
+            lead_credit:
+              type: object
+              properties:
+                limit: { type: integer }
+                consumed: { type: integer }
+                left_over: { type: integer }
+            direct_dial_credit:
+              type: object
+              properties:
+                limit: { type: integer }
+                consumed: { type: integer }
+                left_over: { type: integer }
+            export_credit:
+              type: object
+              properties:
+                limit: { type: integer }
+                consumed: { type: integer }
+                left_over: { type: integer }
+            conversation_credit:
+              type: object
+              properties:
+                limit: { type: integer }
+                consumed: { type: integer }
+                left_over: { type: integer }
+            ai_credit:
+              type: object
+              properties:
+                limit: { type: integer }
+                consumed: { type: integer }
+                left_over: { type: integer }
+            power_up_credit:
+              type: object
+              properties:
+                limit: { type: integer }
+                consumed: { type: integer }
+                left_over: { type: integer }
+            inbound_website_visitor_credit:
+              type: object
+              properties:
+                limit: { type: integer }
+                consumed: { type: integer }
+                left_over: { type: integer }
+            contact_website_visitor_credit:
+              type: object
+              properties:
+                limit: { type: integer }
+                consumed: { type: integer }
+                left_over: { type: integer }
+            web_search_record_credit:
+              type: object
+              properties:
+                limit: { type: integer }
+                consumed: { type: integer }
+                left_over: { type: integer }
+            dialer:
+              type: object
+              properties:
+                limit: { type: integer }
+                consumed: { type: integer }
+                left_over: { type: integer }
+        current_credit_cycle:
+          type: object
+          description: "Start and end of the billing cycle; both null when the team has no active cycle."
+          properties:
+            start_date: { type: [string, "null"] }
+            end_date: { type: [string, "null"] }
+  - id: apollo.account.profile
+    capability: account.profile
+    platform: account
+    auth: api_key
+    scope: own_account
+    principal: organization
+    kind: account
+    method: GET
+    path: "/users/api_profile"
+    name: "User and team the key acts as, with optional credit use"
+    summary: "Use the get current user profile endpoint to retrieve the authenticated profile of the person who owns the API key being used."
+    input:
+      queryParams:
+        include_credit_usage:
+          type: boolean
+          required: false
+          note: "Set true to add the user's and team's credit usage and remaining balances (lead, direct dial, export, AI and power-up credits)."
+          default: false
+    cost: { type: free }
+    docs_url: "https://docs.apollo.io/reference/get-current-user-profile"
+    output:
+      type: object
+      properties:
+        id: { type: string, description: "The user the key acts as." }
+        team_id: { type: string, description: "The Apollo team the user belongs to." }
+        first_name: { type: string }
+        last_name: { type: string }
+        title: { type: string }
+        email: { type: string }
+        num_credits_remaining:
+          { type: integer, description: "Only with include_credit_usage=true." }
+        effective_num_lead_credits: { type: integer }
+        num_lead_credits_used: { type: integer }
+        effective_num_direct_dial_credits: { type: integer }
+        num_direct_dial_credits_used: { type: integer }
+        effective_num_export_credits: { type: integer }
+        num_export_credits_used: { type: integer }
+        effective_num_ai_credits: { type: integer }
+        num_ai_credits_used: { type: integer }
+        effective_num_power_up_credits: { type: integer }
+        num_power_up_credits_used: { type: integer }
+        total_unified_credits_used: { type: integer }
+  - id: apollo.people.contacts.search
+    capability: people.contacts.search
+    platform: people
+    auth: api_key
+    scope: own_account
+    principal: organization
+    kind: data
+    method: POST
+    path: "/contacts/search"
+    name: "Saved contacts in the account by keyword, stage or label"
+    summary: "Use the search for contacts endpoint to search for the contacts that have been added to your team's Apollo account."
+    input:
+      body:
+        q_keywords:
+          type: string
+          required: false
+          example: CEO
+          note: "Keywords over names, job titles, employers or company names, or email addresses. Examples: CEO; Sumware Software."
+        contact_stage_ids:
+          type: array
+          required: false
+          note: "Apollo IDs of contact stages; a contact matches any one. List contact stages returns the IDs."
+        contact_label_ids:
+          { type: array, required: false, note: "Apollo IDs of labels; a contact matches any one." }
+        sort_by_field:
+          type: string
+          required: false
+          note: "Sort field, most recent first."
+          enum:
+            - contact_last_activity_date
+            - contact_email_last_opened_at
+            - contact_email_last_clicked_at
+            - contact_created_at
+            - contact_updated_at
+        sort_ascending:
+          {
+            type: boolean,
+            required: false,
+            note: "Set true for ascending order; needs sort_by_field.",
+            default: false,
+          }
+        per_page:
+          {
+            type: integer,
+            required: false,
+            example: 10,
+            note: "Results per page, up to 100.",
+            min: 1,
+            max: 100,
+          }
+        page:
+          type: integer
+          required: false
+          example: 1
+          note: "Page to return, up to 500 pages of 100; use with per_page."
+          min: 1
+          max: 500
+      bodyType: json
+    cost: { type: free }
+    docs_url: "https://docs.apollo.io/reference/search-for-contacts"
+    output:
+      type: object
+      properties:
+        contacts:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              first_name: { type: string }
+              last_name: { type: string }
+              name: { type: string }
+              title: { type: string }
+              email: { type: string }
+              email_status: { type: string }
+              linkedin_url: { type: [string, "null"] }
+              organization_name: { type: string }
+              organization_id: { type: string }
+              account_id: { type: string }
+              contact_stage_id: { type: string }
+              owner_id: { type: string }
+              source: { type: string }
+              created_at: { type: string }
+              updated_at: { type: string }
+              label_ids:
+                type: array
+                items: { type: string }
+              phone_numbers: { type: array }
+        pagination:
+          type: object
+          properties:
+            page: { type: integer }
+            per_page: { type: integer }
+            total_entries: { type: integer }
+            total_pages: { type: integer }
+  - id: apollo.people.contacts.create
+    capability: people.contacts.create
+    platform: people
+    auth: api_key
+    scope: own_account
+    principal: organization
+    kind: action
+    method: POST
+    path: "/contacts"
+    name: "Save a person as a contact in the account, returning its ID"
+    summary: "Use the create a contact endpoint to add a new contact to your team's Apollo account."
+    input:
+      body:
+        first_name: { type: string, required: false, note: "First name of the contact." }
+        last_name: { type: string, required: false, note: "Last name of the contact." }
+        organization_name:
+          { type: string, required: false, note: "Name of the contact's employer." }
+        title: { type: string, required: false, note: "Current job title." }
+        account_id:
+          {
+            type: string,
+            required: false,
+            note: "Apollo ID of the account the contact belongs to.",
+          }
+        email: { type: string, required: false, note: "Email address of the contact." }
+        website_url: { type: string, required: false, note: "Corporate website URL." }
+        label_names:
+          { type: array, required: false, note: "Names of the lists the contact belongs to." }
+        contact_stage_id: { type: string, required: false, note: "Apollo ID of the contact stage." }
+        present_raw_address:
+          type: string
+          required: false
+          example: "Atlanta, United States"
+          note: "Personal location of the contact."
+        direct_phone: { type: string, required: false, note: "Primary phone number." }
+        corporate_phone: { type: string, required: false, note: "Work or office phone number." }
+        mobile_phone: { type: string, required: false, note: "Mobile phone number." }
+        home_phone: { type: string, required: false, note: "Home phone number." }
+        other_phone: { type: string, required: false, note: "Alternative phone number." }
+        typed_custom_fields:
+          type: object
+          required: false
+          note: "Values for the account's custom fields, keyed by the custom field's ID; custom fields are unique to each account."
+        run_dedupe:
+          type: boolean
+          required: false
+          note: "Set true to match an existing contact and overwrite it with the values sent instead of always creating a new one; the returned id then belongs to the existing contact."
+          default: false
+      bodyType: json
+    cost: { type: free }
+    docs_url: "https://docs.apollo.io/reference/create-a-contact"
+    output:
+      type: object
+      properties:
+        contact:
+          type: object
+          properties:
+            id: { type: string }
+            first_name: { type: string }
+            last_name: { type: string }
+            name: { type: string }
+            title: { type: string }
+            email: { type: string }
+            email_status: { type: string }
+            linkedin_url: { type: [string, "null"] }
+            organization_name: { type: string }
+            organization_id: { type: string }
+            account_id: { type: string }
+            contact_stage_id: { type: string }
+            owner_id: { type: string }
+            created_at: { type: string }
+            updated_at: { type: string }
+            label_ids:
+              type: array
+              items: { type: string }
+  - id: apollo.email.sequences.search
+    capability: email.sequences.search
+    platform: email
+    auth: api_key
+    scope: own_account
+    principal: organization
+    kind: data
+    method: POST
+    path: "/emailer_campaigns/search"
+    name: "Outreach sequences in the account by name, with ID, status"
+    summary: "Use the search for sequences endpoint to search for the sequences that have been created for your team's Apollo account."
+    input:
+      queryParams:
+        q_name:
+          type: string
+          required: false
+          example: marketing
+          note: "Keywords matching part of a sequence's name; marketing finds NY Marketing Sequence but not NY Marketer Conference. Searches names only."
+        page:
+          {
+            type: integer,
+            required: false,
+            example: 1,
+            note: "Page to return; use with per_page.",
+            min: 1,
+          }
+        per_page: { type: integer, required: false, example: 10, note: "Results per page.", min: 1 }
+    cost: { type: free }
+    docs_url: "https://docs.apollo.io/reference/search-for-sequences"
+    output:
+      type: object
+      properties:
+        pagination:
+          type: object
+          properties:
+            page: { type: integer }
+            per_page: { type: integer }
+            total_entries: { type: integer }
+            total_pages: { type: integer }
+        emailer_campaigns:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+              archived: { type: boolean }
+              active: { type: boolean }
+              created_at: { type: string }
+              user_id: { type: string }
+              emailer_schedule_id: { type: string }
+              num_steps: { type: integer }
+              label_ids:
+                type: array
+                items: { type: string }

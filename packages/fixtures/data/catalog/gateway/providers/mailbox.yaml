@@ -1,0 +1,36 @@
+provider: mailbox
+display_name: Mailbox
+base_url: https://api.mailbox.example
+docs_url: https://docs.mailbox.example
+source: { docs: https://docs.mailbox.example, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+auth:
+  schemes:
+    oauth2:
+      type: oauth2
+      authorization_url: https://mailbox.example/oauth/authorize
+      token_url: https://mailbox.example/oauth/token
+      pkce: true
+      refresh: rotating
+      principals: [user]
+      scopes:
+        read: https://mailbox.example/auth/read
+oauth_app: { byo: true }
+identity: { task: mailbox.messages.list, account_path: account, label_path: account }
+endpoints:
+  - id: mailbox.messages.list
+    capability: mail.messages.list
+    platform: mail
+    auth: oauth2
+    scope: own_account
+    principal: user
+    required_scopes: [read]
+    method: GET
+    path: /messages
+    name: Mailbox messages, newest first
+    summary: Lists messages
+    input:
+      queryParams:
+        q: { type: string, required: false, note: A search query }
+    untestable: needs a mailbox only the end user holds
+    output: { type: object }

@@ -1,0 +1,755 @@
+provider: google-analytics
+display_name: Google Analytics 4
+base_url: https://analyticsdata.googleapis.com
+docs_url: https://developers.google.com/analytics/devguides/reporting/data/v1
+source:
+  docs: https://developers.google.com/analytics/devguides/reporting/data/v1
+  openapi:
+    - https://analyticsdata.googleapis.com/$discovery/rest?version=v1beta
+    - https://analyticsadmin.googleapis.com/$discovery/rest?version=v1beta
+    - https://openidconnect.googleapis.com/$discovery/rest?version=v1
+  curated: 2026-10-05
+version: 2026-10-06
+limits: "The Data API's tokens per property: a standard property uses up to 200,000 a day and 40,000 an hour and runs 10 requests at once; an Analytics 360 property 2,000,000 a day, 400,000 an hour and 50 at once. Most requests cost fewer than 10 tokens, and returnPropertyQuota adds the quota left to the answer. A property can send 120 requests an hour that ask for a dimension Google may threshold."
+auth:
+  schemes:
+    oauth:
+      type: oauth2
+      authorization_url: https://accounts.google.com/o/oauth2/v2/auth
+      token_url: https://oauth2.googleapis.com/token
+      revocation_url: https://oauth2.googleapis.com/revoke
+      authorization_params: { access_type: offline }
+      pkce: true
+      refresh: static
+      token_type: Bearer
+      principals: [organization]
+      scopes:
+        openid: openid
+        email: https://www.googleapis.com/auth/userinfo.email
+        analytics.readonly: https://www.googleapis.com/auth/analytics.readonly
+oauth_app: { byo: true }
+identity:
+  task: google-analytics.userinfo.get
+  account_path: sub
+  label_path: email
+proposed_capabilities:
+  analytics.userinfo: The Google account behind a connected Analytics grant, with its id and address
+  analytics.reports.run: Metrics such as active users and sessions, broken down by dimensions such as country, over date ranges, from a property's event data
+  analytics.reports.realtime: Realtime metrics such as active users, broken down by dimensions over the last 30 minutes, from a property's event data
+  analytics.reports.batch: Several reports on one property in one request
+  analytics.reports.compatibility: Which dimensions and metrics can join a report request
+  analytics.properties.metadata: The dimensions and metrics a property offers, custom ones included
+  analytics.accounts.summaries: Analytics accounts and the properties under them, with their ids and types
+  analytics.properties.get: One analytics property's time zone, currency and industry
+  analytics.properties.streams.list: Data streams of an analytics property, with their measurement ids and domains
+endpoints:
+  - id: google-analytics.userinfo.get
+    capability: analytics.userinfo
+    platform: analytics
+    scope: own_account
+    principal: organization
+    auth: oauth
+    required_scopes: [openid, email]
+    kind: utility
+    method: GET
+    path: /v1/userinfo
+    base_url: https://openidconnect.googleapis.com
+    name: Id and address of the Google account behind the connection
+    summary: Returns profile information for the specified user.
+    docs_url: https://developers.google.com/identity/openid-connect/openid-connect#obtaininguserprofileinformation
+    input: {}
+    cost: { type: free }
+    example_response: examples/google-analytics.userinfo.get.json
+    output:
+      type: object
+      required: [sub]
+      properties:
+        sub:
+          type: string
+          description: The Google account's id, which never changes while the address can
+        email: { type: string, description: The address of the Google account }
+        email_verified: { type: boolean, description: True when Google has verified the address }
+        picture: { type: string, description: The URL of the account's photo }
+
+  - id: google-analytics.reports.run
+    capability: analytics.reports.run
+    platform: analytics
+    domain: reports
+    scope: own_account
+    principal: organization
+    auth: oauth
+    required_scopes: [analytics.readonly]
+    kind: data
+    method: POST
+    path: /v1beta/properties/{propertyId}:runReport
+    name: Metrics by dimension and date range for a property
+    summary: "Returns a customized report of your Google Analytics event data. Reports contain statistics derived from data collected by the Google Analytics tracking code. The data returned from the API is as a table with columns for the requested dimensions and metrics. Metrics are individual measurements of user activity on your property, such as active users or event count. Dimensions break down metrics across some common criteria, such as country or event name."
+    docs_url: https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/runReport
+    input:
+      pathParams:
+        propertyId:
+          type: string
+          required: true
+          example: "123456789"
+          note: The numeric id of a GA4 property, as google-analytics.accounts.summaries returns it after properties/
+      body:
+        dateRanges:
+          type: array
+          required: true
+          example:
+            - { startDate: 2026-09-01, endDate: 2026-09-30 }
+          note: "Up to 4 ranges, each a startDate and an endDate, either YYYY-MM-DD or NdaysAgo, yesterday or today. With several, each row carries the index of its range."
+        dimensions:
+          type: array
+          required: false
+          example:
+            - { name: country }
+          note: "Up to 9 dimensions, each an object with the name of one the property offers, such as country or eventName; google-analytics.properties.metadata lists them"
+        metrics:
+          type: array
+          required: true
+          example:
+            - { name: activeUsers }
+          note: "Up to 10 metrics, each an object with the name of one the property offers, such as activeUsers or eventCount; google-analytics.properties.metadata lists them"
+        dimensionFilter:
+          type: object
+          required: false
+          example:
+            filter: { fieldName: country, stringFilter: { matchType: EXACT, value: Germany } }
+          note: A filter expression over dimensions, applied before the metrics are aggregated
+        metricFilter:
+          type: object
+          required: false
+          note: A filter expression over metrics, applied after the rows are aggregated, as a SQL HAVING clause is
+        orderBys:
+          type: array
+          required: false
+          example:
+            - { metric: { metricName: activeUsers }, desc: true }
+          note: How the rows are ordered, each an order by a dimension or a metric
+        limit:
+          type: integer
+          required: false
+          min: 1
+          max: 250000
+          default: 10000
+          note: Rows to return; a report can return fewer
+        offset:
+          type: integer
+          required: false
+          min: 0
+          default: 0
+          note: Zero-based index of the first row, for paging
+        metricAggregations:
+          type: array
+          required: false
+          example: [TOTAL]
+          note: TOTAL, MINIMUM or MAXIMUM, each adding a row of that aggregate of every metric
+        currencyCode:
+          type: string
+          required: false
+          example: USD
+          note: An ISO 4217 code for currency metrics; the property's own currency when absent
+        keepEmptyRows:
+          type: boolean
+          required: false
+          default: false
+          note: Whether to return rows whose metrics are all 0
+        returnPropertyQuota:
+          type: boolean
+          required: false
+          default: false
+          note: Whether to add the property's quota state to the answer
+      bodyType: json
+    cost: { type: free }
+    example_response: examples/google-analytics.reports.run.json
+    output:
+      type: object
+      properties:
+        dimensionHeaders:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+        metricHeaders:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              type:
+                {
+                  type: string,
+                  description: The kind of value such as TYPE_INTEGER or TYPE_CURRENCY,
+                }
+        rows:
+          type: array
+          description: Absent when no row matches. Each row holds the values of the dimension and metric headers, in their order.
+          items:
+            type: object
+            properties:
+              dimensionValues:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    value: { type: string }
+              metricValues:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    value: { type: string, description: A number as a string }
+        totals:
+          type: array
+          description: Present when metricAggregations asked for TOTAL
+          items: { type: object }
+        maximums:
+          type: array
+          description: Present when metricAggregations asked for MAXIMUM
+          items: { type: object }
+        minimums:
+          type: array
+          description: Present when metricAggregations asked for MINIMUM
+          items: { type: object }
+        rowCount: { type: integer, description: Rows in the result before limit and offset }
+        metadata:
+          type: object
+          properties:
+            currencyCode: { type: string }
+            timeZone: { type: string, description: The property's time zone }
+            dataLossFromOtherRow:
+              {
+                type: boolean,
+                description: True when some dimension combinations are rolled into an (other) row,
+              }
+            subjectToThresholding:
+              {
+                type: boolean,
+                description: True when the report leaves out data below a privacy threshold,
+              }
+            emptyReason: { type: string }
+        propertyQuota:
+          type: object
+          description: Present when returnPropertyQuota is true; each quota holds consumed and remaining
+        kind: { type: string }
+
+  - id: google-analytics.reports.realtime
+    capability: analytics.reports.realtime
+    platform: analytics
+    domain: reports
+    scope: own_account
+    principal: organization
+    auth: oauth
+    required_scopes: [analytics.readonly]
+    kind: data
+    method: POST
+    path: /v1beta/properties/{propertyId}:runRealtimeReport
+    name: Realtime metrics by dimension for a property
+    summary: "Returns a customized report of realtime event data for your property. Events appear in realtime reports seconds after they have been sent to the Google Analytics. Realtime reports show events and usage data for the periods of time ranging from the present moment to 30 minutes ago (up to 60 minutes for Google Analytics 360 properties)."
+    docs_url: https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/runRealtimeReport
+    input:
+      pathParams:
+        propertyId:
+          type: string
+          required: true
+          example: "123456789"
+          note: The numeric id of a GA4 property, as google-analytics.accounts.summaries returns it after properties/
+      body:
+        dimensions:
+          type: array
+          required: false
+          example:
+            - { name: country }
+          note: Each an object with the name of a dimension the realtime report offers, such as country or unifiedScreenName
+        metrics:
+          type: array
+          required: true
+          example:
+            - { name: activeUsers }
+          note: Each an object with the name of a metric the realtime report offers, such as activeUsers or eventCount
+        minuteRanges:
+          type: array
+          required: false
+          example:
+            - { startMinutesAgo: 29, endMinutesAgo: 0 }
+          note: Up to 2 ranges, each a startMinutesAgo and an endMinutesAgo; the last 30 minutes when absent
+        dimensionFilter:
+          type: object
+          required: false
+          note: A filter expression over dimensions, applied before the metrics are aggregated
+        metricFilter:
+          type: object
+          required: false
+          note: A filter expression over metrics, applied after the rows are aggregated
+        orderBys:
+          type: array
+          required: false
+          note: How the rows are ordered, each an order by a dimension or a metric
+        limit:
+          type: integer
+          required: false
+          min: 1
+          max: 250000
+          default: 10000
+          note: Rows to return; a report can return fewer
+        metricAggregations:
+          type: array
+          required: false
+          note: TOTAL, MINIMUM or MAXIMUM, each adding a row of that aggregate of every metric
+        returnPropertyQuota:
+          type: boolean
+          required: false
+          default: false
+          note: Whether to add the property's quota state to the answer
+      bodyType: json
+    cost: { type: free }
+    example_response: examples/google-analytics.reports.realtime.json
+    output:
+      type: object
+      properties:
+        dimensionHeaders:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+        metricHeaders:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              type: { type: string, description: The kind of value such as TYPE_INTEGER }
+        rows:
+          type: array
+          description: Absent when no row matches
+          items:
+            type: object
+            properties:
+              dimensionValues:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    value: { type: string }
+              metricValues:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    value: { type: string, description: A number as a string }
+        totals:
+          type: array
+          items: { type: object }
+        maximums:
+          type: array
+          items: { type: object }
+        minimums:
+          type: array
+          items: { type: object }
+        rowCount: { type: integer }
+        propertyQuota:
+          type: object
+          description: Present when returnPropertyQuota is true
+        kind: { type: string }
+
+  - id: google-analytics.reports.batch
+    capability: analytics.reports.batch
+    platform: analytics
+    domain: reports
+    scope: own_account
+    principal: organization
+    auth: oauth
+    required_scopes: [analytics.readonly]
+    kind: data
+    method: POST
+    path: /v1beta/properties/{propertyId}:batchRunReports
+    name: Up to five reports on one property in one request
+    summary: Returns multiple reports in a batch. All reports must be for the same Google Analytics property.
+    docs_url: https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/batchRunReports
+    input:
+      pathParams:
+        propertyId:
+          type: string
+          required: true
+          example: "123456789"
+          note: The numeric id of a GA4 property, as google-analytics.accounts.summaries returns it after properties/
+      body:
+        requests:
+          type: array
+          required: true
+          max: 5
+          example:
+            - dateRanges: [{ startDate: 2026-09-01, endDate: 2026-09-30 }]
+              dimensions: [{ name: country }]
+              metrics: [{ name: activeUsers }]
+          note: Up to 5 report requests, each the body of google-analytics.reports.run; the property is the one in the path
+      bodyType: json
+    cost: { type: free }
+    example_response: examples/google-analytics.reports.batch.json
+    output:
+      type: object
+      properties:
+        reports:
+          type: array
+          description: One report per request, in order, each shaped as the answer of google-analytics.reports.run
+          items:
+            type: object
+            properties:
+              dimensionHeaders:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name: { type: string }
+              metricHeaders:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name: { type: string }
+                    type: { type: string }
+              rows:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    dimensionValues:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          value: { type: string }
+                    metricValues:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          value: { type: string }
+              rowCount: { type: integer }
+              metadata: { type: object }
+              kind: { type: string }
+        kind: { type: string }
+
+  - id: google-analytics.reports.compatibility
+    capability: analytics.reports.compatibility
+    platform: analytics
+    domain: reports
+    scope: own_account
+    principal: organization
+    auth: oauth
+    required_scopes: [analytics.readonly]
+    kind: utility
+    method: POST
+    path: /v1beta/properties/{propertyId}:checkCompatibility
+    name: Dimensions and metrics compatible with a report's columns
+    summary: "This compatibility method lists dimensions and metrics that can be added to a report request and maintain compatibility. This method fails if the request's dimensions and metrics are incompatible. In Google Analytics, reports fail if they request incompatible dimensions and/or metrics; in that case, you will need to remove dimensions and/or metrics from the incompatible report until the report is compatible. The Realtime and Core reports have different compatibility rules. This method checks compatibility for Core reports."
+    docs_url: https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/checkCompatibility
+    input:
+      pathParams:
+        propertyId:
+          type: string
+          required: true
+          example: "123456789"
+          note: The numeric id of a GA4 property, as google-analytics.accounts.summaries returns it after properties/
+      body:
+        dimensions:
+          type: array
+          required: false
+          example:
+            - { name: country }
+          note: The dimensions already in the report, each an object with a name
+        metrics:
+          type: array
+          required: false
+          example:
+            - { name: activeUsers }
+          note: The metrics already in the report, each an object with a name
+        dimensionFilter:
+          type: object
+          required: false
+          note: The report's dimension filter, if it has one
+        metricFilter:
+          type: object
+          required: false
+          note: The report's metric filter, if it has one
+        compatibilityFilter:
+          type: string
+          required: false
+          enum: [COMPATIBLE, INCOMPATIBLE]
+          note: Keep only the dimensions and metrics of this compatibility; COMPATIBLE lists those that can be added
+      bodyType: json
+    cost: { type: free }
+    example_response: examples/google-analytics.reports.compatibility.json
+    output:
+      type: object
+      properties:
+        dimensionCompatibilities:
+          type: array
+          items:
+            type: object
+            properties:
+              compatibility: { type: string, description: COMPATIBLE or INCOMPATIBLE }
+              dimensionMetadata:
+                type: object
+                properties:
+                  apiName: { type: string }
+                  uiName: { type: string }
+                  description: { type: string }
+                  category: { type: string }
+                  customDefinition: { type: boolean }
+        metricCompatibilities:
+          type: array
+          items:
+            type: object
+            properties:
+              compatibility: { type: string, description: COMPATIBLE or INCOMPATIBLE }
+              metricMetadata:
+                type: object
+                properties:
+                  apiName: { type: string }
+                  uiName: { type: string }
+                  description: { type: string }
+                  category: { type: string }
+                  type: { type: string }
+                  customDefinition: { type: boolean }
+
+  - id: google-analytics.properties.metadata
+    capability: analytics.properties.metadata
+    platform: analytics
+    domain: properties
+    scope: own_account
+    principal: organization
+    auth: oauth
+    required_scopes: [analytics.readonly]
+    kind: utility
+    method: GET
+    path: /v1beta/properties/{propertyId}/metadata
+    name: Dimensions and metrics a property offers, with custom ones
+    summary: "Returns metadata for dimensions and metrics available in reporting methods. Used to explore the dimensions and metrics. In this method, a Google Analytics property identifier is specified in the request, and the metadata response includes Custom dimensions and metrics as well as Universal metadata. For example if a custom metric with parameter name `levels_unlocked` is registered to a property, the Metadata response will contain `customEvent:levels_unlocked`. Universal metadata are dimensions and metrics applicable to any property such as `country` and `totalUsers`."
+    docs_url: https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/getMetadata
+    input:
+      pathParams:
+        propertyId:
+          type: string
+          required: true
+          example: "123456789"
+          note: The numeric id of a GA4 property, as google-analytics.accounts.summaries returns it after properties/; 0 lists only the dimensions and metrics common to every property
+    cost: { type: free }
+    example_response: examples/google-analytics.properties.metadata.json
+    output:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, description: "The resource name, properties/<id>/metadata" }
+        dimensions:
+          type: array
+          items:
+            type: object
+            properties:
+              apiName: { type: string, description: The name a report request uses }
+              uiName: { type: string, description: The name Google Analytics shows }
+              description: { type: string }
+              category: { type: string }
+              customDefinition: { type: boolean, description: True for a custom dimension }
+              deprecatedApiNames:
+                type: array
+                items: { type: string }
+        metrics:
+          type: array
+          items:
+            type: object
+            properties:
+              apiName: { type: string, description: The name a report request uses }
+              uiName: { type: string, description: The name Google Analytics shows }
+              description: { type: string }
+              category: { type: string }
+              type: { type: string, description: The kind of value such as TYPE_INTEGER }
+              expression: { type: string, description: The formula of a derived metric }
+              customDefinition: { type: boolean, description: True for a custom metric }
+              deprecatedApiNames:
+                type: array
+                items: { type: string }
+              blockedReasons:
+                type: array
+                items: { type: string }
+
+  - id: google-analytics.accounts.summaries
+    capability: analytics.accounts.summaries
+    platform: analytics
+    domain: accounts
+    scope: own_account
+    principal: organization
+    auth: oauth
+    required_scopes: [analytics.readonly]
+    kind: utility
+    method: GET
+    path: /v1beta/accountSummaries
+    base_url: https://analyticsadmin.googleapis.com
+    name: Accounts with their property ids, names and types
+    summary: Returns summaries of all accounts accessible by the caller.
+    docs_url: https://developers.google.com/analytics/devguides/config/admin/v1/rest/v1beta/accountSummaries/list
+    input:
+      queryParams:
+        pageSize:
+          type: integer
+          required: false
+          min: 1
+          max: 200
+          default: 50
+          note: Accounts to return; a page may hold fewer even when more follow
+        pageToken:
+          type: string
+          required: false
+          note: The nextPageToken of the previous page
+    cost: { type: free }
+    example_response: examples/google-analytics.accounts.summaries.json
+    output:
+      type: object
+      properties:
+        accountSummaries:
+          type: array
+          description: Absent when the connected account has no Analytics account
+          items:
+            type: object
+            properties:
+              name: { type: string, description: "accountSummaries/<account id>" }
+              account: { type: string, description: "accounts/<account id>" }
+              displayName: { type: string }
+              propertySummaries:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    property:
+                      type: string
+                      description: "properties/<property id>; the digits after the slash are the propertyId that google-analytics tasks take"
+                    displayName: { type: string }
+                    propertyType:
+                      type: string
+                      description: PROPERTY_TYPE_ORDINARY, PROPERTY_TYPE_SUBPROPERTY or PROPERTY_TYPE_ROLLUP
+                    parent:
+                      { type: string, description: The account or property the property sits under }
+        nextPageToken: { type: string, description: Absent on the last page }
+
+  - id: google-analytics.properties.get
+    capability: analytics.properties.get
+    platform: analytics
+    domain: properties
+    scope: own_account
+    principal: organization
+    auth: oauth
+    required_scopes: [analytics.readonly]
+    kind: data
+    method: GET
+    path: /v1beta/properties/{propertyId}
+    base_url: https://analyticsadmin.googleapis.com
+    name: Time zone, currency and industry of a property by its id
+    summary: Lookup for a single GA Property.
+    docs_url: https://developers.google.com/analytics/devguides/config/admin/v1/rest/v1beta/properties/get
+    input:
+      pathParams:
+        propertyId:
+          type: string
+          required: true
+          example: "123456789"
+          note: The numeric id of a GA4 property, as google-analytics.accounts.summaries returns it after properties/
+    cost: { type: free }
+    example_response: examples/google-analytics.properties.get.json
+    output:
+      type: object
+      properties:
+        name: { type: string, description: "properties/<property id>" }
+        displayName: { type: string }
+        propertyType: { type: string }
+        parent: { type: string }
+        account: { type: string }
+        timeZone:
+          { type: string, description: The reporting time zone that bounds each day in reports }
+        currencyCode: { type: string }
+        industryCategory: { type: string }
+        serviceLevel:
+          { type: string, description: GOOGLE_ANALYTICS_STANDARD or GOOGLE_ANALYTICS_360 }
+        createTime: { type: string }
+        updateTime: { type: string }
+        deleteTime: { type: string, description: Present when the property is in the trash }
+        expireTime:
+          { type: string, description: Present when a trashed property will be deleted permanently }
+
+  - id: google-analytics.properties.streams.list
+    capability: analytics.properties.streams.list
+    platform: analytics
+    domain: properties
+    scope: own_account
+    principal: organization
+    auth: oauth
+    required_scopes: [analytics.readonly]
+    kind: data
+    method: GET
+    path: /v1beta/properties/{propertyId}/dataStreams
+    base_url: https://analyticsadmin.googleapis.com
+    name: Data streams of a property with measurement ids and domains
+    summary: Lists DataStreams on a property.
+    docs_url: https://developers.google.com/analytics/devguides/config/admin/v1/rest/v1beta/properties.dataStreams/list
+    input:
+      pathParams:
+        propertyId:
+          type: string
+          required: true
+          example: "123456789"
+          note: The numeric id of a GA4 property, as google-analytics.accounts.summaries returns it after properties/
+      queryParams:
+        pageSize:
+          type: integer
+          required: false
+          min: 1
+          max: 200
+          default: 50
+          note: Streams to return; a page may hold fewer even when more follow
+        pageToken:
+          type: string
+          required: false
+          note: The nextPageToken of the previous page
+    cost: { type: free }
+    example_response: examples/google-analytics.properties.streams.list.json
+    output:
+      type: object
+      properties:
+        dataStreams:
+          type: array
+          description: Absent when the property has no stream
+          items:
+            type: object
+            properties:
+              name:
+                { type: string, description: "properties/<property id>/dataStreams/<stream id>" }
+              type:
+                {
+                  type: string,
+                  description: "WEB_DATA_STREAM, ANDROID_APP_DATA_STREAM or IOS_APP_DATA_STREAM",
+                }
+              displayName: { type: string }
+              createTime: { type: string }
+              updateTime: { type: string }
+              webStreamData:
+                type: object
+                description: Present for a web stream
+                properties:
+                  measurementId: { type: string, description: The G- id a page's tag reports to }
+                  defaultUri: { type: string, description: The domain being measured }
+                  firebaseAppId: { type: string }
+              androidAppStreamData:
+                type: object
+                description: Present for an Android app stream
+                properties:
+                  packageName: { type: string }
+                  firebaseAppId: { type: string }
+              iosAppStreamData:
+                type: object
+                description: Present for an iOS app stream
+                properties:
+                  bundleId: { type: string }
+                  firebaseAppId: { type: string }
+        nextPageToken: { type: string, description: Absent on the last page }

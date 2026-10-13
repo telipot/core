@@ -1,0 +1,19 @@
+provider: input-reserved
+display_name: Test input-reserved
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+endpoints:
+  - id: input-reserved.data.get
+    capability: test.data.get
+    platform: test
+    method: GET
+    path: /data
+    name: Test record by option
+    summary: Reads a record
+    input:
+      queryParams:
+        receipt: { type: string, required: false }
+    output: { type: object }
+    auth: public

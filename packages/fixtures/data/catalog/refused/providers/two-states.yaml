@@ -1,0 +1,19 @@
+provider: two-states
+display_name: Test two-states
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+endpoints:
+  - id: two-states.data.get
+    capability: test.data.get
+    platform: test
+    auth: public
+    method: GET
+    path: /data
+    name: Test record by id
+    summary: Gets a record
+    input: {}
+    output: { type: object }
+    unverified: http 404 on the documented path
+    skipped: verified through a sibling route

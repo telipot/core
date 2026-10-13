@@ -1,0 +1,90 @@
+mean_reciprocal_rank_at_least: 1
+queries:
+  - task: Hacker News stories about agent tools
+    finds: hackernews.news.search
+  - task: search hacker news for stories and comments
+    finds: hackernews.news.search
+  - task: hn stories matching a query
+    finds: hackernews.news.search
+  - task: news stories ranked by relevance
+    finds: hackernews.news.search
+  - task: comments on hacker news about typescript
+    finds: hackernews.news.search
+  - task: read the text of a page at a url
+    finds: jina-reader.web.page.text
+  - task: start a crawl of a website and collect its pages
+    finds: firecrawl.web.crawl.start
+  - task: list all the urls on a website
+    finds: firecrawl.web.map
+  - task: find the email address of a person at a company domain
+    finds: hunter.email.find
+  - task: work email of a person at a company
+    finds: hunter.email.find
+  - task: verify an email address is deliverable
+    finds: hunter.email.verify
+  - task: list the email addresses found at a domain
+    finds: hunter.email.domain.search
+  - task: search volume and cost per click for a keyword in the us
+    finds: semrush.seo.keywords.volume
+  - task: which keywords does a domain rank for in google organic search
+    finds: semrush.seo.domain.keywords
+  - task: how many backlinks does a website have and what is its authority score
+    finds: semrush.seo.backlinks.summary
+  - task: search the web for recent articles about a topic and get their urls and titles
+    finds: exa.web.search
+  - task: get the page text and title for a list of urls
+    finds: exa.web.page.text
+  - task: answer a question with sources
+    finds: exa.web.answer
+  - task: find companies by industry size and location
+    finds: apollo.company.search
+  - task: find a company's industry size and revenue from its domain
+    finds: apollo.company.enrich
+  - task: open job postings of a company
+    finds: apollo.company.jobs
+  - task: find people by job title at a company
+    finds: apollo.people.search
+  - task: save a person as a contact
+    finds: apollo.people.contacts.create
+  - task: outreach sequences in my account
+    finds: apollo.email.sequences.search
+  - task: how many emails are on file for a domain
+    finds: hunter.email.domain.count
+  - task: which queries and pages get clicks on google search for my site
+    finds: google-search-console.search.analytics
+  - task: is this url indexed by google and when was it last crawled
+    finds: google-search-console.url.inspect
+  - task: sites i have access to in search console
+    finds: google-search-console.sites.list
+  - task: sitemaps submitted for my site and their errors
+    finds: google-search-console.sitemaps.list
+  - task: active users by country for last month in google analytics
+    finds: google-analytics.reports.run
+  - task: realtime active users on my site
+    finds: google-analytics.reports.realtime
+  - task: which dimensions and metrics can i ask a google analytics property for
+    finds: google-analytics.properties.metadata
+  - task: events on my calendar between two times
+    finds: google-calendar.events.list
+  - task: busy times on my calendar
+    finds: google-calendar.freebusy.query
+  - task: add an event to my calendar
+    finds: google-calendar.events.create
+  - task: calendars on my google account
+    finds: google-calendar.calendars.list
+  - task: list my google analytics accounts and property ids
+    finds: google-analytics.accounts.summaries
+  - task: time zone and currency of a google analytics property
+    finds: google-analytics.properties.get
+  - task: data streams of a property with measurement ids
+    finds: google-analytics.properties.streams.list
+  - task: find contacts at openai
+    finds: apollo.people.contacts.search
+  - task: "is this email deliverable: jane@acme.com"
+    finds: hunter.email.verify
+  - task: get the markdown of https://example.com/blog
+    finds: firecrawl.web.page.text
+  - task: events on my calendar next week
+    finds: google-calendar.events.list
+  - task: I want to see the meetings on my calendar tomorrow
+    finds: google-calendar.events.list

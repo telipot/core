@@ -1,0 +1,703 @@
+provider: firecrawl
+display_name: Firecrawl
+base_url: https://api.firecrawl.dev/v2
+docs_url: https://docs.firecrawl.dev/api-reference/v2-introduction
+source:
+  docs: https://docs.firecrawl.dev/api-reference/v2-introduction
+  openapi: https://docs.firecrawl.dev/api-reference/v2-openapi.json
+  curated: 2026-10-05
+version: 2026-10-05
+pricing_url: https://www.firecrawl.dev/pricing
+limits: Requests per minute per team and endpoint by plan (free 10 on scrape, map and search and 2 on crawl, batch scrape and extract; hobby 100 and 20; standard 500 and 100; growth 5000 and 1000; scale 10000 and 2000), plus a cap on concurrent browsers (free 2, hobby 5, standard 25, growth 50, scale 100); either limit answers 429 with a Retry-After header when available.
+auth:
+  schemes:
+    bearer: { type: bearer, principals: [organization] }
+probe: { method: GET, path: /team/credit-usage, expect: { json_path: success, equals: true } }
+proposed_capabilities:
+  web.search: Web pages that match a query, with their text
+  web.page.text: The text of one web page at a URL
+  web.map: The URLs on a website
+  web.crawl.start: Start crawling a website and extracting its pages
+  web.crawl.status: Progress and pages of a website crawl
+  web.extract.structured: Typed JSON extracted from web pages by a prompt or a schema
+  account.usage: Credits or units used and left on the credential's account
+  web.page.batch.start: Start scraping a list of web pages as one job
+  web.page.batch.status: Progress and pages of a batch scrape of web pages
+  web.extract.status: Progress and typed JSON of a structured data extraction job
+  account.queue.status: Jobs queued and running on the credential's account, and its concurrency limit
+endpoints:
+  - id: firecrawl.web.page.text
+    capability: web.page.text
+    platform: web
+    domain: pages
+    auth: bearer
+    scope: any_account
+    principal: organization
+    method: POST
+    path: /scrape
+    name: Page text as markdown with title and status code by URL
+    summary: Scrape a single URL and optionally extract information using an LLM
+    docs_url: https://docs.firecrawl.dev/api-reference/endpoint/scrape
+    input:
+      bodyType: json
+      body:
+        url: { type: string, required: true, example: https://example.com, note: The URL to scrape }
+        onlyMainContent:
+          type: boolean
+          default: true
+          note: Only return the main content of the page, excluding headers, navs and footers
+        waitFor:
+          type: integer
+          default: 0
+          note: Delay in milliseconds before fetching the content, in addition to Firecrawl's smart wait
+        maxAge:
+          type: integer
+          default: 172800000
+          note: Accept a cached copy younger than this many milliseconds (default 2 days); an older copy is scraped again
+        timeout:
+          type: integer
+          min: 1000
+          max: 300000
+          default: 60000
+          note: Timeout in milliseconds
+        mobile: { type: boolean, default: false, note: Emulate scraping from a mobile device }
+        proxy:
+          type: string
+          enum: [basic, enhanced, auto]
+          default: auto
+          note: auto retries with enhanced proxies when basic fails; enhanced is billed like basic
+    test_request: { body: { url: https://example.com } }
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      unit: page
+      source: docs
+      source_url: https://docs.firecrawl.dev/billing
+      checked: 2026-10-05
+      confidence: documented
+      note: 1 credit per page Firecrawl returns, including a page whose own status is 403 or 404; no document returned costs 0. A PDF costs 1 credit per PDF page. The JSON, question, highlights and other formats that add credits are not offered by this task.
+    output:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          properties:
+            markdown: { type: string, description: The page as markdown }
+            warning: { type: [string, "null"] }
+            metadata:
+              type: object
+              properties:
+                title:
+                  anyOf: [{ type: string }, { type: array, items: { type: string } }]
+                description:
+                  anyOf: [{ type: string }, { type: array, items: { type: string } }]
+                language:
+                  anyOf:
+                    [{ type: string }, { type: array, items: { type: string } }, { type: "null" }]
+                sourceURL: { type: string, description: The URL that was requested }
+                url: { type: string, description: The final URL after redirects }
+                statusCode: { type: integer, description: The status code the page answered with }
+                contentType: { type: string }
+                numPages: { type: integer, description: "For a PDF, the pages parsed" }
+                totalPages: { type: integer }
+                error: { type: [string, "null"] }
+  - id: firecrawl.web.search
+    capability: web.search
+    platform: web
+    domain: search
+    auth: bearer
+    scope: any_account
+    principal: organization
+    method: POST
+    path: /search
+    name: Web, news or image results by query, with URL and snippet
+    summary: Search and optionally scrape search results
+    docs_url: https://docs.firecrawl.dev/api-reference/endpoint/search
+    input:
+      bodyType: json
+      body:
+        query:
+          { type: string, required: true, max: 500, example: openrouter, note: The search query }
+        limit:
+          type: integer
+          min: 1
+          max: 100
+          default: 10
+          note: Maximum number of results to return, per source when sources lists several
+        sources:
+          type: array
+          default: [web]
+          example: [web, news]
+          note: "Any of web, news and images, as plain strings. The response holds one array per source."
+        tbs:
+          type: string
+          example: qdr:w
+          note: "Time filter: qdr:h, qdr:d, qdr:w, qdr:m or qdr:y for the past hour, day, week, month or year; cdr:1,cd_min:MM/DD/YYYY,cd_max:MM/DD/YYYY for a date range; sbd:1 to sort by date; values combine as sbd:1,qdr:w"
+        location:
+          type: string
+          example: San Francisco,California,United States
+          note: Where to search from; set the country field too for best results
+        country: { type: string, default: US, note: ISO country code to geo-target results }
+        includeDomains:
+          type: array
+          example: [docs.firecrawl.dev]
+          note: Hostnames only, without protocol or path. Cannot be combined with excludeDomains
+        excludeDomains:
+          type: array
+          example: [example.com]
+          note: Hostnames only, without protocol or path. Cannot be combined with includeDomains
+    test_request: { body: { query: openrouter, limit: 1 } }
+    cost:
+      type: per_result
+      value: 2
+      per: 10
+      currency: credit
+      unit: result
+      source: docs
+      source_url: https://docs.firecrawl.dev/billing
+      checked: 2026-10-05
+      confidence: documented
+      note: 2 credits per 10 results, rounded up per 10 (1 to 10 results cost 2, 11 to 20 cost 4). Scraping the results costs more and is not offered by this task.
+      settle: { type: reported_charge, path: creditsUsed }
+    output:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        id: { type: string, description: The ID of the search job }
+        creditsUsed: { type: integer, description: Credits the search cost }
+        warning: { type: [string, "null"] }
+        data:
+          type: object
+          properties:
+            web:
+              type: array
+              items:
+                type: object
+                properties:
+                  title: { type: string }
+                  description:
+                    {
+                      type: string,
+                      description: "The passages of the page that match the query, or the site's own description when highlights are unavailable",
+                    }
+                  url: { type: string }
+                  position: { type: integer }
+            news:
+              type: array
+              items:
+                type: object
+                properties:
+                  title: { type: string }
+                  snippet: { type: string }
+                  url: { type: string }
+                  date: { type: string }
+                  imageUrl: { type: string }
+                  position: { type: integer }
+            images:
+              type: array
+              items:
+                type: object
+                properties:
+                  title: { type: string }
+                  imageUrl: { type: string }
+                  imageWidth: { type: integer }
+                  imageHeight: { type: integer }
+                  url: { type: string }
+                  position: { type: integer }
+  - id: firecrawl.web.map
+    capability: web.map
+    platform: web
+    domain: sites
+    auth: bearer
+    scope: any_account
+    principal: organization
+    method: POST
+    path: /map
+    name: URLs, titles and descriptions on a website, from its URL
+    summary: Map multiple URLs based on options
+    docs_url: https://docs.firecrawl.dev/api-reference/endpoint/map
+    input:
+      bodyType: json
+      body:
+        url:
+          {
+            type: string,
+            required: true,
+            example: https://example.com,
+            note: The base URL to start from,
+          }
+        search:
+          type: string
+          example: blog
+          note: Orders the results by relevance to this query, such as blog for URLs that contain blog
+        limit:
+          { type: integer, max: 100000, default: 5000, note: Maximum number of links to return }
+        sitemap:
+          type: string
+          enum: [skip, include, only]
+          default: include
+          note: include uses the sitemap together with other methods; only returns just URLs in the sitemap; skip ignores it
+        includeSubdomains: { type: boolean, default: true, note: Include subdomains of the website }
+    test_request: { body: { url: https://example.com, limit: 1 } }
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      source: docs
+      source_url: https://docs.firecrawl.dev/features/map
+      checked: 2026-10-05
+      confidence: documented
+      note: 1 credit per call, however many URLs come back; a limit of 100000 still costs 1 credit.
+    output:
+      type: object
+      required: [success, links]
+      properties:
+        success: { type: boolean }
+        links:
+          type: array
+          items:
+            type: object
+            required: [url]
+            properties:
+              url: { type: string }
+              title: { type: string }
+              description: { type: string }
+  - id: firecrawl.web.crawl.start
+    capability: web.crawl.start
+    platform: web
+    domain: crawl
+    auth: bearer
+    scope: any_account
+    principal: organization
+    method: POST
+    path: /crawl
+    name: Start a website crawl from a URL; returns the job id
+    summary: Crawl multiple URLs based on options
+    docs_url: https://docs.firecrawl.dev/api-reference/endpoint/crawl-post
+    input:
+      bodyType: json
+      body:
+        url:
+          {
+            type: string,
+            required: true,
+            example: https://example.com,
+            note: The base URL to start crawling from,
+          }
+        limit:
+          type: integer
+          default: 10000
+          example: 10
+          note: Maximum number of pages to crawl. Always set it; the default is 10000 pages, 10000 credits.
+        maxDiscoveryDepth:
+          type: integer
+          example: 1
+          note: Maximum depth to crawl by discovery order. The root and sitemap pages have depth 0.
+        includePaths:
+          type: array
+          max: 1000
+          example: ["blog/.*"]
+          note: URL pathname regex patterns; only matching URLs are crawled, and the starting URL must match too
+        excludePaths:
+          type: array
+          max: 1000
+          example: ["blog/.*"]
+          note: URL pathname regex patterns; matching URLs are skipped
+        sitemap:
+          type: string
+          enum: [skip, include, only]
+          default: include
+          note: skip ignores the sitemap; only crawls the start URL and sitemap URLs without following links
+        crawlEntireDomain:
+          type: boolean
+          default: false
+          note: Follow internal links to sibling and parent URLs, not only child paths
+        allowSubdomains:
+          { type: boolean, default: false, note: Follow links to subdomains of the main domain }
+        allowExternalLinks:
+          { type: boolean, default: false, note: "Follow links to external websites, one hop" }
+    test_request: { body: { url: https://example.com, limit: 1, maxDiscoveryDepth: 1 } }
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      unit: page
+      source: docs
+      source_url: https://docs.firecrawl.dev/billing
+      checked: 2026-10-05
+      confidence: documented
+      note: 1 credit per page crawled, billed as each page finishes, up to limit pages; the status route reports creditsUsed. A PDF costs 1 credit per PDF page. The JSON format that adds 4 credits per page is not offered by this task.
+    output:
+      type: object
+      required: [success, id, url]
+      properties:
+        success: { type: boolean }
+        id: { type: string, description: The crawl job id to pass to the status task }
+        url: { type: string, description: The status URL of the job }
+  - id: firecrawl.web.crawl.status
+    capability: web.crawl.status
+    platform: web
+    domain: crawl
+    auth: bearer
+    scope: any_account
+    principal: organization
+    method: GET
+    path: /crawl/{id}
+    name: Crawl progress, credits used and pages by job id
+    summary: Get the status of a crawl job
+    docs_url: https://docs.firecrawl.dev/api-reference/endpoint/crawl-get
+    input:
+      pathParams:
+        id:
+          {
+            type: string,
+            required: true,
+            example: 123e4567-e89b-12d3-a456-426614174000,
+            note: The ID of the crawl job (a UUID),
+          }
+      queryParams:
+        skip:
+          type: integer
+          min: 0
+          note: Offset into the pages, as in the next URL of a truncated response; the docs describe it, the OpenAPI document does not list it
+    untestable: needs the id of a job that costs credits to start
+    cost: { type: free }
+    output:
+      type: object
+      required: [status, total, completed, creditsUsed]
+      properties:
+        status: { type: string, enum: [scraping, completed, failed, cancelled] }
+        total:
+          {
+            type: integer,
+            description: "Pages completed or still in flight, failed pages excluded",
+          }
+        completed: { type: integer, description: Pages crawled so far }
+        creditsUsed: { type: integer, description: Credits the crawl has used so far }
+        expiresAt: { type: string }
+        createdAt: { type: string }
+        completedAt: { type: string, description: Present only once the crawl has ended }
+        duration: { type: number, description: Seconds }
+        next:
+          {
+            type: [string, "null"],
+            description: "URL of the next 10MB of pages; absent or null at the end, but also set while the crawl runs",
+          }
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              markdown: { type: string }
+              metadata:
+                type: object
+                properties:
+                  title:
+                    anyOf: [{ type: string }, { type: array, items: { type: string } }]
+                  description:
+                    anyOf: [{ type: string }, { type: array, items: { type: string } }]
+                  sourceURL: { type: string }
+                  url: { type: string }
+                  statusCode: { type: integer }
+                  error: { type: [string, "null"] }
+  - id: firecrawl.web.page.batch.start
+    capability: web.page.batch.start
+    platform: web
+    domain: batch
+    auth: bearer
+    scope: any_account
+    principal: organization
+    method: POST
+    path: /batch/scrape
+    name: Start a batch scrape of many URLs; returns the job id
+    summary: Scrape multiple URLs and optionally extract information using an LLM
+    docs_url: https://docs.firecrawl.dev/api-reference/endpoint/batch-scrape
+    input:
+      bodyType: json
+      body:
+        urls:
+          {
+            type: array,
+            required: true,
+            example: ["https://example.com"],
+            note: The URLs to scrape,
+          }
+        ignoreInvalidURLs:
+          type: boolean
+          default: true
+          note: Skip invalid URLs and list them in invalidURLs instead of failing the request
+        maxConcurrency:
+          type: integer
+          note: Maximum number of concurrent scrapes; defaults to the team's concurrency limit
+        onlyMainContent:
+          type: boolean
+          default: true
+          note: Only return the main content of each page, excluding headers, navs and footers
+        waitFor:
+          { type: integer, default: 0, note: Delay in milliseconds before fetching each page }
+        maxAge:
+          type: integer
+          default: 172800000
+          note: Accept a cached copy younger than this many milliseconds (default 2 days)
+        timeout:
+          { type: integer, min: 1000, max: 300000, default: 60000, note: Timeout in milliseconds }
+        mobile: { type: boolean, default: false, note: Emulate scraping from a mobile device }
+        proxy:
+          type: string
+          enum: [basic, enhanced, auto]
+          default: auto
+          note: auto retries with enhanced proxies when basic fails; enhanced is billed like basic
+    test_request: { body: { urls: ["https://example.com"] } }
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      unit: page
+      source: docs
+      source_url: https://docs.firecrawl.dev/billing
+      checked: 2026-10-05
+      confidence: documented
+      note: 1 credit per page, billed as each page finishes, not when the job is submitted; the status route reports creditsUsed. A PDF costs 1 credit per PDF page. The JSON and other formats that add credits are not offered by this task.
+    output:
+      type: object
+      required: [success, id, url]
+      properties:
+        success: { type: boolean }
+        id: { type: string, description: The batch job id to pass to the status task }
+        url: { type: string, description: The status URL of the job }
+        invalidURLs: { type: [array, "null"], items: { type: string } }
+  - id: firecrawl.web.page.batch.status
+    capability: web.page.batch.status
+    platform: web
+    domain: batch
+    auth: bearer
+    scope: any_account
+    principal: organization
+    method: GET
+    path: /batch/scrape/{id}
+    name: Batch scrape progress, credits used and pages by job id
+    summary: Get the status of a batch scrape job
+    docs_url: https://docs.firecrawl.dev/api-reference/endpoint/batch-scrape-get
+    input:
+      pathParams:
+        id:
+          {
+            type: string,
+            required: true,
+            example: 123e4567-e89b-12d3-a456-426614174000,
+            note: The ID of the batch scrape job (a UUID),
+          }
+      queryParams:
+        skip:
+          type: integer
+          min: 0
+          note: Offset into the pages, as in the next URL of a truncated response; the docs describe it, the OpenAPI document does not list it
+    untestable: needs the id of a job that costs credits to start
+    cost: { type: free }
+    output:
+      type: object
+      required: [status, total, completed, creditsUsed]
+      properties:
+        status: { type: string, enum: [scraping, completed, failed, cancelled] }
+        total: { type: integer, description: Pages attempted }
+        completed: { type: integer, description: Pages scraped so far }
+        creditsUsed: { type: integer, description: Credits the batch has used so far }
+        expiresAt: { type: string }
+        createdAt: { type: string }
+        completedAt: { type: string, description: Present only once the batch has ended }
+        duration: { type: number, description: Seconds }
+        next: { type: [string, "null"], description: URL of the next 10MB of pages }
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              markdown: { type: string }
+              metadata:
+                type: object
+                properties:
+                  title:
+                    anyOf: [{ type: string }, { type: array, items: { type: string } }]
+                  description:
+                    anyOf: [{ type: string }, { type: array, items: { type: string } }]
+                  sourceURL: { type: string }
+                  url: { type: string }
+                  statusCode: { type: integer }
+                  error: { type: [string, "null"] }
+  - id: firecrawl.web.extract.structured
+    capability: web.extract.structured
+    platform: web
+    domain: extract
+    auth: bearer
+    scope: any_account
+    principal: organization
+    method: POST
+    path: /extract
+    name: Start JSON extraction from URLs by prompt or schema
+    summary: Extract structured data from pages using LLMs
+    docs_url: https://docs.firecrawl.dev/api-reference/endpoint/extract
+    input:
+      bodyType: json
+      body:
+        urls:
+          type: array
+          required: true
+          example: ["https://example.com"]
+          note: The URLs to extract data from, in glob format; a trailing /* crawls the whole domain (experimental)
+        prompt:
+          {
+            type: string,
+            example: Extract the page title,
+            note: Guides the extraction; required when there is no schema,
+          }
+        schema:
+          {
+            type: object,
+            note: JSON Schema of the data to return; required when there is no prompt,
+          }
+        enableWebSearch:
+          {
+            type: boolean,
+            default: false,
+            note: Let the extraction use web search to find additional data,
+          }
+        showSources:
+          {
+            type: boolean,
+            default: false,
+            note: Include the sources used in the response as sources,
+          }
+        includeSubdomains:
+          { type: boolean, default: true, note: Also scan subdomains of the provided URLs }
+    test_request: { body: { urls: ["https://example.com"], prompt: Extract the page title } }
+    cost:
+      type: per_call
+      currency: credit
+      source: docs
+      source_url: https://docs.firecrawl.dev/features/extract
+      checked: 2026-10-05
+      confidence: unknown
+      note: Extract bills credits by tokens used, each credit worth 15 tokens, and the docs publish no per-call or per-URL price. The status route reports tokensUsed.
+    output:
+      type: object
+      required: [success, id]
+      properties:
+        success: { type: boolean }
+        id: { type: string, description: The extract job id to pass to the status task }
+        invalidURLs: { type: [array, "null"], items: { type: string } }
+  - id: firecrawl.web.extract.status
+    capability: web.extract.status
+    platform: web
+    domain: extract
+    auth: bearer
+    scope: any_account
+    principal: organization
+    method: GET
+    path: /extract/{id}
+    name: Extraction status and JSON data by job id
+    summary: Get the status of an extract job
+    docs_url: https://docs.firecrawl.dev/api-reference/endpoint/extract-get
+    input:
+      pathParams:
+        id:
+          {
+            type: string,
+            required: true,
+            example: 123e4567-e89b-12d3-a456-426614174000,
+            note: The ID of the extract job (a UUID),
+          }
+    untestable: needs the id of a job that costs credits to start
+    cost:
+      type: per_call
+      currency: credit
+      source: docs
+      source_url: https://docs.firecrawl.dev/billing
+      checked: 2026-10-05
+      confidence: unknown
+      note: The billing page says polling a crawl or batch scrape job costs nothing and says nothing about extract jobs.
+    output:
+      type: object
+      required: [success, status]
+      properties:
+        success: { type: boolean }
+        status: { type: string, enum: [completed, processing, failed, cancelled] }
+        data: { type: object, description: "The extracted data, shaped by the prompt or schema" }
+        expiresAt: { type: string }
+        tokensUsed: { type: integer, description: Tokens the job used; only once completed }
+  - id: firecrawl.account.usage
+    capability: account.usage
+    platform: account
+    domain: billing
+    kind: account
+    auth: bearer
+    scope: any_account
+    principal: organization
+    method: GET
+    path: /team/credit-usage
+    name: Credits left and plan credits for the key's account
+    summary: Get remaining credits for the authenticated team
+    docs_url: https://docs.firecrawl.dev/api-reference/endpoint/credit-usage
+    input: {}
+    test_request: {}
+    cost:
+      type: per_call
+      currency: credit
+      source: docs
+      source_url: https://docs.firecrawl.dev/billing
+      checked: 2026-10-05
+      confidence: unknown
+      note: The billing page's credit table lists no charge for this route and no page says it is free.
+    output:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          required: [remainingCredits]
+          properties:
+            remainingCredits: { type: number, description: Credits the account has left }
+            planCredits:
+              {
+                type: number,
+                description: "Credits in the plan, excluding coupon and pay-as-you-go credits",
+              }
+            billingPeriodStart: { type: [string, "null"] }
+            billingPeriodEnd: { type: [string, "null"] }
+  - id: firecrawl.account.queue.status
+    capability: account.queue.status
+    platform: account
+    domain: queue
+    kind: account
+    auth: bearer
+    scope: any_account
+    principal: organization
+    method: GET
+    path: /team/queue-status
+    name: Queued and active jobs and concurrency of the key's account
+    summary: Metrics about your team's scrape queue
+    docs_url: https://docs.firecrawl.dev/api-reference/endpoint/queue-status
+    input: {}
+    test_request: {}
+    cost:
+      type: per_call
+      currency: credit
+      source: docs
+      source_url: https://docs.firecrawl.dev/billing
+      checked: 2026-10-05
+      confidence: unknown
+      note: The billing page's credit table lists no charge for this route and no page says it is free.
+    output:
+      type: object
+      required: [success, jobsInQueue, activeJobsInQueue, waitingJobsInQueue, maxConcurrency]
+      properties:
+        success: { type: boolean }
+        jobsInQueue: { type: number, description: Jobs in the queue }
+        activeJobsInQueue: { type: number, description: Jobs running now }
+        waitingJobsInQueue: { type: number, description: Jobs waiting for a free browser }
+        maxConcurrency: { type: number, description: Concurrent jobs the plan allows }
+        mostRecentSuccess: { type: [string, "null"] }

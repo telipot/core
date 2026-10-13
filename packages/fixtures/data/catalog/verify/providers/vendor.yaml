@@ -1,0 +1,275 @@
+provider: vendor
+display_name: Vendor
+base_url: http://vendor.test/v1
+docs_url: http://vendor.test/docs
+source: { docs: http://vendor.test/docs, openapi: null, curated: 2026-10-05 }
+version: 2026-10-05
+auth:
+  schemes:
+    api_key: { type: api_key, in: query, name: key, principals: [organization] }
+endpoints:
+  - id: vendor.page.text
+    capability: web.page.text
+    platform: web
+    auth: public
+    method: GET
+    path: /page
+    name: Page text by URL
+    summary: Reads a page
+    input:
+      queryParams:
+        url: { type: string, required: true }
+    test_request: { queryParams: { url: https://example.com } }
+    cost: { type: free }
+    output:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string }
+
+  - id: vendor.keywords.volume
+    capability: seo.keywords.volume
+    platform: seo
+    scope: any_account
+    auth: api_key
+    method: GET
+    path: /keywords
+    name: Keyword volume by phrase
+    summary: Volume of a phrase
+    input:
+      queryParams:
+        phrase: { type: string, required: true }
+        limit: { type: integer, required: false, min: 1, max: 10 }
+    test_request: { queryParams: { phrase: openrouter, limit: 1 } }
+    cost:
+      type: per_call
+      value: 0.01
+      currency: USD
+      source: docs
+      source_url: http://vendor.test/pricing
+      checked: 2026-10-05
+      confidence: documented
+    output:
+      type: object
+      required: [rows]
+      properties:
+        rows:
+          type: array
+          items:
+            type: object
+            required: [phrase]
+            properties:
+              phrase: { type: string }
+              volume: { type: integer }
+
+  - id: vendor.keywords.volume.again
+    capability: seo.keywords.volume
+    platform: seo
+    scope: any_account
+    auth: api_key
+    method: GET
+    path: /keywords
+    name: Keyword volume by phrase, repeated
+    summary: Volume of a phrase
+    input:
+      queryParams:
+        phrase: { type: string, required: true }
+        limit: { type: integer, required: false, min: 1, max: 10 }
+    test_request: { queryParams: { phrase: openrouter, limit: 1 } }
+    cost:
+      type: per_call
+      value: 0.01
+      currency: USD
+      source: docs
+      source_url: http://vendor.test/pricing
+      checked: 2026-10-05
+      confidence: documented
+    output:
+      type: object
+      required: [rows]
+      properties:
+        rows: { type: array }
+
+  - id: vendor.keywords.related
+    capability: seo.keywords.related
+    platform: seo
+    scope: any_account
+    auth: api_key
+    method: GET
+    path: /related
+    name: Related keywords by phrase
+    summary: Phrases related to a phrase
+    input:
+      queryParams:
+        phrase: { type: string, required: true }
+    test_request: { queryParams: { phrase: openrouter } }
+    cost:
+      type: per_call
+      value: 0.05
+      currency: USD
+      source: docs
+      source_url: http://vendor.test/pricing
+      checked: 2026-10-05
+      confidence: documented
+      settle: { type: reported_charge, path: usage.cost }
+    output:
+      type: object
+      required: [related]
+      properties:
+        related: { type: array, items: { type: string } }
+        usage:
+          type: object
+          properties:
+            cost: { type: number }
+
+  - id: vendor.domain.overview
+    capability: seo.domain.overview
+    platform: seo
+    scope: any_account
+    auth: api_key
+    method: POST
+    path: /domains/overview
+    name: Domain overview by domain
+    summary: Summary of a domain
+    input:
+      body:
+        domain: { type: string, required: true }
+      bodyType: json
+    test_request: { body: { domain: example.com } }
+    cost:
+      type: per_call
+      value: 0.02
+      currency: USD
+      source: docs
+      source_url: http://vendor.test/pricing
+      checked: 2026-10-05
+      confidence: documented
+    output:
+      type: object
+      required: [domain]
+      properties:
+        domain: { type: string }
+        owner_email: { type: string }
+
+  - id: vendor.contacts.find
+    capability: seo.contacts.find
+    platform: seo
+    scope: any_account
+    auth: api_key
+    method: GET
+    path: /contacts
+    name: Contacts by domain
+    summary: People at a domain
+    input:
+      queryParams:
+        domain: { type: string, required: true }
+    untestable: answers with named people, so no test request can avoid naming them
+    cost:
+      {
+        type: per_call,
+        value: 0.1,
+        currency: USD,
+        source: docs,
+        source_url: http://vendor.test/pricing,
+        checked: 2026-10-05,
+        confidence: documented,
+      }
+    output:
+      type: object
+
+  - id: vendor.keywords.lookup
+    capability: seo.keywords.lookup
+    platform: seo
+    scope: any_account
+    auth: api_key
+    method: GET
+    path: /lookup
+    name: Keyword rank by phrase
+    summary: Where a phrase ranks
+    input:
+      queryParams:
+        phrase: { type: string, required: true }
+    test_request: { queryParams: { phrase: openrouter } }
+    output:
+      type: string
+      pattern: "^(?!ERROR)"
+
+  - id: vendor.keywords.search
+    capability: seo.keywords.search
+    platform: seo
+    scope: any_account
+    auth: api_key
+    method: POST
+    path: /search
+    name: Keywords by prompt
+    summary: Keywords found by a prompt
+    input:
+      body:
+        prompt: { type: string, required: true }
+      bodyType: form
+    test_request: { body: { prompt: openrouter } }
+    cost:
+      type: per_success
+      value: 0.03
+      currency: USD
+      source: docs
+      source_url: http://vendor.test/pricing
+      checked: 2026-10-05
+      confidence: documented
+    output:
+      type: object
+      required: [keywords]
+      properties:
+        keywords: { type: array }
+
+  - id: vendor.keywords.similar
+    capability: seo.keywords.related
+    platform: seo
+    scope: any_account
+    auth: api_key
+    method: GET
+    path: /similar
+    name: Similar keywords by phrase
+    summary: Phrases similar to a phrase
+    input:
+      queryParams:
+        phrase: { type: string, required: true }
+    test_request: { queryParams: { phrase: openrouter } }
+    cost:
+      type: per_call
+      currency: USD
+      source: docs
+      source_url: http://vendor.test/pricing
+      checked: 2026-10-05
+      confidence: unknown
+      note: The vendor lists no rate, so no price is recorded; the response reports its charge in usage.cost.
+      settle: { type: reported_charge, path: usage.cost }
+    output:
+      type: object
+      required: [similar]
+      properties:
+        similar: { type: array, items: { type: string } }
+        usage:
+          type: object
+          properties:
+            cost: { type: number }
+
+  - id: vendor.credits.left
+    capability: account.usage
+    platform: account
+    scope: any_account
+    auth: api_key
+    kind: account
+    method: GET
+    path: /account
+    name: Credits left on the account
+    summary: Account credits
+    input: {}
+    test_request: {}
+    cost: { type: free }
+    output:
+      type: object
+      required: [credits]
+      properties:
+        credits: { type: integer }
+        email: { type: string }

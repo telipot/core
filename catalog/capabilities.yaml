@@ -1,0 +1,17 @@
+# The provider-neutral job taxonomy. A task's `capability` joins it to every
+# other provider's task for the same job; the first segment is its platform,
+# listed under `platforms`.
+platforms:
+  news: News sites and discussion boards
+  web: Web pages to search, read, crawl and map
+  account: The account behind a credential
+  email: Email addresses and mailboxes
+  people: People at companies
+  company: Companies
+  seo: Search engine optimization data
+  search-console: Google Search Console sites, search performance, sitemaps and indexing
+  analytics: Web and app analytics reports and properties
+  calendar: Calendars, their events and free time
+
+capabilities:
+  news.search: Stories and comments on a news site that match a query

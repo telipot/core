@@ -1,0 +1,30 @@
+provider: key-and-oauth
+display_name: Test key-and-oauth
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+auth:
+  schemes:
+    api_key: { type: api_key, in: header, name: X-API-Key, principals: [organization] }
+    oauth:
+      type: oauth2
+      authorization_url: https://auth.example.com/authorize
+      token_url: https://auth.example.com/token
+      pkce: true
+      refresh: static
+      principals: [organization]
+      scopes:
+        read: https://scopes.example.com/read
+endpoints:
+  - id: key-and-oauth.data.get
+    capability: test.data.get
+    platform: test
+    method: GET
+    path: /data
+    name: Test record by id
+    summary: Gets a record
+    input: {}
+    output: { type: object }
+    auth: api_key
+    scope: any_account

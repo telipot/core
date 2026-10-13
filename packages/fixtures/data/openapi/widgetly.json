@@ -1,0 +1,150 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Widgetly API", "version": "1.4.0" },
+  "servers": [{ "url": "/v1" }],
+  "security": [{ "apiKey": [] }],
+  "components": {
+    "securitySchemes": {
+      "apiKey": { "type": "apiKey", "in": "header", "name": "X-Widgetly-Key" },
+      "oauth": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://auth.widgetly.example/authorize",
+            "tokenUrl": "https://auth.widgetly.example/token",
+            "scopes": { "profile": "Read the signed-in profile", "widgets.write": "Change widgets" }
+          }
+        }
+      },
+      "session": { "type": "apiKey", "in": "cookie", "name": "sid" }
+    },
+    "parameters": {
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "description": "How many widgets to return",
+        "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }
+      }
+    },
+    "schemas": {
+      "NewWidget": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "What the widget is called",
+            "example": "Sprocket"
+          },
+          "size": { "type": "integer", "minimum": 1, "maximum": 10 },
+          "tags": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/widgets": {
+      "get": {
+        "operationId": "listWidgets",
+        "summary": "List widgets",
+        "description": "Widgets the owner has, newest first.",
+        "parameters": [
+          { "$ref": "#/components/parameters/Limit" },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": true,
+            "description": "The owner's handle",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "Widgets" } }
+      },
+      "post": {
+        "operationId": "createWidget",
+        "summary": "Create a widget",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/NewWidget" } }
+          }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/widgets/{widgetId}": {
+      "parameters": [
+        {
+          "name": "widgetId",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" },
+          "example": "w_1"
+        }
+      ],
+      "get": {
+        "operationId": "getWidget",
+        "summary": "Get a widget by id",
+        "externalDocs": { "url": "https://docs.widgetly.example/widgets/get" },
+        "responses": { "200": { "description": "A widget" } }
+      },
+      "delete": {
+        "operationId": "deleteWidget",
+        "summary": "Delete a widget",
+        "responses": { "204": { "description": "Deleted" } }
+      }
+    },
+    "/widgets/{widgetId}/parts": {
+      "get": {
+        "summary": "Parts a widget is made of",
+        "parameters": [
+          {
+            "name": "widgetId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "examples": { "first": { "value": "w_1" } }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["gear", "spring"] }
+          }
+        ],
+        "responses": { "200": { "description": "Parts" } }
+      }
+    },
+    "/status": {
+      "get": {
+        "operationId": "getStatus",
+        "summary": "Whether Widgetly is up",
+        "security": [],
+        "responses": { "200": { "description": "Status" } }
+      }
+    },
+    "/me": {
+      "get": {
+        "operationId": "getCurrentUser",
+        "summary": "The signed-in user",
+        "security": [{ "oauth": ["profile"] }],
+        "responses": { "200": { "description": "The user" } }
+      }
+    },
+    "/cookie-only": {
+      "get": {
+        "operationId": "getCookieOnly",
+        "summary": "Needs a browser session",
+        "security": [{ "session": [] }],
+        "responses": { "200": { "description": "Ok" } }
+      }
+    },
+    "/old-widgets": {
+      "get": {
+        "operationId": "listOldWidgets",
+        "summary": "List widgets, first version",
+        "deprecated": true,
+        "responses": { "200": { "description": "Widgets" } }
+      }
+    }
+  }
+}

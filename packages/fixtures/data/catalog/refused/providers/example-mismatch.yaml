@@ -1,0 +1,22 @@
+provider: example-mismatch
+display_name: Test example-mismatch
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+endpoints:
+  - id: example-mismatch.data.get
+    capability: test.data.get
+    platform: test
+    auth: public
+    method: GET
+    path: /data
+    name: Test record by id
+    summary: Gets a record
+    input: {}
+    example_response: examples/example-mismatch.data.get.json
+    output:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { type: object, properties: { title: { type: string } } } }

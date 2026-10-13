@@ -1,0 +1,19 @@
+{
+  "reports": [
+    {
+      "dimensionHeaders": [{ "name": "country" }],
+      "metricHeaders": [{ "name": "activeUsers", "type": "TYPE_INTEGER" }],
+      "rows": [
+        {
+          "dimensionValues": [{ "value": "United States" }],
+          "metricValues": [{ "value": "1842" }]
+        },
+        { "dimensionValues": [{ "value": "Germany" }], "metricValues": [{ "value": "311" }] }
+      ],
+      "rowCount": 37,
+      "metadata": { "currencyCode": "USD", "timeZone": "America/Los_Angeles" },
+      "kind": "analyticsData#runReport"
+    }
+  ],
+  "kind": "analyticsData#batchRunReports"
+}

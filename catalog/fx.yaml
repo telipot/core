@@ -1,0 +1,29 @@
+# What one unit of each currency a provider file writes is worth in USD, so a
+# rate refresh re-prices the catalog without touching a provider file. Every
+# rate names its basis, source and date; a provider that publishes no USD price
+# for its credits or meter has `usd: null`.
+
+rates_to_usd: {}
+credit_rates_usd:
+  firecrawl:
+    usd: 0.0038
+    basis: "Hobby plan billed monthly, $19 a month for 5,000 credits: 19 / 5,000 = $0.0038 a credit, the entry plan's monthly price. Other published rates: Hobby billed annually $16 / 5,000 = $0.0032; Standard billed annually $83 / 100,000 = $0.00083; a pay-as-you-go top-up of $5 buys 1,000 credits on Hobby ($0.005 a credit), 2,000 on Standard, 2,500 on Growth and 5,000 on Scale ($0.001)."
+    source: https://www.firecrawl.dev/pricing
+    checked: 2026-10-05
+  hunter:
+    usd: 0.0245
+    basis: All-in-one Starter plan billed monthly, $49 for 2,000 credits a month ($49 / 2,000)
+    source: https://hunter.io/pricing
+    checked: 2026-10-05
+  apollo:
+    usd: 0.0196
+    basis: "Basic plan at $49 per user per month billed annually, which is $588 a year, for 30,000 credits a year: 588 / 30,000 = $0.0196 per credit. Apollo's own pages give the price and the credits; add-on credit packs have no published price, and credits per call differ on legacy plans."
+    source: https://www.apollo.io/insights/apollo-vs-zoominfo
+    checked: 2026-10-05
+meter_rates_usd:
+  semrush:
+    api_unit:
+      usd: null
+      basis: Semrush sells API units in packages of 2,000,000, 5,000,000, 10,000,000 or 20,000,000 with a Business subscription and publishes no USD price per unit
+      source: https://www.semrush.com/kb/5-api
+      checked: 2026-10-05

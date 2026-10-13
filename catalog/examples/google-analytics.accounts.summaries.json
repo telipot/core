@@ -1,0 +1,23 @@
+{
+  "accountSummaries": [
+    {
+      "name": "accountSummaries/100200300",
+      "account": "accounts/100200300",
+      "displayName": "Example",
+      "propertySummaries": [
+        {
+          "property": "properties/123456789",
+          "displayName": "example.com",
+          "propertyType": "PROPERTY_TYPE_ORDINARY",
+          "parent": "accounts/100200300"
+        },
+        {
+          "property": "properties/987654321",
+          "displayName": "example.com staging",
+          "propertyType": "PROPERTY_TYPE_ORDINARY",
+          "parent": "accounts/100200300"
+        }
+      ]
+    }
+  ]
+}

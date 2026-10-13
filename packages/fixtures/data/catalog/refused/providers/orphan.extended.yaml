@@ -1,0 +1,10 @@
+provider: orphan
+source:
+  {
+    docs: https://docs.example.com,
+    openapi: https://api.example.com/openapi.json,
+    curated: 2026-10-04,
+  }
+version: 2026-10-04
+digest: sha256:e248b5f6f50bec22adfb460d4f4da476e6d9172bd792ab510683cc7f97771d63
+endpoints: []

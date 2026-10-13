@@ -1,0 +1,37 @@
+{
+  "name": "properties/123456789/metadata",
+  "dimensions": [
+    {
+      "apiName": "country",
+      "uiName": "Country",
+      "description": "The country the user activity came from.",
+      "category": "Geography",
+      "customDefinition": false
+    },
+    {
+      "apiName": "customEvent:levels_unlocked",
+      "uiName": "levels_unlocked",
+      "description": "A custom event parameter.",
+      "category": "Custom",
+      "customDefinition": true
+    }
+  ],
+  "metrics": [
+    {
+      "apiName": "activeUsers",
+      "uiName": "Active users",
+      "description": "The number of distinct users who visited the site or app.",
+      "category": "User",
+      "type": "TYPE_INTEGER",
+      "customDefinition": false
+    },
+    {
+      "apiName": "eventCount",
+      "uiName": "Event count",
+      "description": "The number of events.",
+      "category": "Event",
+      "type": "TYPE_INTEGER",
+      "customDefinition": false
+    }
+  ]
+}

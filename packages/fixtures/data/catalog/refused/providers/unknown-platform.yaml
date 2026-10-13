@@ -1,0 +1,19 @@
+provider: unknown-platform
+display_name: Test unknown-platform
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+proposed_capabilities:
+  nowhere.data.get: A record from nowhere
+endpoints:
+  - id: unknown-platform.data.get
+    capability: nowhere.data.get
+    platform: nowhere
+    auth: public
+    method: GET
+    path: /data
+    name: Test record by id
+    summary: Gets a record
+    input: {}
+    output: { type: object }

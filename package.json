@@ -1,0 +1,32 @@
+{
+  "name": "telipot-core",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ],
+    "catalog": {
+      "@effect/platform-bun": "^4.0.4",
+      "@effect/vitest": "^4.0.4",
+      "@types/bun": "^1.4.2",
+      "effect": "^4.0.4",
+      "stemmer": "^2.0.1",
+      "typescript": "^7.0.2",
+      "vitest": "^5.0.3",
+      "yaml": "^2.9.1"
+    }
+  },
+  "type": "module",
+  "scripts": {
+    "telipot": "bun packages/cli/src/bin.ts",
+    "validate": "bun packages/cli/src/bin.ts catalog validate catalog",
+    "build": "bun packages/cli/src/bin.ts catalog build catalog --out dist/snapshot.json",
+    "test": "bun run --filter '*' test",
+    "check-types": "bun run --filter '*' check-types"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  },
+  "packageManager": "bun@1.4.0"
+}

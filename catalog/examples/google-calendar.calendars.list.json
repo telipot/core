@@ -1,0 +1,31 @@
+{
+  "kind": "calendar#calendarList",
+  "etag": "\"EXAMPLEETAG\"",
+  "items": [
+    {
+      "kind": "calendar#calendarListEntry",
+      "etag": "\"EXAMPLEETAG\"",
+      "id": "contact@example.com",
+      "summary": "contact@example.com",
+      "timeZone": "America/Los_Angeles",
+      "accessRole": "owner",
+      "primary": true,
+      "selected": true,
+      "backgroundColor": "#9fe1e7",
+      "foregroundColor": "#000000",
+      "colorId": "14",
+      "defaultReminders": [{ "method": "popup", "minutes": 10 }]
+    },
+    {
+      "kind": "calendar#calendarListEntry",
+      "etag": "\"EXAMPLEETAG\"",
+      "id": "team@example.com",
+      "summary": "Team",
+      "timeZone": "America/Los_Angeles",
+      "accessRole": "reader",
+      "backgroundColor": "#cabdbf",
+      "foregroundColor": "#000000",
+      "colorId": "8"
+    }
+  ]
+}

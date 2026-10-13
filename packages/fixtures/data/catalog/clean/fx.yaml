@@ -1,0 +1,25 @@
+rates_to_usd:
+  EUR:
+    usd: 1.1712
+    basis: ECB euro reference rate
+    source: https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html
+    checked: 2026-10-03
+credit_rates_usd:
+  acme:
+    usd: 0.012
+    basis: Starter plan, $24 for 2,000 credits
+    source: https://docs.acme.example/pricing
+    checked: 2026-10-04
+  # Graph sells credits only through sales, so its tasks have no USD figure.
+  graph:
+    usd: null
+    basis: credits are sold by quote only
+    source: https://docs.graph.example/credits
+    checked: 2026-06-01
+meter_rates_usd:
+  acme:
+    api_unit:
+      usd: 0.00004
+      basis: Business plan, $80 for 2,000,000 API units
+      source: https://docs.acme.example/units
+      checked: 2026-10-04

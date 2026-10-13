@@ -1,0 +1,51 @@
+provider: helpdesk
+display_name: Helpdesk
+base_url: https://api.helpdesk.example
+docs_url: https://docs.helpdesk.example
+source: { docs: https://docs.helpdesk.example, openapi: null, curated: 2026-10-11 }
+version: 2026-10-11
+# The organization pastes a key; each of its agents signs in with OAuth, which alone says who.
+auth:
+  schemes:
+    key: { type: api_key, in: header, name: X-Helpdesk-Key, principals: [organization] }
+    oauth2:
+      type: oauth2
+      authorization_url: https://helpdesk.example/oauth/authorize
+      token_url: https://helpdesk.example/oauth/token
+      pkce: true
+      refresh: static
+      principals: [user]
+      scopes:
+        profile: https://helpdesk.example/auth/profile
+identity: { task: helpdesk.me.get, account_path: agent.id, label_path: agent.name }
+endpoints:
+  - id: helpdesk.tickets.list
+    capability: tickets.list
+    platform: tickets
+    auth: key
+    scope: any_account
+    method: GET
+    path: /tickets
+    name: Support tickets by status
+    summary: Lists the organization's support tickets
+    input: {}
+    skipped: no key for the replay yet
+    output: { type: object }
+    cost: { type: free }
+  - id: helpdesk.me.get
+    capability: account.profile
+    platform: account
+    auth: oauth2
+    scope: own_account
+    principal: user
+    kind: account
+    required_scopes: [profile]
+    method: GET
+    path: /me
+    name: The helpdesk agent a sign-in acts as
+    summary: Returns the signed-in agent, and their name
+    input: {}
+    untestable: needs a sign-in only the agent holds
+    output: { type: object }
+    example_response: examples/helpdesk.me.get.json
+    cost: { type: free }

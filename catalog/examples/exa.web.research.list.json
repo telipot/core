@@ -1,0 +1,34 @@
+{
+  "object": "masked",
+  "data": [
+    {
+      "id": "masked",
+      "object": "masked",
+      "status": "masked",
+      "stopReason": null,
+      "createdAt": "masked",
+      "completedAt": null,
+      "request": {},
+      "output": {
+        "text": "masked",
+        "structured": null,
+        "grounding": []
+      },
+      "usage": {
+        "agentComputeUnits": 0,
+        "searches": 3,
+        "emails": 0,
+        "phoneNumbers": 0
+      },
+      "costDollars": {
+        "total": 0.012,
+        "agentCompute": 0,
+        "search": 0.012,
+        "emails": 0,
+        "phoneNumbers": 0
+      }
+    }
+  ],
+  "hasMore": true,
+  "nextCursor": "masked"
+}

@@ -1,0 +1,49 @@
+name: Checks
+
+# Every pull request, from anyone: the catalog's own rules, the scan for secrets and contact
+# details, types and tests. No secret is used or available, and the checkout leaves no token.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - name: Find where the change started
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          base=$(git merge-base origin/main HEAD)
+          if [ "$GITHUB_REF" = refs/heads/main ]; then
+            base=$BEFORE
+            git cat-file -e "${base}^{commit}" 2>/dev/null ||
+              base=$(git rev-parse --verify --quiet HEAD^ || git hash-object -t tree /dev/null)
+          fi
+          echo "BASE=$base" >> "$GITHUB_ENV"
+      - name: telipot catalog validate
+        run: |
+          # Before the catalog's first commit there is no earlier lock to hold the ids to.
+          if git show "${BASE}:catalog/ids.lock.json" > "$RUNNER_TEMP/ids.lock.json" 2>/dev/null; then
+            bun run telipot catalog validate catalog --previous-lock "$RUNNER_TEMP/ids.lock.json"
+          else
+            bun run telipot catalog validate catalog
+          fi
+      - name: telipot catalog scan
+        run: bun run telipot catalog scan --base "$BASE"
+      - run: bun run check-types
+      - run: bun run test
+      - name: A release builds
+        run: bun run build

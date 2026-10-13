@@ -1,0 +1,22 @@
+provider: probe-two-addresses
+display_name: Test probe-two-addresses
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+auth:
+  schemes:
+    api_key: { type: api_key, in: header, name: X-API-Key, principals: [organization] }
+probe: { path: /me, url: https://www.example.com/me, expect: { status: 200 } }
+endpoints:
+  - id: probe-two-addresses.data.get
+    capability: test.data.get
+    platform: test
+    method: GET
+    path: /data
+    name: Test record by id
+    summary: Gets a record
+    input: {}
+    output: { type: object }
+    auth: api_key
+    scope: any_account

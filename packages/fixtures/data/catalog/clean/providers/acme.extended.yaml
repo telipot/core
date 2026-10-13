@@ -1,0 +1,37 @@
+provider: acme
+source:
+  {
+    docs: https://docs.acme.example,
+    openapi: https://api.acme.example/openapi.json,
+    curated: 2026-10-04,
+  }
+version: 2026-10-04
+digest: sha256:126b21d990ee31ee941e763177608e8404b1c2fbaf0d2cc8e542073c01b90c7c
+endpoints:
+  # The same route as the core task acme.page.text, so core wins.
+  - id: acme.x.page
+    auth: api_key
+    scope: any_account
+    method: GET
+    path: /page
+    name: Page
+    summary: Returns the text of a page
+    input: {}
+  # The core task acme.widget.get's route, under another placeholder name.
+  - id: acme.x.widget
+    auth: public
+    method: GET
+    path: /widgets/{id}
+    name: Widget
+    summary: Gets a widget
+    input:
+      pathParams:
+        id: { type: string, required: true }
+  - id: acme.x.gadgets
+    auth: api_key
+    scope: any_account
+    method: GET
+    path: /gadgets
+    name: Acme gadgets, newest first
+    summary: Lists gadgets
+    input: {}

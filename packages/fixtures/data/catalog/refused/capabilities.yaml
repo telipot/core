@@ -1,0 +1,5 @@
+platforms:
+  test: Test records
+capabilities:
+  test.data.get: A record from a test provider
+  ghost.data.get: A capability on a platform nobody listed

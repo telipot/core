@@ -1,0 +1,1162 @@
+# Semrush, Analytics API version 3 (api.semrush.com). Curated from the vendor's documentation; Semrush
+# publishes no OpenAPI. Every report is one GET: the Analytics API reports share the path / on
+# api.semrush.com and are chosen by the fixed query parameter `type`; the Backlinks reports live under
+# /analytics/v1/ and are chosen by `type` too. Responses are semicolon-separated text, not JSON.
+#
+# Semrush marks the version 3 Keyword reports and Backlinks reports deprecated ("no longer recommended for
+# new integrations"); its version 4 replacements are in Early Access, need a separate version 4 key and
+# answer JSON. The Domain and Overview reports used here carry no deprecation notice.
+#
+# Deliberately left out of every input: display_date and display_daily (historical data bills about five
+# times the live price per line, and a price cannot switch on an optional field), export_escape and
+# export_decode (they change the response format).
+provider: semrush
+display_name: Semrush
+base_url: https://api.semrush.com
+docs_url: https://developer.semrush.com/api/v3/seo/overview/
+source:
+  { docs: https://developer.semrush.com/api/v3/seo/overview/, openapi: null, curated: 2026-10-05 }
+version: 2026-10-05
+pricing_url: https://developer.semrush.com/api/v3/get-started/api-units-balance/
+limits: Up to 10 requests per second and 10 simultaneous requests per account on every method; each report spends API units from the account's balance, per line returned or per request, and the data may not be cached for more than one month.
+auth:
+  schemes:
+    api_key: { type: api_key, in: query, name: key, principals: [organization] }
+probe:
+  url: https://www.semrush.com/users/countapiunits.html
+  method: GET
+  auth: api_key
+  expect: { status: 200, body_pattern: '^\s*[0-9][0-9,]*\s*$' }
+  reject: { body_pattern: '^\s*ERROR (70|12[0-2]) ' }
+terms:
+  url: https://www.semrush.com/company/legal/terms-of-service/
+  note: Semrush's terms of service (section 3.3) bar using its outputs as inputs or prompts into, or to develop, train or improve, any AI or machine-learning system, except Semrush's own official integrations embedded in an AI system.
+proposed_capabilities:
+  seo.keywords.volume: Search volume, cost per click and competition of a keyword
+  seo.keywords.volume.batch: Search volume, cost per click and competition of up to 100 keywords at once
+  seo.keywords.related: Keywords related to a keyword
+  seo.keywords.questions: Questions people ask about a keyword
+  seo.keywords.difficulty: How hard a keyword is to rank for
+  seo.serp.organic: The organic results on a keyword's search page
+  seo.domain.overview: Organic and paid search summary of a domain
+  seo.domain.keywords: Keywords a domain ranks for in organic search, each with its rank
+  seo.domain.competitors: Domains that compete with a domain in organic search
+  seo.domain.pages: Pages of a domain that rank in organic search, with their keywords and traffic
+  seo.domain.gap: Keywords that two or more domains rank for, compared side by side
+  seo.backlinks.summary: Backlink profile of a domain or URL
+  seo.backlinks.list: Backlinks that point at a domain or URL
+  seo.backlinks.refdomains: Domains that link to a domain or URL
+endpoints:
+  - id: semrush.seo.keywords.volume
+    capability: seo.keywords.volume
+    platform: seo
+    domain: keywords
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /
+    name: Keyword volume, CPC and competition by phrase and country
+    summary: This report provides a keyword summary, including its volume, CPC, competition level, and the number of results in a chosen regional database.
+    docs_url: https://developer.semrush.com/api/v3/seo/keyword-reports/#keyword-overview-one-database
+    input:
+      queryParams:
+        type:
+          {
+            type: string,
+            required: true,
+            const: phrase_this,
+            note: Fixed. Selects the Keyword Overview (one database) report.,
+          }
+        phrase:
+          {
+            type: string,
+            required: true,
+            example: seo,
+            note: Keyword or keyword expression to investigate.,
+          }
+        database:
+          type: string
+          required: true
+          example: us
+          note: Two-letter regional database code, such as us, uk, ca, de or fr. Keyword reports accept the plain two-letter codes only, not the mobile- and -ext variants. The full list is under Databases in the SEO API overview.
+        export_columns:
+          type: string
+          required: false
+          default: Ph,Nq,Cp,Co,Nr
+          note: "Comma-separated column codes, in the order wanted. Ph Keyword, Nq Search Volume (monthly average over the last 12 months), Cp CPC in USD, Co Competition (0 to 1, 1 is highest), Nr Number of Results, Td Trends (12 monthly values), In Intents (0 Commercial, 1 Informational, 2 Navigational, 3 Transactional), Kd Keyword Difficulty Index (0 to 100, higher is harder)."
+    test_request:
+      queryParams: { type: phrase_this, phrase: seo, database: us, export_columns: "Ph,Nq,Cp,Co" }
+    cost:
+      type: per_result
+      value: 10
+      currency: meter
+      unit: api_unit
+      source: docs
+      source_url: https://developer.semrush.com/api/v3/seo/keyword-reports/#keyword-overview-one-database
+      checked: 2026-10-05
+      confidence: documented
+      note: 10 API units per line returned, one line for this report. Semrush does not charge a request that returns no data. Semrush publishes no USD price per API unit.
+    output:
+      type: string
+      pattern: '^(?!\s*ERROR)'
+      description: "CSV text: a header line of column names, then one line per result, columns separated by semicolons, in the order of export_columns. A body that starts with ERROR is a failure, for example ERROR 50 :: NOTHING FOUND."
+
+  - id: semrush.seo.keywords.volume.batch
+    capability: seo.keywords.volume.batch
+    platform: seo
+    domain: keywords
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /
+    name: Volume, CPC and competition of up to 100 keywords by country
+    summary: This report provides a summary of up to 100 keywords, including their volume, CPC, competition level, and the number of results in a chosen regional database.
+    docs_url: https://developer.semrush.com/api/v3/seo/keyword-reports/#batch-keyword-overview-one-database
+    input:
+      queryParams:
+        type:
+          {
+            type: string,
+            required: true,
+            const: phrase_these,
+            note: Fixed. Selects the Batch Keyword Overview (one database) report.,
+          }
+        phrase:
+          {
+            type: string,
+            required: true,
+            example: "seo;ebay",
+            note: "Up to 100 keywords or keyword expressions separated by semicolons.",
+          }
+        database:
+          type: string
+          required: true
+          example: us
+          note: Two-letter regional database code, such as us, uk, ca, de or fr. Keyword reports accept the plain two-letter codes only, not the mobile- and -ext variants. The full list is under Databases in the SEO API overview.
+        export_columns:
+          type: string
+          required: false
+          default: Ph,Nq,Cp,Co,Nr,Td
+          note: "Comma-separated column codes, in the order wanted. Ph Keyword, Nq Search Volume (monthly average over the last 12 months), Cp CPC in USD, Co Competition (0 to 1, 1 is highest), Nr Number of Results, Td Trends (12 monthly values), In Intents (0 Commercial, 1 Informational, 2 Navigational, 3 Transactional), Kd Keyword Difficulty Index (0 to 100, higher is harder)."
+    test_request:
+      queryParams:
+        { type: phrase_these, phrase: "seo;ebay", database: us, export_columns: "Ph,Nq,Cp,Co" }
+    cost:
+      type: per_result
+      value: 10
+      currency: meter
+      unit: api_unit
+      source: docs
+      source_url: https://developer.semrush.com/api/v3/seo/keyword-reports/#batch-keyword-overview-one-database
+      checked: 2026-10-05
+      confidence: documented
+      note: 10 API units per line returned, one line per keyword found. Semrush does not charge a request that returns no data. Semrush publishes no USD price per API unit.
+    output:
+      type: string
+      pattern: '^(?!\s*ERROR)'
+      description: "CSV text: a header line of column names, then one line per keyword, columns separated by semicolons, in the order of export_columns. A body that starts with ERROR is a failure, for example ERROR 50 :: NOTHING FOUND."
+
+  - id: semrush.seo.keywords.related
+    capability: seo.keywords.related
+    platform: seo
+    domain: keywords
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /
+    name: Related keywords with volume and CPC by phrase and country
+    summary: This report provides an extended list of related keywords, synonyms, and variations relevant to a queried term in a chosen database.
+    docs_url: https://developer.semrush.com/api/v3/seo/keyword-reports/#related-keywords
+    input:
+      queryParams:
+        type:
+          {
+            type: string,
+            required: true,
+            const: phrase_related,
+            note: Fixed. Selects the Related Keywords report.,
+          }
+        phrase:
+          {
+            type: string,
+            required: true,
+            example: seo,
+            note: Keyword or keyword expression to investigate.,
+          }
+        database:
+          type: string
+          required: true
+          example: us
+          note: Two-letter regional database code, such as us, uk, ca, de or fr. Keyword reports accept the plain two-letter codes only, not the mobile- and -ext variants. The full list is under Databases in the SEO API overview.
+        display_limit:
+          type: integer
+          required: true
+          min: 1
+          max: 100000
+          example: 10
+          note: Lines returned, which is what Semrush bills. Semrush returns up to 10,000 lines when the parameter is omitted or 0, so this task requires it. Semrush returns at most 100,000 lines per call.
+        display_offset:
+          type: integer
+          required: false
+          min: 0
+          note: Lines to skip before the report starts. Semrush counts display_limit from the first line, so set display_limit to display_offset plus the lines wanted.
+        display_sort:
+          type: string
+          required: false
+          enum:
+            [
+              nq_asc,
+              nq_desc,
+              cp_asc,
+              cp_desc,
+              co_asc,
+              co_desc,
+              nr_asc,
+              nr_desc,
+              rr_asc,
+              rr_desc,
+              kd_asc,
+              kd_desc,
+            ]
+          note: Sort rule, one per call, such as nq_desc for the highest volume first.
+        display_filter:
+          type: string
+          required: false
+          example: "+|Nq|Lt|1000"
+          note: "Filters written as sign|column|operation|value, joined with |. Sign + includes and - excludes. Columns: Ph, Nq, Cp, Co, Nr, Wc, Fk, Kd. Operations: Eq, Gt, Lt for numbers; Bw, Ew, Eq, Co, Wm for text. At most 25 filters. Write it in plain text; the + must reach Semrush as %2B."
+        export_columns:
+          type: string
+          required: false
+          default: Ph,Nr,Cp,Co,Nq,Td,Rr
+          note: "Comma-separated column codes, in the order wanted. Ph Keyword, Nq Search Volume (monthly average over the last 12 months), Cp CPC in USD, Co Competition (0 to 1, 1 is highest), Nr Number of Results, Td Trends (12 monthly values), Rr Related Relevance, Fk SERP Features, In Intents (0 Commercial, 1 Informational, 2 Navigational, 3 Transactional), Kd Keyword Difficulty Index (0 to 100, higher is harder)."
+    test_request:
+      queryParams:
+        {
+          type: phrase_related,
+          phrase: seo,
+          database: us,
+          display_limit: 1,
+          export_columns: "Ph,Nq,Cp,Co",
+        }
+    cost:
+      type: per_result
+      value: 40
+      currency: meter
+      unit: api_unit
+      source: docs
+      source_url: https://developer.semrush.com/api/v3/seo/keyword-reports/#related-keywords
+      checked: 2026-10-05
+      confidence: documented
+      note: 40 API units per line returned. Semrush does not charge a request that returns no data. Semrush publishes no USD price per API unit.
+    output:
+      type: string
+      pattern: '^(?!\s*ERROR)'
+      description: "CSV text: a header line of column names, then one line per related keyword, columns separated by semicolons, in the order of export_columns. A body that starts with ERROR is a failure, for example ERROR 50 :: NOTHING FOUND."
+
+  - id: semrush.seo.keywords.questions
+    capability: seo.keywords.questions
+    platform: seo
+    domain: keywords
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /
+    name: Questions about a keyword with volume and CPC by country
+    summary: The report lists phrase questions relevant to a queried term in a chosen database.
+    docs_url: https://developer.semrush.com/api/v3/seo/keyword-reports/#phrase-questions
+    input:
+      queryParams:
+        type:
+          {
+            type: string,
+            required: true,
+            const: phrase_questions,
+            note: Fixed. Selects the Phrase questions report.,
+          }
+        phrase:
+          {
+            type: string,
+            required: true,
+            example: seo,
+            note: Keyword or keyword expression to investigate.,
+          }
+        database:
+          type: string
+          required: true
+          example: us
+          note: Two-letter regional database code, such as us, uk, ca, de or fr. Keyword reports accept the plain two-letter codes only, not the mobile- and -ext variants. The full list is under Databases in the SEO API overview.
+        display_limit:
+          type: integer
+          required: true
+          min: 1
+          max: 100000
+          example: 10
+          note: Lines returned, which is what Semrush bills. Semrush returns up to 10,000 lines when the parameter is omitted or 0, so this task requires it. Semrush returns at most 100,000 lines per call.
+        display_offset:
+          type: integer
+          required: false
+          min: 0
+          note: Lines to skip before the report starts. Semrush counts display_limit from the first line, so set display_limit to display_offset plus the lines wanted.
+        display_sort:
+          type: string
+          required: false
+          enum:
+            [nq_asc, nq_desc, cp_asc, cp_desc, co_asc, co_desc, nr_asc, nr_desc, kd_asc, kd_desc]
+          note: Sort rule, one per call, such as nq_desc for the highest volume first.
+        display_filter:
+          type: string
+          required: false
+          example: "+|Nq|Lt|1000"
+          note: "Filters written as sign|column|operation|value, joined with |. Sign + includes and - excludes. Columns: Ph, Nq, Cp, Co, Nr, Kd. Operations: Eq, Gt, Lt for numbers; Bw, Ew, Eq, Co, Wm for text. At most 25 filters. Write it in plain text; the + must reach Semrush as %2B."
+        export_columns:
+          type: string
+          required: false
+          default: Ph,Nr,Cp,Co,Nq,Td
+          note: "Comma-separated column codes, in the order wanted. Ph Keyword, Nq Search Volume (monthly average over the last 12 months), Cp CPC in USD, Co Competition (0 to 1, 1 is highest), Nr Number of Results, Td Trends (12 monthly values), In Intents (0 Commercial, 1 Informational, 2 Navigational, 3 Transactional), Kd Keyword Difficulty Index (0 to 100, higher is harder)."
+    test_request:
+      queryParams:
+        {
+          type: phrase_questions,
+          phrase: seo,
+          database: us,
+          display_limit: 1,
+          export_columns: "Ph,Nq,Cp,Co",
+        }
+    cost:
+      type: per_result
+      value: 40
+      currency: meter
+      unit: api_unit
+      source: docs
+      source_url: https://developer.semrush.com/api/v3/seo/keyword-reports/#phrase-questions
+      checked: 2026-10-05
+      confidence: documented
+      note: 40 API units per line returned. Semrush does not charge a request that returns no data. Semrush publishes no USD price per API unit.
+    output:
+      type: string
+      pattern: '^(?!\s*ERROR)'
+      description: "CSV text: a header line of column names, then one line per question, columns separated by semicolons, in the order of export_columns. A body that starts with ERROR is a failure, for example ERROR 50 :: NOTHING FOUND."
+
+  - id: semrush.seo.keywords.difficulty
+    capability: seo.keywords.difficulty
+    platform: seo
+    domain: keywords
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /
+    name: Keyword difficulty index of up to 100 keywords by country
+    summary: This report provides keyword difficulty, an index that helps to estimate how difficult it would be to seize competitors’ positions in organic search within Google’s top 10 with a queried search term.
+    docs_url: https://developer.semrush.com/api/v3/seo/keyword-reports/#keyword-difficulty
+    input:
+      queryParams:
+        type:
+          {
+            type: string,
+            required: true,
+            const: phrase_kdi,
+            note: Fixed. Selects the Keyword Difficulty report.,
+          }
+        phrase:
+          {
+            type: string,
+            required: true,
+            example: "seo;ebay",
+            note: "From 1 to 100 keywords separated by semicolons.",
+          }
+        database:
+          type: string
+          required: true
+          example: us
+          note: Two-letter regional database code, such as us, uk, ca, de or fr. Keyword reports accept the plain two-letter codes only, not the mobile- and -ext variants. The full list is under Databases in the SEO API overview.
+        export_columns:
+          type: string
+          required: false
+          default: Ph,Kd
+          note: "Comma-separated column codes, in the order wanted. Ph Keyword, Kd Keyword Difficulty Index (0 to 100, higher is harder)."
+    test_request:
+      queryParams: { type: phrase_kdi, phrase: seo, database: us, export_columns: "Ph,Kd" }
+    cost:
+      type: per_result
+      value: 50
+      currency: meter
+      unit: api_unit
+      source: docs
+      source_url: https://developer.semrush.com/api/v3/seo/keyword-reports/#keyword-difficulty
+      checked: 2026-10-05
+      confidence: documented
+      note: 50 API units per line returned, one line per keyword. Semrush does not charge a request that returns no data. Semrush publishes no USD price per API unit.
+    output:
+      type: string
+      pattern: '^(?!\s*ERROR)'
+      description: "CSV text: a header line of column names, then one line per keyword, columns separated by semicolons, in the order of export_columns. A body that starts with ERROR is a failure, for example ERROR 50 :: NOTHING FOUND."
+
+  - id: semrush.seo.serp.organic
+    capability: seo.serp.organic
+    platform: seo
+    domain: serp
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /
+    name: Google top organic domains and URLs for a keyword by country
+    summary: This report lists domains ranking in Google’s top 100 organic search results with a requested keyword.
+    docs_url: https://developer.semrush.com/api/v3/seo/keyword-reports/#organic-results
+    input:
+      queryParams:
+        type:
+          {
+            type: string,
+            required: true,
+            const: phrase_organic,
+            note: Fixed. Selects the Organic Results report.,
+          }
+        phrase:
+          {
+            type: string,
+            required: true,
+            example: seo,
+            note: Keyword or keyword expression to investigate.,
+          }
+        database:
+          type: string
+          required: true
+          example: us
+          note: Two-letter regional database code, such as us, uk, ca, de or fr. Keyword reports accept the plain two-letter codes only, not the mobile- and -ext variants. The full list is under Databases in the SEO API overview.
+        display_limit:
+          type: integer
+          required: true
+          min: 1
+          max: 100000
+          example: 10
+          note: Lines returned, which is what Semrush bills. Semrush returns up to 10,000 lines when the parameter is omitted or 0, so this task requires it. Semrush returns at most 100,000 lines per call.
+        display_offset:
+          type: integer
+          required: false
+          min: 0
+          note: Lines to skip before the report starts. Semrush counts display_limit from the first line, so set display_limit to display_offset plus the lines wanted.
+        export_columns:
+          type: string
+          required: false
+          default: Dn,Ur,Fk
+          note: "Comma-separated column codes, in the order wanted. Po Position, Pt Position type, Dn Domain, Ur Url, Fk Keywords SERP Features, Fp SERP Features the domain appears in."
+    test_request:
+      queryParams:
+        {
+          type: phrase_organic,
+          phrase: seo,
+          database: us,
+          display_limit: 1,
+          export_columns: "Po,Dn,Ur",
+        }
+    cost:
+      type: per_result
+      value: 10
+      currency: meter
+      unit: api_unit
+      source: docs
+      source_url: https://developer.semrush.com/api/v3/seo/keyword-reports/#organic-results
+      checked: 2026-10-05
+      confidence: documented
+      note: 10 API units per line returned. Semrush does not charge a request that returns no data. Semrush publishes no USD price per API unit.
+    output:
+      type: string
+      pattern: '^(?!\s*ERROR)'
+      description: "CSV text: a header line of column names, then one line per ranking result, columns separated by semicolons, in the order of export_columns. A body that starts with ERROR is a failure, for example ERROR 50 :: NOTHING FOUND."
+
+  - id: semrush.seo.domain.overview
+    capability: seo.domain.overview
+    platform: seo
+    domain: domains
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /
+    name: Domain rank, organic and paid keywords, traffic by country
+    summary: This report provides live or historical data on a domain’s keyword rankings in both organic and paid search in a chosen regional database.
+    docs_url: https://developer.semrush.com/api/v3/seo/overview-reports/#domain-overview-one-database
+    input:
+      queryParams:
+        type:
+          {
+            type: string,
+            required: true,
+            const: domain_rank,
+            note: Fixed. Selects the Domain Overview (one database) report.,
+          }
+        domain:
+          {
+            type: string,
+            required: true,
+            example: stripe.com,
+            note: Unique name of the website to investigate.,
+          }
+        database:
+          type: string
+          required: true
+          example: us
+          note: Two-letter regional database code, such as us, uk, ca, de or fr. Domain reports also take the mobile- and -ext codes listed under Databases in the SEO API overview.
+        export_columns:
+          type: string
+          required: false
+          default: Dn,Rk,Or,Ot,Oc,Ad,At,Ac
+          note: "Comma-separated column codes, in the order wanted. Dn Domain, Rk Rank, Or Organic Keywords, Ot Organic Traffic, Oc Organic Cost, Ad Adwords Keywords, At Adwords Traffic, Ac Adwords Cost. The report also takes position, intent and SERP feature columns listed in the SEO API overview."
+    test_request:
+      queryParams:
+        { type: domain_rank, domain: stripe.com, database: us, export_columns: "Dn,Rk,Or,Ot,Oc" }
+    cost:
+      type: per_result
+      value: 10
+      currency: meter
+      unit: api_unit
+      source: docs
+      source_url: https://developer.semrush.com/api/v3/seo/overview-reports/#domain-overview-one-database
+      checked: 2026-10-05
+      confidence: documented
+      note: 10 API units per line returned, one line for this report. Semrush does not charge a request that returns no data. Semrush publishes no USD price per API unit.
+    output:
+      type: string
+      pattern: '^(?!\s*ERROR)'
+      description: "CSV text: a header line of column names, then one line, columns separated by semicolons, in the order of export_columns. A body that starts with ERROR is a failure, for example ERROR 50 :: NOTHING FOUND."
+
+  - id: semrush.seo.domain.keywords
+    capability: seo.domain.keywords
+    platform: seo
+    domain: domains
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /
+    name: Keywords a domain ranks for in Google organic, by country
+    summary: This report lists keywords that bring users to a domain via Google’s top 100 organic search results.
+    docs_url: https://developer.semrush.com/api/v3/seo/domain-reports/#domain-organic-search-keywords
+    input:
+      queryParams:
+        type:
+          {
+            type: string,
+            required: true,
+            const: domain_organic,
+            note: Fixed. Selects the Domain Organic Search Keywords report.,
+          }
+        domain:
+          {
+            type: string,
+            required: true,
+            example: stripe.com,
+            note: Unique name of the website to investigate.,
+          }
+        database:
+          type: string
+          required: true
+          example: us
+          note: Two-letter regional database code, such as us, uk, ca, de or fr. Domain reports also take the mobile- and -ext codes listed under Databases in the SEO API overview.
+        display_limit:
+          type: integer
+          required: true
+          min: 1
+          max: 100000
+          example: 10
+          note: Lines returned, which is what Semrush bills. Semrush returns up to 10,000 lines when the parameter is omitted or 0, so this task requires it. Semrush returns at most 100,000 lines per call.
+        display_offset:
+          type: integer
+          required: false
+          min: 0
+          note: Lines to skip before the report starts. Semrush counts display_limit from the first line, so set display_limit to display_offset plus the lines wanted.
+        display_sort:
+          type: string
+          required: false
+          enum:
+            [
+              po_asc,
+              po_desc,
+              tg_asc,
+              tg_desc,
+              tr_asc,
+              tr_desc,
+              tc_asc,
+              tc_desc,
+              nq_asc,
+              nq_desc,
+              co_asc,
+              co_desc,
+              kd_asc,
+              kd_desc,
+              cp_asc,
+              cp_desc,
+              nr_asc,
+              nr_desc,
+              ts_asc,
+              ts_desc,
+            ]
+          note: Sort rule, one per call, such as tr_desc for the biggest traffic share first.
+        display_positions:
+          type: string
+          required: false
+          enum: [new, lost, rise, fall]
+          note: "Keeps only keywords that are new in the top 100, lost from it, moved up (rise) or moved down but still in it (fall)."
+        display_filter:
+          type: string
+          required: false
+          example: "+|Ph|Co|seo"
+          note: "Filters written as sign|column|operation|value, joined with |. Sign + includes and - excludes. Columns: Ph, Po, Nq, Cp, Ur, Tg, Tr, Tc, Nr, Co, Pp, Pd, Fp, Fk, In, Br. Operations: Eq, Gt, Lt for numbers; Bw, Ew, Eq, Co, Wm for text. At most 25 filters. Write it in plain text; the + must reach Semrush as %2B."
+        export_columns:
+          type: string
+          required: false
+          default: Ph,Po,Pp,Pd,Nq,Cp,Ur,Tr,Tc,Co,Nr,Td
+          note: "Comma-separated column codes, in the order wanted. Ph Keyword, Po Position, Pp Previous Position, Pd Position Difference, Nq Search Volume, Cp CPC in USD, Ur Url, Tr Traffic (%), Tg Traffic, Tc Traffic Cost (%), Co Competition (0 to 1), Nr Number of Results, Td Trends, Kd Keyword Difficulty Index, Fp and Fk SERP Features, Ts Timestamp, In Intents (0 Commercial, 1 Informational, 2 Navigational, 3 Transactional), Pt Position type."
+    test_request:
+      queryParams:
+        {
+          type: domain_organic,
+          domain: stripe.com,
+          database: us,
+          display_limit: 1,
+          export_columns: "Ph,Po,Nq,Ur",
+        }
+    cost:
+      type: per_result
+      value: 10
+      currency: meter
+      unit: api_unit
+      source: docs
+      source_url: https://developer.semrush.com/api/v3/seo/domain-reports/#domain-organic-search-keywords
+      checked: 2026-10-05
+      confidence: documented
+      note: 10 API units per line returned. Semrush does not charge a request that returns no data. Semrush publishes no USD price per API unit.
+    output:
+      type: string
+      pattern: '^(?!\s*ERROR)'
+      description: "CSV text: a header line of column names, then one line per keyword, columns separated by semicolons, in the order of export_columns. A body that starts with ERROR is a failure, for example ERROR 50 :: NOTHING FOUND."
+
+  - id: semrush.seo.domain.competitors
+    capability: seo.domain.competitors
+    platform: seo
+    domain: domains
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /
+    name: Organic search competitors of a domain by country
+    summary: This report lists a domain’s competitors in organic search results.
+    docs_url: https://developer.semrush.com/api/v3/seo/domain-reports/#competitors-in-organic-search
+    input:
+      queryParams:
+        type:
+          {
+            type: string,
+            required: true,
+            const: domain_organic_organic,
+            note: Fixed. Selects the Competitors in Organic Search report.,
+          }
+        domain:
+          {
+            type: string,
+            required: true,
+            example: stripe.com,
+            note: Unique name of the website to investigate.,
+          }
+        database:
+          type: string
+          required: true
+          example: us
+          note: Two-letter regional database code, such as us, uk, ca, de or fr. Domain reports also take the mobile- and -ext codes listed under Databases in the SEO API overview.
+        display_limit:
+          type: integer
+          required: true
+          min: 1
+          max: 100000
+          example: 10
+          note: Lines returned, which is what Semrush bills. Semrush returns up to 10,000 lines when the parameter is omitted or 0, so this task requires it. Semrush returns at most 100,000 lines per call.
+        display_offset:
+          type: integer
+          required: false
+          min: 0
+          note: Lines to skip before the report starts. Semrush counts display_limit from the first line, so set display_limit to display_offset plus the lines wanted.
+        display_sort:
+          type: string
+          required: false
+          enum: [np_desc, np_asc, cr_desc, cr_asc]
+          note: Sort rule, one per call. np is Common Keywords and cr is Competitor Relevance.
+        export_columns:
+          type: string
+          required: false
+          default: Dn,Cr,Np,Or,Ot,Oc,Ad
+          note: "Comma-separated column codes, in the order wanted. Dn Domain, Cr Competitor Relevance, Np Common Keywords (organic keywords both domains rank for in Google's top 100), Or Organic Keywords, Ot Organic Traffic, Oc Organic Cost, Ad Adwords Keywords, Sr SERP Features Positions, St SERP Features Traffic, Sc SERP Features Traffic Cost."
+    test_request:
+      queryParams:
+        {
+          type: domain_organic_organic,
+          domain: stripe.com,
+          database: us,
+          display_limit: 1,
+          export_columns: "Dn,Cr,Np,Or,Ot",
+        }
+    cost:
+      type: per_result
+      value: 40
+      currency: meter
+      unit: api_unit
+      source: docs
+      source_url: https://developer.semrush.com/api/v3/seo/domain-reports/#competitors-in-organic-search
+      checked: 2026-10-05
+      confidence: documented
+      note: 40 API units per line returned. Semrush does not charge a request that returns no data. Semrush publishes no USD price per API unit.
+    output:
+      type: string
+      pattern: '^(?!\s*ERROR)'
+      description: "CSV text: a header line of column names, then one line per competitor, columns separated by semicolons, in the order of export_columns. A body that starts with ERROR is a failure, for example ERROR 50 :: NOTHING FOUND."
+
+  - id: semrush.seo.domain.pages
+    capability: seo.domain.pages
+    platform: seo
+    domain: domains
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /
+    name: Top organic pages of a domain with keywords and traffic
+    summary: This report shows unique pages of the analyzed domain ranking in Google’s top 100 organic search results.
+    docs_url: https://developer.semrush.com/api/v3/seo/domain-reports/#domain-organic-pages
+    input:
+      queryParams:
+        type:
+          {
+            type: string,
+            required: true,
+            const: domain_organic_unique,
+            note: Fixed. Selects the Domain Organic Pages report.,
+          }
+        domain:
+          {
+            type: string,
+            required: true,
+            example: stripe.com,
+            note: Unique name of the website to investigate.,
+          }
+        database:
+          type: string
+          required: true
+          example: us
+          note: Two-letter regional database code, such as us, uk, ca, de or fr. Domain reports also take the mobile- and -ext codes listed under Databases in the SEO API overview.
+        display_limit:
+          type: integer
+          required: true
+          min: 1
+          max: 100000
+          example: 10
+          note: Lines returned, which is what Semrush bills. Semrush returns up to 10,000 lines when the parameter is omitted or 0, so this task requires it. Semrush returns at most 100,000 lines per call.
+        display_offset:
+          type: integer
+          required: false
+          min: 0
+          note: Lines to skip before the report starts. Semrush counts display_limit from the first line, so set display_limit to display_offset plus the lines wanted.
+        display_sort:
+          type: string
+          required: false
+          enum:
+            [pc_asc, pc_desc, tg_asc, tg_desc, tr_asc, tr_desc, sr_asc, sr_desc, st_asc, st_desc]
+          note: "Sort rule, one per call. Semrush sorts by tr_desc, the biggest traffic share first, when it is omitted."
+        display_filter:
+          type: string
+          required: false
+          example: "+|Pc|Gt|100"
+          note: "Filters written as sign|column|operation|value, joined with |. Sign + includes and - excludes. Columns: Ur, Pc, Tg, Tr, Ipu, Ip0, Ip1, Ip2, Ip3, Sr, St. Operations: Eq, Gt, Lt for numbers; Bw, Ew, Eq, Co, Wm for text. At most 25 filters. Write it in plain text; the + must reach Semrush as %2B."
+        export_columns:
+          type: string
+          required: false
+          default: Ur,Pc,Tg,Tr
+          note: "Comma-separated column codes, in the order wanted. Ur Url, Pc Number of Keywords, Tg Traffic, Tr Traffic (%), Sr SERP Features Positions, St SERP Features Traffic. The report also takes the intent columns Ipu, Ip0 to Ip3, Itu and It0 to It3 listed in the SEO API overview."
+    test_request:
+      queryParams:
+        {
+          type: domain_organic_unique,
+          domain: stripe.com,
+          database: us,
+          display_limit: 1,
+          export_columns: "Ur,Pc,Tg,Tr",
+        }
+    cost:
+      type: per_result
+      value: 10
+      currency: meter
+      unit: api_unit
+      source: docs
+      source_url: https://developer.semrush.com/api/v3/seo/domain-reports/#domain-organic-pages
+      checked: 2026-10-05
+      confidence: documented
+      note: 10 API units per line returned. Semrush does not charge a request that returns no data. Semrush publishes no USD price per API unit.
+    output:
+      type: string
+      pattern: '^(?!\s*ERROR)'
+      description: "CSV text: a header line of column names, then one line per page, columns separated by semicolons, in the order of export_columns. A body that starts with ERROR is a failure, for example ERROR 50 :: NOTHING FOUND."
+
+  - id: semrush.seo.domain.gap
+    capability: seo.domain.gap
+    platform: seo
+    domain: domains
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /
+    name: Keyword gap between up to five domains by country
+    summary: This report allows users to compare up to five domains by common keywords, unique keywords, all keywords, or search terms that are unique to the first domain.
+    docs_url: https://developer.semrush.com/api/v3/seo/domain-reports/#domain-vs-domain
+    input:
+      queryParams:
+        type:
+          {
+            type: string,
+            required: true,
+            const: domain_domains,
+            note: Fixed. Selects the Domain vs. Domain report.,
+          }
+        domains:
+          type: string
+          required: true
+          example: "*|or|stripe.com|*|or|paypal.com"
+          note: "Up to five domains, each written sign|type|domain and all joined with |. Sign is +, -, * or /. Type is or for organic keywords or ad for paid keywords. Shared keywords: *|or|a.com|*|or|b.com. All keywords: *|or|a.com|+|or|b.com. Unique to a.com: *|or|a.com|-|or|b.com. Untapped for a.com: *|or|b.com|+|or|c.com|-|or|a.com. Missing for a.com: *|or|b.com|*|or|c.com|-|or|a.com. Keywords in only one domain: *|or|a.com|/|or|b.com. Write it in plain text; Semrush needs it URL-encoded, so the | and * must reach it as %7C and %2A."
+        database:
+          type: string
+          required: true
+          example: us
+          note: Two-letter regional database code, such as us, uk, ca, de or fr. Domain reports also take the mobile- and -ext codes listed under Databases in the SEO API overview.
+        display_limit:
+          type: integer
+          required: true
+          min: 1
+          max: 100000
+          example: 10
+          note: Lines returned, which is what Semrush bills. Semrush returns up to 10,000 lines when the parameter is omitted or 0, so this task requires it. Semrush returns at most 100,000 lines per call.
+        display_offset:
+          type: integer
+          required: false
+          min: 0
+          note: Lines to skip before the report starts. Semrush counts display_limit from the first line, so set display_limit to display_offset plus the lines wanted.
+        display_sort:
+          type: string
+          required: false
+          enum:
+            [
+              p0_asc,
+              p0_desc,
+              p1_asc,
+              p1_desc,
+              p2_asc,
+              p2_desc,
+              p3_asc,
+              p3_desc,
+              p4_asc,
+              p4_desc,
+              nq_asc,
+              nq_desc,
+              co_asc,
+              co_desc,
+              cp_asc,
+              cp_desc,
+              nr_asc,
+              nr_desc,
+            ]
+          note: Sort rule, one per call. p0 to p4 are the positions of the first to fifth domain.
+        display_filter:
+          type: string
+          required: false
+          note: "Filters written as sign|column|operation|value, joined with |. Sign + includes and - excludes. Columns: Ph, P0, P1, P2, P3, P4, Nq, Cp, Co, Nr, Kd. Operations: Eq, Gt, Lt for numbers; Bw, Ew, Eq, Co, Wm for text. At most 25 filters. Write it in plain text; the + must reach Semrush as %2B."
+        export_columns:
+          type: string
+          required: false
+          default: Ph,P0,P1,P2,P3,P4,Nr,Cp,Nq,Kd,Co,Td
+          note: "Comma-separated column codes, in the order wanted. Ph Keyword, P0 to P4 position of the first to fifth domain in Google's top 100 (0 means not ranked), Nq Search Volume, Cp CPC in USD, Co Competition (0 to 1), Nr Number of Results, Kd Keyword Difficulty Index, Td Trends."
+    test_request:
+      queryParams:
+        {
+          type: domain_domains,
+          domains: "*|or|stripe.com|*|or|paypal.com",
+          database: us,
+          display_limit: 1,
+          export_columns: "Ph,P0,P1,Nq",
+        }
+    cost:
+      type: per_result
+      value: 80
+      currency: meter
+      unit: api_unit
+      source: docs
+      source_url: https://developer.semrush.com/api/v3/seo/domain-reports/#domain-vs-domain
+      checked: 2026-10-05
+      confidence: documented
+      note: 80 API units per line returned. Semrush does not charge a request that returns no data. Semrush publishes no USD price per API unit.
+    output:
+      type: string
+      pattern: '^(?!\s*ERROR)'
+      description: "CSV text: a header line of column names, then one line per keyword, columns separated by semicolons, in the order of export_columns. The position columns P0 to P4 are headed by the names of the domains queried. A body that starts with ERROR is a failure, for example ERROR 50 :: NOTHING FOUND."
+
+  - id: semrush.seo.backlinks.summary
+    capability: seo.backlinks.summary
+    platform: seo
+    domain: backlinks
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /analytics/v1/
+    name: Backlink counts and Authority Score of a domain or URL
+    summary: This report provides a summary of backlinks, including their type, referring domains, and IP addresses for a domain, root domain, or URL.
+    docs_url: https://developer.semrush.com/api/v3/seo/backlinks/#backlinks-overview
+    input:
+      queryParams:
+        type:
+          {
+            type: string,
+            required: true,
+            const: backlinks_overview,
+            note: Fixed. Selects the Backlinks overview report.,
+          }
+        target:
+          {
+            type: string,
+            required: true,
+            example: stripe.com,
+            note: "Root domain, subdomain, or URL of the website to investigate: example.com, www.example.com or http://www.example.com.",
+          }
+        target_type:
+          type: string
+          required: true
+          enum: [root_domain, domain, url]
+          note: Type of the target. Use domain for a subdomain.
+        export_columns:
+          type: string
+          required: true
+          example: "ascore,total,domains_num,urls_num,ips_num,follows_num,nofollows_num"
+          note: "Comma-separated column codes, in the order wanted. ascore Authority Score, total backlinks, domains_num referring domains, urls_num referring URLs, ips_num referring IP addresses, ipclassc_num referring class C subnets, follows_num follow backlinks, nofollows_num nofollow backlinks, sponsored_num sponsored backlinks, ugc_num user-generated backlinks, texts_num text backlinks, images_num image backlinks, forms_num backlinks from forms, frames_num backlinks from frames. Semrush's docs list score and trust_score in the default but not among the accepted values, so name the columns you want."
+    test_request:
+      queryParams:
+        {
+          type: backlinks_overview,
+          target: stripe.com,
+          target_type: root_domain,
+          export_columns: "ascore,total,domains_num,follows_num,nofollows_num",
+        }
+    cost:
+      type: per_success
+      value: 40
+      currency: meter
+      unit: api_unit
+      source: docs
+      source_url: https://developer.semrush.com/api/v3/seo/backlinks/#backlinks-overview
+      checked: 2026-10-05
+      confidence: documented
+      note: 40 API units per request, not per line. Semrush does not charge a request that returns no data. Semrush publishes no USD price per API unit.
+    output:
+      type: string
+      pattern: '^(?!\s*ERROR)'
+      description: "CSV text: a header line of the requested column codes, then one line of values, columns separated by semicolons, in the order of export_columns. A body that starts with ERROR is a failure, for example ERROR 50 :: NOTHING FOUND."
+
+  - id: semrush.seo.backlinks.list
+    capability: seo.backlinks.list
+    platform: seo
+    domain: backlinks
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /analytics/v1/
+    name: Backlinks to a domain or URL with source page and anchor
+    summary: This report lists backlinks for a domain, root domain, or URL.
+    docs_url: https://developer.semrush.com/api/v3/seo/backlinks/#backlinks
+    input:
+      queryParams:
+        type:
+          {
+            type: string,
+            required: true,
+            const: backlinks,
+            note: Fixed. Selects the Backlinks report.,
+          }
+        target:
+          {
+            type: string,
+            required: true,
+            example: stripe.com,
+            note: "Root domain, subdomain, or URL of the website to investigate: example.com, www.example.com or http://www.example.com.",
+          }
+        target_type:
+          type: string
+          required: true
+          enum: [root_domain, domain, url]
+          note: Type of the target. Use domain for a subdomain.
+        display_limit:
+          type: integer
+          required: true
+          min: 1
+          max: 1000000
+          example: 10
+          note: Lines returned, which is what Semrush bills. Semrush returns 10,000 lines when the parameter is omitted or 0, so this task requires it.
+        display_offset:
+          type: integer
+          required: false
+          min: 0
+          note: Lines to skip before the report starts. Semrush counts display_limit from the first line, so set display_limit to display_offset plus the lines wanted.
+        display_sort:
+          type: string
+          required: false
+          enum:
+            [
+              page_ascore_asc,
+              page_ascore_desc,
+              last_seen_asc,
+              last_seen_desc,
+              first_seen_asc,
+              first_seen_desc,
+            ]
+          note: Sort rule, one per call. Semrush sorts by page_ascore_desc when it is omitted.
+        display_filter:
+          type: string
+          required: false
+          example: "+|type||newlink"
+          note: "Filters on type, zone, ip, refdomain, anchor, newlink, lostlink, urlanchor and redirects, joined with |. Semrush documents only this form: +|type||newlink|+|type||follow. The urlanchor filter does not work for domains with a large backlink profile. Write it in plain text; the + must reach Semrush as %2B."
+        export_columns:
+          type: string
+          required: false
+          default: page_score,source_title,source_url,target_url,anchor,external_num,internal_num,first_seen,last_seen
+          note: "Comma-separated column codes, in the order wanted. page_ascore Page Authority Score (page_score is the same), source_url, source_title and source_size of the linking page, target_url and target_title of the page linked to, anchor text, image_url and image_alt for image links, first_seen and last_seen as Unix timestamps, external_num and internal_num links on the source page, response_code, redirect_url, and the flags nofollow, form, frame, image, sitewide, newlink and lostlink."
+    test_request:
+      queryParams:
+        {
+          type: backlinks,
+          target: stripe.com,
+          target_type: root_domain,
+          display_limit: 1,
+          export_columns: "page_ascore,source_url,target_url,anchor,first_seen,last_seen",
+        }
+    cost:
+      type: per_result
+      value: 40
+      currency: meter
+      unit: api_unit
+      source: docs
+      source_url: https://developer.semrush.com/api/v3/seo/backlinks/#backlinks
+      checked: 2026-10-05
+      confidence: documented
+      note: 40 API units per line returned. Semrush does not charge a request that returns no data. Semrush publishes no USD price per API unit.
+    output:
+      type: string
+      pattern: '^(?!\s*ERROR)'
+      description: "CSV text: a header line of the requested column codes, then one line per backlink, columns separated by semicolons, in the order of export_columns. A body that starts with ERROR is a failure, for example ERROR 50 :: NOTHING FOUND."
+
+  - id: semrush.seo.backlinks.refdomains
+    capability: seo.backlinks.refdomains
+    platform: seo
+    domain: backlinks
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /analytics/v1/
+    name: Referring domains of a domain or URL with Authority Score
+    summary: This report lists domains pointing to the queried domain, root domain, or URL.
+    docs_url: https://developer.semrush.com/api/v3/seo/backlinks/#referring-domains
+    input:
+      queryParams:
+        type:
+          {
+            type: string,
+            required: true,
+            const: backlinks_refdomains,
+            note: Fixed. Selects the Referring domains report.,
+          }
+        target:
+          {
+            type: string,
+            required: true,
+            example: stripe.com,
+            note: "Root domain, subdomain, or URL of the website to investigate: example.com, www.example.com or http://www.example.com.",
+          }
+        target_type:
+          type: string
+          required: true
+          enum: [root_domain, domain, url]
+          note: Type of the target. Use domain for a subdomain.
+        display_limit:
+          type: integer
+          required: true
+          min: 1
+          example: 10
+          note: Lines returned, which is what Semrush bills. Semrush returns 10,000 lines when the parameter is omitted or 0, so this task requires it.
+        display_offset:
+          type: integer
+          required: false
+          min: 0
+          note: Lines to skip before the report starts. Semrush counts display_limit from the first line, so set display_limit to display_offset plus the lines wanted.
+        display_sort:
+          type: string
+          required: false
+          enum:
+            [
+              domain_ascore_asc,
+              domain_ascore_desc,
+              backlinks_num_asc,
+              backlinks_num_desc,
+              last_seen_asc,
+              last_seen_desc,
+              first_seen_asc,
+              first_seen_desc,
+            ]
+          note: Sort rule, one per call. Semrush sorts by backlinks_num_desc when it is omitted.
+        display_filter:
+          type: string
+          required: false
+          note: "Filters on zone, country, ip, newdomain, lostdomain and category, joined with |. Semrush gives no example for this report. Write it in plain text; the + must reach Semrush as %2B."
+        export_columns:
+          type: string
+          required: true
+          example: "domain_ascore,domain,backlinks_num,first_seen,last_seen"
+          note: "Comma-separated column codes, in the order wanted. domain_ascore Domain Authority Score (domain_score is the same), domain, backlinks_num backlinks from the domain, domain_trust_score, ip, country, first_seen and last_seen as Unix timestamps."
+    test_request:
+      queryParams:
+        {
+          type: backlinks_refdomains,
+          target: stripe.com,
+          target_type: root_domain,
+          display_limit: 1,
+          export_columns: "domain_ascore,domain,backlinks_num,first_seen,last_seen",
+        }
+    cost:
+      type: per_result
+      value: 40
+      currency: meter
+      unit: api_unit
+      source: docs
+      source_url: https://developer.semrush.com/api/v3/seo/backlinks/#referring-domains
+      checked: 2026-10-05
+      confidence: documented
+      note: 40 API units per line returned. Semrush does not charge a request that returns no data. Semrush publishes no USD price per API unit.
+    output:
+      type: string
+      pattern: '^(?!\s*ERROR)'
+      description: "CSV text: a header line of the requested column codes, then one line per referring domain, columns separated by semicolons, in the order of export_columns. A body that starts with ERROR is a failure, for example ERROR 50 :: NOTHING FOUND."

@@ -1,0 +1,43 @@
+provider: tracker
+display_name: Tracker
+base_url: https://api.tracker.example
+docs_url: https://docs.tracker.example
+source: { docs: https://docs.tracker.example, openapi: null, curated: 2026-10-11 }
+version: 2026-10-11
+# Each end user signs in with a username and password of their own, sent as HTTP basic.
+auth:
+  schemes:
+    basic: { type: basic, principals: [user] }
+identity: { task: tracker.myself.get, account_path: accountId, label_path: displayName }
+probe: { path: /session/check, expect: { json_path: active, equals: true } }
+endpoints:
+  - id: tracker.issues.list
+    capability: issues.list
+    platform: issues
+    auth: basic
+    scope: own_account
+    principal: user
+    method: GET
+    path: /issues
+    name: Issues assigned to the end user
+    summary: Lists the issues assigned to the end user
+    input: {}
+    untestable: needs a tracker only the end user holds
+    output: { type: object }
+    cost: { type: free }
+  - id: tracker.myself.get
+    capability: account.profile
+    platform: account
+    auth: basic
+    scope: own_account
+    principal: user
+    kind: account
+    method: GET
+    path: /myself
+    name: The tracker account a username and password act as
+    summary: Returns the end user the username belongs to, and their name
+    input: {}
+    untestable: needs a tracker only the end user holds
+    output: { type: object }
+    example_response: examples/tracker.myself.get.json
+    cost: { type: free }

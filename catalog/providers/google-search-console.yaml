@@ -1,0 +1,434 @@
+provider: google-search-console
+display_name: Google Search Console
+base_url: https://searchconsole.googleapis.com
+docs_url: https://developers.google.com/webmaster-tools
+source:
+  docs: https://developers.google.com/webmaster-tools
+  openapi:
+    - https://searchconsole.googleapis.com/$discovery/rest?version=v1
+    - https://openidconnect.googleapis.com/$discovery/rest?version=v1
+  curated: 2026-10-05
+version: 2026-10-06
+limits: "Search Analytics: 1,200 queries per minute per site and per user, and per project 40,000 per minute and 30,000,000 per day, on top of a short-term (10 minutes) and a long-term (1 day) load quota that a query grouped by page and query over a long date range uses fastest; URL inspection: 600 per minute and 2,000 per day per site; every other route: 20 per second and 200 per minute per user. An exceeded quota answers with a quota exceeded error."
+auth:
+  schemes:
+    oauth:
+      type: oauth2
+      authorization_url: https://accounts.google.com/o/oauth2/v2/auth
+      token_url: https://oauth2.googleapis.com/token
+      revocation_url: https://oauth2.googleapis.com/revoke
+      authorization_params: { access_type: offline }
+      pkce: true
+      refresh: static
+      token_type: Bearer
+      principals: [organization]
+      scopes:
+        openid: openid
+        email: https://www.googleapis.com/auth/userinfo.email
+        webmasters.readonly: https://www.googleapis.com/auth/webmasters.readonly
+oauth_app: { byo: true }
+identity:
+  task: google-search-console.userinfo.get
+  account_path: sub
+  label_path: email
+proposed_capabilities:
+  search-console.userinfo: The Google account behind a connected Search Console grant, with its id and address
+  search-console.sites.list: Sites on the connected Search Console account and the permission level on each
+  search-console.sites.get: One site's permission level on the connected Search Console account
+  search-console.queries: Search queries, pages, countries and devices with their clicks, impressions, click-through rate and position
+  search-console.sitemaps.list: Sitemaps submitted for a site, with their errors, warnings and submitted URLs
+  search-console.sitemaps.get: One sitemap's status, errors, warnings and submitted URLs
+  search-console.url.inspect: Whether Google has indexed a URL, its canonical and its last crawl
+endpoints:
+  - id: google-search-console.userinfo.get
+    capability: search-console.userinfo
+    platform: search-console
+    scope: own_account
+    principal: organization
+    auth: oauth
+    required_scopes: [openid, email]
+    kind: utility
+    method: GET
+    path: /v1/userinfo
+    base_url: https://openidconnect.googleapis.com
+    name: Id and address of the Google account behind the connection
+    summary: Returns profile information for the specified user.
+    docs_url: https://developers.google.com/identity/openid-connect/openid-connect#obtaininguserprofileinformation
+    input: {}
+    cost: { type: free }
+    example_response: examples/google-search-console.userinfo.get.json
+    output:
+      type: object
+      required: [sub]
+      properties:
+        sub:
+          type: string
+          description: The Google account's id, which never changes while the address can
+        email: { type: string, description: The address of the Google account }
+        email_verified: { type: boolean, description: True when Google has verified the address }
+        picture: { type: string, description: The URL of the account's photo }
+
+  - id: google-search-console.sites.list
+    capability: search-console.sites.list
+    platform: search-console
+    scope: own_account
+    principal: organization
+    auth: oauth
+    required_scopes: [webmasters.readonly]
+    kind: utility
+    method: GET
+    path: /webmasters/v3/sites
+    name: Sites and permission levels on the connected account
+    summary: Lists the user's Search Console sites.
+    docs_url: https://developers.google.com/webmaster-tools/v1/sites/list
+    input: {}
+    cost: { type: free }
+    example_response: examples/google-search-console.sites.list.json
+    output:
+      type: object
+      properties:
+        siteEntry:
+          type: array
+          description: Absent when the account has no site
+          items:
+            type: object
+            required: [siteUrl, permissionLevel]
+            properties:
+              siteUrl:
+                type: string
+                description: A URL-prefix property with its trailing slash, or a domain property written sc-domain:example.com
+              permissionLevel:
+                type: string
+                description: siteOwner, siteFullUser, siteRestrictedUser or siteUnverifiedUser
+
+  - id: google-search-console.sites.get
+    capability: search-console.sites.get
+    platform: search-console
+    domain: sites
+    scope: own_account
+    principal: organization
+    auth: oauth
+    required_scopes: [webmasters.readonly]
+    kind: data
+    method: GET
+    path: /webmasters/v3/sites/{siteUrl}
+    name: Permission level on one site by its URL
+    summary: Retrieves information about specific site.
+    docs_url: https://developers.google.com/webmaster-tools/v1/sites/get
+    input:
+      pathParams:
+        siteUrl:
+          type: string
+          required: true
+          example: sc-domain:example.com
+          note: The property as sites.list returns it, a URL-prefix property with its trailing slash or a domain property written sc-domain:example.com
+    cost: { type: free }
+    example_response: examples/google-search-console.sites.get.json
+    output:
+      type: object
+      required: [siteUrl, permissionLevel]
+      properties:
+        siteUrl: { type: string }
+        permissionLevel:
+          type: string
+          description: siteOwner, siteFullUser, siteRestrictedUser or siteUnverifiedUser
+
+  - id: google-search-console.search.analytics
+    capability: search-console.queries
+    platform: search-console
+    domain: analytics
+    scope: own_account
+    principal: organization
+    auth: oauth
+    required_scopes: [webmasters.readonly]
+    kind: data
+    method: POST
+    path: /webmasters/v3/sites/{siteUrl}/searchAnalytics/query
+    name: Search queries, clicks and impressions for a verified site
+    summary: Query your data with filters and parameters that you define. Returns zero or more rows grouped by the row keys that you define. You must define a date range of one or more days. When date is one of the group by values, any days without data are omitted from the result list. If you need to know which days have data, issue a broad date range query grouped by date for any metric, and see which day rows are returned.
+    docs_url: https://developers.google.com/webmaster-tools/v1/searchanalytics/query
+    input:
+      pathParams:
+        siteUrl:
+          type: string
+          required: true
+          example: sc-domain:example.com
+          note: The property as sites.list returns it, a URL-prefix property with its trailing slash or a domain property written sc-domain:example.com
+      body:
+        startDate:
+          type: string
+          required: true
+          example: 2026-09-01
+          note: YYYY-MM-DD in Pacific time, included in the range
+        endDate:
+          type: string
+          required: true
+          example: 2026-09-30
+          note: YYYY-MM-DD in Pacific time, included in the range
+        dimensions:
+          type: array
+          required: false
+          example: [query]
+          note: "Zero or more of country, device, page, query, searchAppearance, date and hour, grouped in this order. With none, every value is combined into one row. Grouping by hour needs dataState hourly_all."
+        type:
+          type: string
+          required: false
+          enum: [web, image, video, news, discover, googleNews]
+          default: web
+          note: The search type to report on; web is the combined All tab and leaves out Discover and Google News
+        dimensionFilterGroups:
+          type: array
+          required: false
+          example:
+            - groupType: and
+              filters:
+                - { dimension: query, operator: contains, expression: agent }
+          note: "Groups that must all match for a row to be returned. A group is a groupType of and and its filters, each a dimension (country, device, page, query or searchAppearance), an operator (equals, notEquals, contains, notContains, includingRegex or excludingRegex) and an expression."
+        aggregationType:
+          type: string
+          required: false
+          enum: [auto, byPage, byProperty, byNewsShowcasePanel]
+          default: auto
+          note: How data is aggregated; grouping or filtering by page rules out byProperty
+        rowLimit:
+          type: integer
+          required: false
+          min: 1
+          max: 25000
+          default: 1000
+          note: Rows to return; page through the rest with startRow
+        startRow:
+          type: integer
+          required: false
+          min: 0
+          default: 0
+          note: Zero-based index of the first row
+        dataState:
+          type: string
+          required: false
+          enum: [final, all, hourly_all]
+          default: final
+          note: all adds fresh data that is still partial; hourly_all adds the hourly breakdown
+      bodyType: json
+    cost: { type: free }
+    example_response: examples/google-search-console.search.analytics.json
+    output:
+      type: object
+      properties:
+        rows:
+          type: array
+          description: Sorted by clicks, descending, or by date, ascending, when grouped by date. Absent when no row matches.
+          items:
+            type: object
+            required: [clicks, impressions, ctr, position]
+            properties:
+              keys:
+                type: array
+                description: The dimension values of the row, in the order the request grouped by them; absent when no dimensions are requested
+                items: { type: string }
+              clicks: { type: number }
+              impressions: { type: number }
+              ctr: { type: number, description: From 0 to 1 }
+              position: { type: number, description: Average position in search results }
+        responseAggregationType:
+          type: string
+          description: How the results were aggregated
+        metadata:
+          type: object
+          description: Present when the request asked for fresh or hourly data
+          properties:
+            firstIncompleteDate: { type: string }
+            firstIncompleteHour: { type: string }
+
+  - id: google-search-console.sitemaps.list
+    capability: search-console.sitemaps.list
+    platform: search-console
+    domain: sitemaps
+    scope: own_account
+    principal: organization
+    auth: oauth
+    required_scopes: [webmasters.readonly]
+    kind: data
+    method: GET
+    path: /webmasters/v3/sites/{siteUrl}/sitemaps
+    name: Sitemaps submitted for a site, with errors and warnings
+    summary: Lists the sitemaps-entries submitted for this site, or included in the sitemap index file (if `sitemapIndex` is specified in the request).
+    docs_url: https://developers.google.com/webmaster-tools/v1/sitemaps/list
+    input:
+      pathParams:
+        siteUrl:
+          type: string
+          required: true
+          example: sc-domain:example.com
+          note: The property as sites.list returns it, a URL-prefix property with its trailing slash or a domain property written sc-domain:example.com
+      queryParams:
+        sitemapIndex:
+          type: string
+          required: false
+          example: https://www.example.com/sitemap_index.xml
+          note: A sitemap index file's URL; lists the sitemaps it includes and not those submitted for the site
+    cost: { type: free }
+    example_response: examples/google-search-console.sitemaps.list.json
+    output:
+      type: object
+      properties:
+        sitemap:
+          type: array
+          description: Absent when no sitemap was submitted
+          items:
+            type: object
+            properties:
+              path: { type: string, description: The URL of the sitemap }
+              lastSubmitted: { type: string, description: RFC 3339 time }
+              lastDownloaded: { type: string, description: RFC 3339 time }
+              isPending: { type: boolean, description: True when Google has not processed it yet }
+              isSitemapsIndex:
+                { type: boolean, description: True when it is a collection of sitemaps }
+              type: { type: string, description: The kind of sitemap such as sitemap or rssFeed }
+              warnings: { type: string, description: Count as an int64 string }
+              errors: { type: string, description: Count as an int64 string }
+              contents:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type: { type: string, description: The kind of content such as web or image }
+                    submitted: { type: string, description: URLs submitted as an int64 string }
+
+  - id: google-search-console.sitemaps.get
+    capability: search-console.sitemaps.get
+    platform: search-console
+    domain: sitemaps
+    scope: own_account
+    principal: organization
+    auth: oauth
+    required_scopes: [webmasters.readonly]
+    kind: data
+    method: GET
+    path: /webmasters/v3/sites/{siteUrl}/sitemaps/{feedpath}
+    name: One sitemap's status, errors and warnings by its URL
+    summary: Retrieves information about a specific sitemap.
+    docs_url: https://developers.google.com/webmaster-tools/v1/sitemaps/get
+    input:
+      pathParams:
+        siteUrl:
+          type: string
+          required: true
+          example: sc-domain:example.com
+          note: The property as sites.list returns it, a URL-prefix property with its trailing slash or a domain property written sc-domain:example.com
+        feedpath:
+          type: string
+          required: true
+          example: https://www.example.com/sitemap.xml
+          note: The URL of the sitemap, as sitemaps.list returns it
+    cost: { type: free }
+    example_response: examples/google-search-console.sitemaps.get.json
+    output:
+      type: object
+      properties:
+        path: { type: string, description: The URL of the sitemap }
+        lastSubmitted: { type: string, description: RFC 3339 time }
+        lastDownloaded: { type: string, description: RFC 3339 time }
+        isPending: { type: boolean, description: True when Google has not processed it yet }
+        isSitemapsIndex: { type: boolean, description: True when it is a collection of sitemaps }
+        type: { type: string, description: The kind of sitemap such as sitemap or rssFeed }
+        warnings: { type: string, description: Count as an int64 string }
+        errors: { type: string, description: Count as an int64 string }
+        contents:
+          type: array
+          items:
+            type: object
+            properties:
+              type: { type: string, description: The kind of content such as web or image }
+              submitted: { type: string, description: URLs submitted as an int64 string }
+
+  - id: google-search-console.url.inspect
+    capability: search-console.url.inspect
+    platform: search-console
+    domain: indexing
+    scope: own_account
+    principal: organization
+    auth: oauth
+    required_scopes: [webmasters.readonly]
+    kind: data
+    method: POST
+    path: /v1/urlInspection/index:inspect
+    name: Index status, canonical and last crawl of a URL on a site
+    summary: Index inspection.
+    docs_url: https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect
+    input:
+      body:
+        inspectionUrl:
+          type: string
+          required: true
+          example: https://www.example.com/pricing
+          note: The URL to inspect, which must be under the property named in siteUrl
+        siteUrl:
+          type: string
+          required: true
+          example: sc-domain:example.com
+          note: The property as sites.list returns it, a URL-prefix property with its trailing slash or a domain property written sc-domain:example.com
+        languageCode:
+          type: string
+          required: false
+          default: en-US
+          note: An IETF BCP-47 code for the language of the translated issue messages
+      bodyType: json
+    cost: { type: free }
+    example_response: examples/google-search-console.url.inspect.json
+    output:
+      type: object
+      required: [inspectionResult]
+      properties:
+        inspectionResult:
+          type: object
+          required: [inspectionResultLink]
+          properties:
+            inspectionResultLink:
+              { type: string, description: The URL inspection page in Search Console }
+            indexStatusResult:
+              type: object
+              properties:
+                verdict:
+                  type: string
+                  description: PASS when the URL is indexed, PARTIAL, FAIL or NEUTRAL
+                coverageState:
+                  {
+                    type: string,
+                    description: Whether Google could find and index the page in words,
+                  }
+                robotsTxtState: { type: string, description: ALLOWED or DISALLOWED }
+                indexingState:
+                  type: string
+                  description: INDEXING_ALLOWED, or the noindex rule that blocks it
+                pageFetchState:
+                  {
+                    type: string,
+                    description: Whether Google could retrieve the page such as SUCCESSFUL or NOT_FOUND,
+                  }
+                lastCrawlTime:
+                  {
+                    type: string,
+                    description: RFC 3339 time; absent when the URL was never crawled,
+                  }
+                googleCanonical:
+                  {
+                    type: string,
+                    description: The canonical Google selected; absent when the page is not indexed,
+                  }
+                userCanonical: { type: string, description: The canonical the page declares }
+                crawledAs: { type: string, description: DESKTOP or MOBILE }
+                sitemap:
+                  type: array
+                  description: Sitemaps Google knows list this URL
+                  items: { type: string }
+                referringUrls:
+                  type: array
+                  description: URLs that link to this URL
+                  items: { type: string }
+            richResultsResult:
+              type: object
+              description: Absent when no rich result was found
+            ampResult:
+              type: object
+              description: Absent when the page is not an AMP page

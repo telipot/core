@@ -1,0 +1,17 @@
+{
+  "inspectionResult": {
+    "inspectionResultLink": "https://search.google.com/search-console/inspect?resource_id=sc-domain%3Aexample.com&id=EXAMPLE",
+    "indexStatusResult": {
+      "verdict": "PASS",
+      "coverageState": "Submitted and indexed",
+      "robotsTxtState": "ALLOWED",
+      "indexingState": "INDEXING_ALLOWED",
+      "pageFetchState": "SUCCESSFUL",
+      "lastCrawlTime": "2026-10-02T04:12:09Z",
+      "googleCanonical": "https://www.example.com/pricing",
+      "userCanonical": "https://www.example.com/pricing",
+      "crawledAs": "MOBILE",
+      "sitemap": ["https://www.example.com/sitemap.xml"]
+    }
+  }
+}

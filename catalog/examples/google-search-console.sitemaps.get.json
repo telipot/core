@@ -1,0 +1,11 @@
+{
+  "path": "https://www.example.com/sitemap.xml",
+  "lastSubmitted": "2026-09-12T08:15:30.123Z",
+  "lastDownloaded": "2026-10-03T21:04:11.456Z",
+  "isPending": false,
+  "isSitemapsIndex": false,
+  "type": "sitemap",
+  "warnings": "0",
+  "errors": "0",
+  "contents": [{ "type": "web", "submitted": "1842" }]
+}

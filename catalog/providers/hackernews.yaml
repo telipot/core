@@ -1,0 +1,55 @@
+provider: hackernews
+display_name: Hacker News
+base_url: https://hn.algolia.com/api/v1
+docs_url: https://hn.algolia.com/api
+source: { docs: https://hn.algolia.com/api, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+endpoints:
+  - id: hackernews.news.search
+    capability: news.search
+    platform: news
+    auth: public
+    kind: data
+    method: GET
+    path: /search
+    name: Hacker News stories by query, ranked by relevance
+    summary: Search Hacker News stories and comments
+    input:
+      queryParams:
+        query: { type: string, required: true, example: agent tools }
+        tags: { type: string, required: false, enum: [story, comment], default: story }
+        hitsPerPage: { type: integer, required: false, min: 1, max: 50, default: 10 }
+    test_request: { queryParams: { query: agent tools, hitsPerPage: 2 } }
+    cost: { type: free }
+    verified: 2026-10-05
+    example_response: examples/hackernews.news.search.json
+    output:
+      type: object
+      required: [hits, hitsPerPage, nbHits, nbPages, page, query]
+      properties:
+        hits:
+          type: array
+          items:
+            type: object
+            required: [objectID, author, created_at, created_at_i, _tags]
+            properties:
+              objectID: { type: string }
+              title: { type: string }
+              url: { type: string }
+              author: { type: string }
+              points: { type: [integer, "null"] }
+              num_comments: { type: [integer, "null"] }
+              story_id: { type: integer }
+              story_text: { type: string }
+              comment_text: { type: string }
+              created_at: { type: string }
+              created_at_i: { type: integer }
+              updated_at: { type: string }
+              _tags: { type: array, items: { type: string } }
+        hitsPerPage: { type: integer }
+        nbHits: { type: integer }
+        nbPages: { type: integer }
+        page: { type: integer }
+        params: { type: string }
+        processingTimeMS: { type: integer }
+        query: { type: string }

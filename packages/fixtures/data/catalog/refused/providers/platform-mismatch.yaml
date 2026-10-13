@@ -1,0 +1,17 @@
+provider: platform-mismatch
+display_name: Test platform-mismatch
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+endpoints:
+  - id: platform-mismatch.data.get
+    capability: test.data.get
+    platform: records
+    auth: public
+    method: GET
+    path: /data
+    name: Test record by id
+    summary: Gets a record
+    input: {}
+    output: { type: object }

@@ -1,0 +1,33 @@
+{
+  "name": "@telipot/cli",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "bin": {
+    "telipot": "./src/bin.ts"
+  },
+  "type": "module",
+  "exports": {
+    "./testing": "./src/testing.ts",
+    "./signed-in": "./src/signed-in.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "vitest run --silent=passed-only"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "catalog:",
+    "@telipot/catalog": "workspace:*",
+    "@telipot/contract": "workspace:*",
+    "@telipot/sdk": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@telipot/config": "workspace:*",
+    "@telipot/fixtures": "workspace:*",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "yaml": "catalog:"
+  }
+}

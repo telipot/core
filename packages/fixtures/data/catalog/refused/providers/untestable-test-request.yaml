@@ -1,0 +1,19 @@
+provider: untestable-test-request
+display_name: Test untestable-test-request
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+endpoints:
+  - id: untestable-test-request.data.get
+    capability: test.data.get
+    platform: test
+    auth: public
+    method: GET
+    path: /data
+    name: Test record by id
+    summary: Gets a record
+    input: {}
+    output: { type: object }
+    test_request: {}
+    untestable: returns a named person

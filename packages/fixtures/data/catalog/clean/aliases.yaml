@@ -1,0 +1,3 @@
+aliases:
+  # A target no task holds: the validator warns, and the catalog still loads.
+  gizmo: thingamajig

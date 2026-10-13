@@ -1,0 +1,29 @@
+provider: currency-without-rate
+display_name: Test currency-without-rate
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+auth:
+  schemes:
+    api_key: { type: api_key, in: header, name: X-API-Key, principals: [organization] }
+endpoints:
+  - id: currency-without-rate.data.get
+    capability: test.data.get
+    platform: test
+    auth: api_key
+    method: GET
+    path: /data
+    name: Test record by id
+    summary: Gets a record
+    input: {}
+    output: { type: object }
+    scope: any_account
+    cost:
+      type: per_call
+      value: 2
+      currency: GBP
+      source: docs
+      source_url: https://docs.example.com/pricing
+      checked: 2026-10-04
+      confidence: documented

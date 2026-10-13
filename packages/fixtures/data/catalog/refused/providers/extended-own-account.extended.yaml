@@ -1,0 +1,20 @@
+provider: extended-own-account
+source:
+  {
+    docs: https://docs.example.com,
+    openapi: https://api.example.com/openapi.json,
+    curated: 2026-10-04,
+  }
+version: 2026-10-04
+digest: sha256:f40ec94d9a971a92d71cfcc90d1c0b064e84052d34b75b7893561ed8b3cd4ca0
+endpoints:
+  - id: extended-own-account.x.profile
+    auth: oauth
+    scope: own_account
+    principal: user
+    required_scopes: [read]
+    method: GET
+    path: /profile
+    name: Test profile
+    summary: Gets the profile
+    input: {}

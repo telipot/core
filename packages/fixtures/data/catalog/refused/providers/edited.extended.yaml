@@ -1,0 +1,17 @@
+provider: edited
+source:
+  {
+    docs: https://docs.example.com,
+    openapi: https://api.example.com/openapi.json,
+    curated: 2026-10-04,
+  }
+version: 2026-10-04
+digest: sha256:0b4507c8f261274027d12d4a91b5a85d3296b4527ee7dbde12abe35aa6f3b3be
+endpoints:
+  - id: edited.x.records
+    auth: public
+    method: GET
+    path: /records/all
+    name: Test records
+    summary: Lists records
+    input: {}

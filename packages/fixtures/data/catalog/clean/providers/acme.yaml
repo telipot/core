@@ -1,0 +1,229 @@
+provider: acme
+display_name: Acme
+base_url: https://api.acme.example
+docs_url: https://docs.acme.example
+source:
+  {
+    docs: https://docs.acme.example,
+    openapi: https://api.acme.example/openapi.json,
+    curated: 2026-10-04,
+  }
+version: 2026-10-04
+auth:
+  schemes:
+    api_key: { type: api_key, in: header, name: X-API-Key, principals: [organization] }
+proposed_capabilities:
+  acme.widgets.list: Widgets in an Acme catalogue
+  acme.widgets.get: One widget in an Acme catalogue
+  acme.people.search: People in the Acme directory
+  acme.reports.run: A report Acme builds
+  acme.videos.make: A video Acme renders from a prompt
+endpoints:
+  - id: acme.page.text
+    capability: web.page.text
+    platform: web
+    auth: api_key
+    scope: any_account
+    method: GET
+    path: /page
+    name: Page text by URL
+    summary: Returns the text of a page
+    input:
+      queryParams:
+        url: { type: string, required: true, example: https://example.com }
+    test_request: { queryParams: { url: https://example.com } }
+    expect: { json_path: status, equals: ok }
+    miss: { status: 404, means: the page does not exist }
+    # A verified route with a documented price: neither implies the other.
+    cost:
+      type: per_call
+      value: 0.006
+      currency: USD
+      source: docs
+      source_url: https://docs.acme.example/pricing
+      checked: 2026-10-04
+      confidence: documented
+      settle: { type: quote }
+    verified: 2026-10-04
+    example_response: examples/acme.page.text.json
+    output: { type: object, properties: { text: { type: string } } }
+  - id: acme.widgets.list
+    capability: acme.widgets.list
+    platform: acme
+    auth: public
+    method: GET
+    path: /widgets
+    name: Acme widgets, newest first
+    summary: Lists widgets
+    input: {}
+    output: { type: object }
+  - id: acme.widget.get
+    capability: acme.widgets.get
+    platform: acme
+    auth: public
+    method: GET
+    path: /widgets/{widgetId}
+    # Served from a host of its own, so it shows the task's host winning.
+    base_url: https://widgets.acme.example/v2/
+    name: Acme widget by id
+    summary: Gets a widget
+    input:
+      pathParams:
+        widgetId: { type: string, required: true, example: w_1 }
+    untestable: needs a widget id only the caller holds
+    output: { type: object }
+    cost:
+      type: per_call
+      currency: USD
+      checked: 2026-06-01
+      confidence: unknown
+      note: Acme publishes no price for single widgets
+  - id: acme.page.old
+    capability: web.page.text
+    platform: web
+    auth: public
+    method: GET
+    path: /page/v0
+    name: Page text by URL, first version
+    summary: Returns the text of a page
+    input: {}
+    output: { type: object }
+    status: retired
+    status_note: Replaced by the authenticated route
+    superseded_by: acme.page.text
+  - id: acme.people.search
+    capability: acme.people.search
+    platform: acme
+    auth: api_key
+    scope: any_account
+    method: GET
+    path: /people
+    name: Acme people by name
+    summary: Searches people
+    input:
+      queryParams:
+        q: { type: string, required: true, example: ada }
+    output: { type: object }
+    cost:
+      type: per_result
+      value: 3.00
+      currency: USD
+      per: 1000
+      unit: row
+      source: docs
+      source_url: https://docs.acme.example/pricing
+      checked: 2026-10-04
+      confidence: documented
+      settle: { type: quote }
+  - id: acme.report.run
+    capability: acme.reports.run
+    platform: acme
+    auth: api_key
+    scope: any_account
+    method: POST
+    path: /reports
+    name: Acme report by topic
+    summary: Starts a report
+    input:
+      body:
+        topic: { type: string, required: true, example: widgets }
+    async: { id_from: job_id }
+    output: { type: object }
+    cost:
+      type: per_success
+      value: 1.5
+      currency: credit
+      source: observed
+      source_url: https://docs.acme.example/pricing
+      checked: 2026-10-04
+      confidence: verified
+      settle: { type: reported_charge, path: usage.credits }
+  - id: acme.people.enrich
+    capability: acme.people.search
+    platform: acme
+    auth: api_key
+    scope: any_account
+    method: GET
+    path: /people/enrich
+    name: Acme person profile by email
+    summary: Enriches a person
+    input:
+      queryParams:
+        email: { type: string, required: true, example: ada@example.com }
+    output: { type: object }
+    cost:
+      type: per_result
+      value: 10
+      currency: meter
+      unit: api_unit
+      source: docs
+      source_url: https://docs.acme.example/units
+      checked: 2026-10-04
+      confidence: documented
+      settle: { type: usage, header: X-Units-Used }
+  - id: acme.page.translate
+    capability: web.page.text
+    platform: web
+    auth: api_key
+    scope: any_account
+    method: GET
+    path: /page/translate
+    name: Page text by URL, in English
+    summary: Returns the text of a page, translated
+    input:
+      queryParams:
+        url: { type: string, required: true, example: https://example.com }
+    output: { type: object }
+    cost:
+      type: per_call
+      value: 0.001
+      currency: EUR
+      source: docs
+      source_url: https://docs.acme.example/pricing
+      checked: 2026-10-04
+      confidence: documented
+  - id: acme.video.make
+    capability: acme.videos.make
+    platform: acme
+    auth: api_key
+    scope: any_account
+    method: POST
+    path: /videos
+    name: Acme video by prompt
+    summary: Renders a video
+    input:
+      body:
+        prompt: { type: string, required: true, example: a widget on a desk }
+        model: { type: string, required: true, enum: [small, large] }
+        resolution: { type: string, required: false, enum: ["512", "1080"], default: "512" }
+        duration: { type: integer, required: false, min: 2, max: 10, default: 5 }
+    output: { type: object }
+    cost:
+      type: per_success
+      currency: USD
+      # Narrow rows before broad ones: the first row that matches prices the call.
+      table:
+        - { when: { body.model: small, body.resolution: "512" }, value: 0.4 }
+        - { when: { body.model: small }, value: 0.06, times: body.duration }
+        - { when: { body.model: large }, value: 0.15, times: body.duration }
+      # Above the large model at its longest clip.
+      fallback: { value: 2.5 }
+      source: docs
+      source_url: https://docs.acme.example/pricing
+      checked: 2026-10-04
+      confidence: documented
+      settle: { type: quote }
+  # Free, though asynchronous: a free task is charged nothing whether its job
+  # succeeds or not.
+  - id: acme.widgets.export
+    capability: acme.widgets.list
+    platform: acme
+    auth: public
+    method: POST
+    path: /widgets/export
+    name: Acme widgets as a file, by job
+    summary: Exports widgets
+    input: {}
+    async: { id_from: job_id }
+    output: { type: object }
+    cost: { type: free }

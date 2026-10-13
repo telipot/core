@@ -1,0 +1,4 @@
+platforms:
+  shelf: Book shelves
+capabilities:
+  shelf.books.list: Books on a shelf

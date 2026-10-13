@@ -1,0 +1,59 @@
+provider: fetcher
+display_name: Fetcher
+base_url: https://api.fetcher.example
+docs_url: https://docs.fetcher.example
+source: { docs: https://docs.fetcher.example, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+# Fetcher says when to retry in headers of its own, beside Retry-After, and
+# answers a 400 that says "rate limit" when it is limiting calls.
+retry:
+  after: X-Wait-Seconds
+  at: X-Reset-At
+  in_body: "rate limit"
+  error_code: [429, 500, 503]
+  max_wait: 5
+terms:
+  url: https://fetcher.example/terms
+  note: Pages are fetched as an anonymous visitor and never cached.
+endpoints:
+  - id: fetcher.page.text
+    capability: web.page.text
+    platform: web
+    auth: public
+    method: GET
+    path: /text
+    name: Web page text by URL
+    summary: Returns the readable text of a page
+    input:
+      queryParams:
+        url: { type: string, required: true, example: https://example.com, note: The page to read }
+    test_request: { queryParams: { url: https://example.com } }
+    miss: { status: 404, means: the page does not exist }
+    # Fetcher answers 200 with the page it actually read.
+    expect: { json_path: url, equals: https://example.com }
+    cost: { type: free }
+    verified: 2026-10-04
+    example_response: examples/fetcher.page.text.json
+    output:
+      type: object
+      required: [url, text]
+      properties:
+        url: { type: string }
+        text: { type: string }
+  # An action, and the one task outside the mail platform whose summary says mail.
+  - id: fetcher.page.send
+    capability: web.page.send
+    platform: web
+    kind: action
+    auth: public
+    method: POST
+    path: /send
+    name: Web page text by URL, sent to an address
+    summary: Fetches a page and sends its text by mail
+    input:
+      body:
+        url: { type: string, required: true, example: https://example.com }
+        address: { type: string, required: true, example: ada@example.com }
+    cost: { type: free }
+    example_response: examples/fetcher.page.send.json
+    output: { type: object }

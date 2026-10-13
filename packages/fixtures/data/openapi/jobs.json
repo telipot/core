@@ -1,0 +1,437 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Jobs HTTP API",
+    "version": "1"
+  },
+  "servers": [
+    {
+      "url": "https://api.jobs.example/v1"
+    }
+  ],
+  "externalDocs": {
+    "url": "https://docs.jobs.example"
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Job": {
+        "type": "object",
+        "required": ["id", "status"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["queued", "running", "done", "error", "cancelled"]
+          },
+          "output": {}
+        }
+      },
+      "Page": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["a", "b"]
+          }
+        }
+      },
+      "Input": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string"
+          }
+        },
+        "required": ["prompt"]
+      },
+      "Call": {
+        "type": "object",
+        "properties": {
+          "call_id": {
+            "type": "string"
+          },
+          "started": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CallState": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["started", "in-progress", "done", "failed"]
+          },
+          "transcript": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "pathItems": {
+      "Health": {
+        "get": {
+          "operationId": "health",
+          "summary": "Whether the service is up",
+          "security": [{}],
+          "responses": {
+            "200": {
+              "description": "Up"
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/jobs": {
+      "post": {
+        "operationId": "jobs.create",
+        "summary": "Create a job",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "links": {
+              "read": {
+                "operationId": "jobs.get",
+                "parameters": {
+                  "job_id": "$response.body#/id"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs/{job_id}": {
+      "get": {
+        "operationId": "jobs.get",
+        "summary": "Get a job",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "examples": {
+              "first": {
+                "dataValue": "job_1"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A job",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs/{job_id}/cancel": {
+      "post": {
+        "operationId": "jobs.cancel",
+        "summary": "Cancel a job",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A job",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pages": {
+      "post": {
+        "operationId": "pages.create",
+        "summary": "Create a page",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            },
+            "links": {
+              "job": {
+                "operationId": "jobs.get",
+                "parameters": {
+                  "job_id": "$response.body#/id"
+                }
+              },
+              "call": {
+                "operationId": "calls.get",
+                "parameters": {
+                  "call_id": "$response.body#/id"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/calls": {
+      "post": {
+        "operationId": "calls.start",
+        "summary": "Start a call",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Call"
+                }
+              }
+            },
+            "links": {
+              "state": {
+                "operationRef": "#/paths/~1calls~1%7Bcall_id%7D/get",
+                "parameters": {
+                  "path.call_id": "$response.body#/call_id"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/calls/{call_id}": {
+      "get": {
+        "operationId": "calls.get",
+        "summary": "Get a call",
+        "parameters": [
+          {
+            "name": "call_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A call",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/calls/{call_id}/note": {
+      "post": {
+        "operationId": "calls.note",
+        "summary": "Add a note to a call",
+        "parameters": [
+          {
+            "name": "call_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Noted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Call"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports": {
+      "post": {
+        "operationId": "reports.create",
+        "summary": "Create a report",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Call"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search": {
+      "query": {
+        "operationId": "search",
+        "summary": "Search jobs",
+        "responses": {
+          "200": {
+            "description": "Jobs"
+          }
+        }
+      }
+    },
+    "/uploads": {
+      "servers": [
+        {
+          "url": "https://uploads.jobs.example/v1"
+        }
+      ],
+      "get": {
+        "operationId": "uploads.list",
+        "summary": "List uploads",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "me"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uploads"
+          }
+        }
+      }
+    },
+    "/health": {
+      "$ref": "#/components/pathItems/Health"
+    },
+    "/elsewhere": {
+      "get": {
+        "operationId": "elsewhere",
+        "summary": "Uses another document",
+        "parameters": [
+          {
+            "$ref": "common.yaml#/components/parameters/Page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ok"
+          }
+        }
+      }
+    }
+  }
+}

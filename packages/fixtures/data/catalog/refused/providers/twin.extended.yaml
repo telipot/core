@@ -1,0 +1,19 @@
+provider: twin
+source:
+  {
+    docs: https://docs.example.com,
+    openapi: https://api.example.com/openapi.json,
+    curated: 2026-10-04,
+  }
+version: 2026-10-04
+digest: sha256:33f9d021bd5fd73f062daff20b8ddbbdcd0ff930032940ebdc66994021c4c820
+endpoints:
+  - id: twin.x.data
+    auth: public
+    method: GET
+    path: /data/{dataId}
+    name: Test record
+    summary: Gets a record
+    input:
+      pathParams:
+        dataId: { type: string, required: true }

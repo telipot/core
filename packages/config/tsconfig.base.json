@@ -1,0 +1,42 @@
+{
+  "$schema": "../../node_modules/@effect/tsgo/schema.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext"],
+    "verbatimModuleSyntax": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "types": ["bun"],
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        // HttpApi and SqlClient are still marked unstable in Effect 4; they are the stack here.
+        "diagnosticSeverity": {
+          "unstableApiUsage": "off",
+          // Effects are run, never dropped; failures stay typed in E.
+          "floatingEffect": "error",
+          "missingStarInYieldEffectGen": "error",
+          "returnEffectInGen": "error",
+          "runEffectInsideEffect": "error",
+          "missingReturnYieldStar": "error",
+          "tryCatchInEffectGen": "error",
+          "schemaSyncInEffect": "error",
+          "catchUnfailableEffect": "error",
+          "globalErrorInEffectFailure": "error",
+          "globalErrorInEffectCatch": "error"
+        }
+      }
+    ]
+  }
+}

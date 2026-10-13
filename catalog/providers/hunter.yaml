@@ -1,0 +1,1089 @@
+provider: hunter
+display_name: Hunter
+base_url: https://api.hunter.io/v2
+docs_url: https://hunter.io/api-documentation/v2
+source:
+  {
+    docs: https://hunter.io/api-documentation/v2,
+    openapi: https://hunter.io/openapi.json,
+    curated: 2026-10-05,
+  }
+version: 2026-10-05
+pricing_url: https://hunter.io/pricing
+limits: "Per endpoint: Discover 5 requests per second and 50 per minute; Domain Search, Email Finder and the three enrichment routes 15 per second and 500 per minute; Email Verifier 10 per second and 300 per minute; Email Count 15 per second. No limit is stated for Domain Finder, Email Insight or Account. A 403 is the rate limit; a 429 is the plan's usage limit."
+auth:
+  schemes:
+    api_key: { type: api_key, in: header, name: X-API-KEY, principals: [organization] }
+probe: { path: /account, expect: { status: 200 } }
+proposed_capabilities:
+  email.find: Email address of a named person at a company domain
+  email.verify: Whether an email address can receive mail
+  email.domain.search: Email addresses found at a domain
+  email.domain.count: How many email addresses are on file for a domain
+  people.enrich: A person's profile from a name, email or LinkedIn URL
+  company.search: Companies that match industry, size and location filters
+  company.enrich: A company's profile from its domain
+  account.usage: Credits or units used and left on the credential's account
+  email.insight: Signals about an email address from its form and domain, such as random-looking, disposable, webmail, mail server present
+  company.domain.find: A company's website domain from its name
+  people.enrich.combined: A person's profile and their company's profile from an email or LinkedIn URL
+endpoints:
+  - id: hunter.email.domain.search
+    capability: email.domain.search
+    platform: email
+    domain: finder
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /domain-search
+    name: Emails found at a domain, with names, titles and confidence
+    summary: One key feature of Hunter is to search all the email addresses corresponding to one website. You give one domain name and it returns email addresses found for that domain on the internet.
+    docs_url: https://hunter.io/api-documentation/v2#domain-search
+    input:
+      queryParams:
+        domain:
+          type: string
+          required: false
+          example: stripe.com
+          note: Domain to search. Give domain or company; domain wins when both are given.
+        company:
+          type: string
+          required: false
+          example: stripe
+          note: Company name, used when the domain is unknown. A domain gives better results.
+        limit:
+          type: integer
+          required: false
+          min: 1
+          max: 100
+          default: 10
+          note: Maximum emails returned. Each email returned is charged. On a Free plan limit plus offset above 10 is refused with 400 pagination_error.
+        offset:
+          type: integer
+          required: false
+          min: 0
+          default: 0
+          note: Emails to skip, for paging.
+        type:
+          type: string
+          required: false
+          enum: [personal, generic]
+          note: Only personal addresses, or only role-based (generic) ones such as contact@.
+        seniority:
+          type: string
+          required: false
+          example: senior,executive
+          note: Comma-separated. The docs list junior, senior and executive; Hunter's OpenAPI says the values come from a live taxonomy and a list with no valid value returns 400 invalid_seniority.
+        department:
+          type: string
+          required: false
+          example: sales,marketing
+          note: Comma-separated. The docs list executive, it, finance, management, sales, legal, support, hr, marketing, communication, education, design, health, operations, product, research, consulting, administrative and procurement. A list with no valid value returns 400 invalid_department.
+        decision_maker:
+          type: boolean
+          required: false
+          note: true keeps only likely decision makers, false only people explicitly classified as not. Addresses not yet classified match neither.
+        required_field:
+          type: string
+          required: false
+          example: full_name,position
+          note: Comma-separated. Keep only emails that have these fields. The docs list full_name, position and phone_number.
+        verification_status:
+          type: string
+          required: false
+          example: valid
+          note: Comma-separated. The docs list valid, accept_all and unknown.
+        job_titles:
+          type: string
+          required: false
+          example: CTO,Head of Engineering
+          note: Comma-separated. Matches whole words; common executive titles match their equivalents.
+        source_type:
+          type: string
+          required: false
+          enum: [found, generated]
+          note: found keeps only addresses seen on the web, generated only inferred ones. Listed in Hunter's OpenAPI, not on the docs page.
+        aggregations:
+          type: boolean
+          required: false
+          note: true adds meta.aggregations, a breakdown of the matching emails by department, decision makers and personal versus generic.
+    untestable: Lists named people with their email addresses, so every real call returns private individuals' contact details; there is no personal-data-free target.
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      unit: email
+      source: docs
+      source_url: https://help.hunter.io/en/articles/1911617-how-do-credits-work-in-hunter
+      checked: 2026-10-05
+      confidence: documented
+      note: "All-in-one plans: 1 credit per email revealed, none when no email is found, and a repeat of the same search in one billing period is not charged again. Data Platform plans: 1 Search credit for up to 10 emails per domain. The API reference says only that a query counts when it returns at least one result."
+    output:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required:
+            [domain, disposable, webmail, accept_all, pattern, organization, linked_domains, emails]
+          properties:
+            domain: { type: [string, "null"] }
+            disposable: { type: boolean }
+            webmail: { type: boolean }
+            accept_all: { type: boolean }
+            pattern:
+              {
+                type: [string, "null"],
+                description: "The email pattern most addresses at the domain follow",
+              }
+            organization: { type: [string, "null"] }
+            linked_domains: { type: array, items: { type: string } }
+            emails:
+              type: array
+              items:
+                type: object
+                required: [value, type, confidence]
+                properties:
+                  value: { type: string }
+                  type: { type: string, enum: [personal, generic] }
+                  source_type: { type: string, description: "found or generated" }
+                  confidence:
+                    {
+                      type: integer,
+                      description: "Estimated probability, 0 to 100, that the address is correct",
+                    }
+                  first_name: { type: [string, "null"] }
+                  last_name: { type: [string, "null"] }
+                  position: { type: [string, "null"] }
+                  seniority: { type: [string, "null"] }
+                  department: { type: [string, "null"] }
+                  decision_maker: { type: boolean }
+                  linkedin: { type: [string, "null"] }
+                  twitter: { type: [string, "null"] }
+                  phone_number: { type: [string, "null"] }
+                  sources:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        domain: { type: string }
+                        uri: { type: string }
+                        extracted_on: { type: string }
+                        last_seen_on: { type: string }
+                        still_on_page: { type: boolean }
+                  verification:
+                    type: object
+                    properties:
+                      date: { type: [string, "null"] }
+                      status: { type: [string, "null"] }
+        meta:
+          type: object
+          required: [results, limit, offset]
+          properties:
+            results: { type: integer }
+            results_approximate: { type: boolean }
+            limit: { type: integer }
+            offset: { type: integer }
+            aggregations: { type: object }
+            params: { type: object }
+
+  - id: hunter.email.find
+    capability: email.find
+    platform: email
+    domain: finder
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /email-finder
+    name: Email for a named person at a company domain, with score
+    summary: This API endpoint finds the most likely email address from a domain name, a first name and a last name.
+    docs_url: https://hunter.io/api-documentation/v2#email-finder
+    input:
+      queryParams:
+        domain:
+          type: string
+          required: false
+          example: reddit.com
+          note: Company domain. Give domain, company or linkedin_handle. A URL or a leading @ is reduced to the domain.
+        company:
+          type: string
+          required: false
+          example: reddit
+          note: Company name, used when the domain is unknown. A domain gives better results; domain wins when both are given.
+        linkedin_handle:
+          type: string
+          required: false
+          note: LinkedIn profile handle. With it no name is needed.
+        first_name:
+          type: string
+          required: false
+          note: With last_name, required unless full_name or linkedin_handle is given.
+        last_name:
+          type: string
+          required: false
+          note: With first_name, required unless full_name or linkedin_handle is given.
+        full_name:
+          type: string
+          required: false
+          note: Required unless first_name and last_name, or linkedin_handle, is given. First and last name give better results.
+        max_duration:
+          type: integer
+          required: false
+          min: 3
+          max: 20
+          default: 10
+          note: Seconds the lookup may run. A longer time lets Hunter refine the result.
+    untestable: Needs a specific person's name or LinkedIn handle and answers with that person's email address and employer.
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      unit: email
+      source: docs
+      source_url: https://help.hunter.io/en/articles/1911617-how-do-credits-work-in-hunter
+      checked: 2026-10-05
+      confidence: documented
+      note: "All-in-one plans: 1 credit per email found, none when no email is found, and a repeat of the same search in one billing period is not charged again. Data Platform plans: 1 Search credit per email."
+    output:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required:
+            [
+              first_name,
+              last_name,
+              email,
+              score,
+              domain,
+              accept_all,
+              position,
+              linkedin_url,
+              company,
+              sources,
+              verification,
+            ]
+          properties:
+            first_name: { type: [string, "null"] }
+            last_name: { type: [string, "null"] }
+            email: { type: [string, "null"] }
+            score:
+              {
+                type: [integer, "null"],
+                description: "Estimated probability, 0 to 100, that the address is correct",
+              }
+            domain: { type: [string, "null"] }
+            accept_all: { type: [boolean, "null"] }
+            position: { type: [string, "null"] }
+            twitter: { type: [string, "null"] }
+            linkedin_url: { type: [string, "null"] }
+            phone_number: { type: [string, "null"] }
+            company: { type: [string, "null"] }
+            source_type: { type: [string, "null"], description: "found or generated" }
+            sources:
+              type: array
+              items:
+                type: object
+                properties:
+                  domain: { type: string }
+                  uri: { type: string }
+                  extracted_on: { type: string }
+                  last_seen_on: { type: string }
+                  still_on_page: { type: boolean }
+            verification:
+              type: object
+              properties:
+                date: { type: [string, "null"] }
+                status: { type: [string, "null"], description: "valid, accept_all or unknown" }
+        meta:
+          type: object
+          properties:
+            params: { type: object }
+
+  - id: hunter.email.verify
+    capability: email.verify
+    platform: email
+    domain: verifier
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /email-verifier
+    name: Valid or deliverable status and score of one email address
+    summary: This API endpoint allows you to verify the deliverability of an email address.
+    docs_url: https://hunter.io/api-documentation/v2#email-verifier
+    input:
+      queryParams:
+        email:
+          type: string
+          required: true
+          example: someone@example.com
+          note: The email address to verify.
+        domain_metadata:
+          type: string
+          required: false
+          example: "1"
+          note: Any non-empty value adds meta.domain, company_name, following_domain and webmail about the address's domain. Listed in Hunter's OpenAPI, not on the docs page.
+    test_request: { queryParams: { email: test@example.com } }
+    cost:
+      type: per_success
+      value: 0.5
+      currency: credit
+      unit: verification
+      source: docs
+      source_url: https://help.hunter.io/en/articles/1911617-how-do-credits-work-in-hunter
+      checked: 2026-10-05
+      confidence: documented
+      note: "All-in-one plans: 0.5 credit per verified email; nothing when Hunter fails to verify (status unknown) or the address is disposable, and a repeat in one billing period is not charged again. Data Platform plans: 1 Verification credit. A 202 means the verification is still running: repeat the same call, it counts once."
+    output:
+      type: object
+      required: [meta]
+      properties:
+        data:
+          type: object
+          properties:
+            status:
+              {
+                type: string,
+                description: "valid, invalid, accept_all, webmail, disposable or unknown",
+              }
+            score: { type: integer }
+            email: { type: string }
+            regexp: { type: boolean }
+            gibberish: { type: boolean }
+            disposable: { type: boolean }
+            webmail: { type: boolean }
+            mx_records: { type: boolean }
+            smtp_server: { type: boolean }
+            smtp_check: { type: boolean }
+            accept_all: { type: boolean }
+            block: { type: boolean }
+            result: { type: string, description: "Deprecated; use status" }
+            verification:
+              type: object
+              properties:
+                date: { type: [string, "null"] }
+                status: { type: [string, "null"] }
+            sources:
+              type: array
+              items:
+                type: object
+                properties:
+                  domain: { type: string }
+                  uri: { type: string }
+                  extracted_on: { type: string }
+                  last_seen_on: { type: string }
+                  still_on_page: { type: boolean }
+        meta:
+          type: object
+          required: [params]
+          properties:
+            params:
+              type: object
+              properties:
+                email: { type: string }
+            message:
+              {
+                type: string,
+                description: "Present on a 202, while the verification is still running",
+              }
+
+  - id: hunter.email.insight
+    capability: email.insight
+    platform: email
+    domain: verifier
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /email-insight
+    name: Disposable, webmail and mail-server flags of an email
+    summary: Returns deliverability signals for a single email address without a full verification.
+    docs_url: https://hunter.io/api-documentation/v2#email-insight
+    input:
+      queryParams:
+        email:
+          type: string
+          required: true
+          example: someone@example.com
+          note: The email address to inspect.
+    test_request: { queryParams: { email: test@example.com } }
+    cost: { type: free }
+    output:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          properties:
+            email: { type: string }
+            gibberish:
+              { type: boolean, description: "True when the local part looks like a random string" }
+            pattern:
+              {
+                type: boolean,
+                description: "True when Hunter has detected a recognized email pattern for the domain",
+              }
+            mx_records: { type: boolean, description: "True when the domain can receive email" }
+            disposable: { type: boolean }
+            webmail: { type: boolean }
+            webmail_allowed:
+              { type: [boolean, "null"], description: "Reserved; currently always null" }
+        meta:
+          type: object
+          properties:
+            params: { type: object }
+
+  - id: hunter.email.domain.count
+    capability: email.domain.count
+    platform: email
+    domain: finder
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /email-count
+    name: Count of emails on file for a domain, by type and department
+    summary: This API endpoint allows you to know how many email addresses we have for one domain or for one company.
+    docs_url: https://hunter.io/api-documentation/v2#email-count
+    input:
+      queryParams:
+        domain:
+          type: string
+          required: false
+          example: stripe.com
+          note: Domain to count. Give domain or company; domain wins when both are given.
+        company:
+          type: string
+          required: false
+          example: stripe
+          note: Company name, used when the domain is unknown. At least 3 characters.
+        type:
+          type: string
+          required: false
+          enum: [personal, generic]
+          note: Count only personal addresses, or only role-based (generic) ones.
+        include_job_titles:
+          type: string
+          required: false
+          example: "1"
+          note: Any non-empty value adds data.job_titles, counts by job title. Listed in Hunter's OpenAPI, not on the docs page.
+    test_request: { queryParams: { domain: stripe.com } }
+    cost: { type: free }
+    output:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [total, personal_emails, generic_emails, department, seniority]
+          properties:
+            total: { type: integer }
+            personal_emails: { type: integer }
+            generic_emails: { type: integer }
+            department:
+              type: object
+              description: Counts by department. Only emails with a known department are counted, so the sum can be below total.
+              additionalProperties: { type: integer }
+            seniority:
+              type: object
+              description: Counts by seniority. Only emails with a known seniority are counted, so the sum can be below total.
+              additionalProperties: { type: integer }
+            job_titles:
+              type: object
+              additionalProperties: { type: integer }
+        meta:
+          type: object
+          properties:
+            params: { type: object }
+
+  - id: hunter.company.search
+    capability: company.search
+    platform: company
+    domain: discover
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: POST
+    path: /discover
+    name: Companies by industry, headcount, location and keywords
+    summary: Returns companies matching a set of criteria.
+    docs_url: https://hunter.io/api-documentation/v2#discover
+    input:
+      body:
+        query:
+          type: string
+          required: false
+          max: 2000
+          example: Companies in Europe that specialize in software development
+          note: Plain-language description; Hunter's AI assistant picks the filters and returns them in meta.filters, which are better to reuse than the sentence when paging. Required unless a filter is given.
+        organization:
+          type: object
+          required: false
+          example: { domain: [stripe.com] }
+          note: "{ domain: [..], name: [..] }. Lists of domains and company names to select; when both are given the results combine into one set of domains."
+        headquarters_location:
+          type: object
+          required: false
+          example: { include: [{ country: FR, city: Paris }] }
+          note: "{ include: [..], exclude: [..] }, each location one of continent (Europe, Asia, North America, Africa, Antarctica, South America, Oceania), business_region (AMER, EMEA, APAC, LATAM), or country (ISO 3166-1 alpha-2) with optional state and city. A city needs a country; a US city needs a state."
+        industry:
+          type: object
+          required: false
+          example: { include: [Financial Services] }
+          note: "{ include: [..], exclude: [..] } of names from https://hunter.io/files/industries.json."
+        headcount:
+          type: array
+          required: false
+          example: ["51-200", "201-500"]
+          note: Company size ranges to keep. One or more of 1-10, 11-50, 51-200, 201-500, 501-1000, 1001-5000, 5001-10000, 10001+.
+        company_type:
+          type: object
+          required: false
+          example: { include: [privately held] }
+          note: "{ include: [..], exclude: [..] } of educational, educational institution, government agency, non profit, partnership, privately held, public company, self employed, self owned, sole proprietorship."
+        keywords:
+          type: object
+          required: false
+          example: { include: [payments], match: any }
+          note: "{ include: [..], exclude: [..], match: any|all }, at most 100 keywords per list; match defaults to all."
+        job_openings:
+          type: object
+          required: false
+          example: { hiring: true, department: [engineering] }
+          note: "{ hiring, department: [..], job_title: { include, exclude }, posted_date: last7d|last30d|last90d, open_roles: { from, to }, include_closed_roles }. Department values are case-sensitive; any field selects companies that are hiring."
+        year_founded:
+          type: object
+          required: false
+          example: { from: 2015, to: 2020 }
+          note: "{ include: [..], exclude: [..] } or { from, to }, four-digit years. Premium plan only."
+        technology:
+          type: object
+          required: false
+          example: { include: [stripe], match: any }
+          note: "{ include: [..], exclude: [..], match: any|all } of slugs from https://hunter.io/files/technologies.json. Premium plan only."
+        funding:
+          type: object
+          required: false
+          example: { series: [seed, series_a] }
+          note: "{ series: [..], amount: { from, to }, date: { from, to } }; series is one or more of pre_seed, seed, pre_series_a, series_a, pre_series_b, series_b, pre_series_c, series_c+, other. Premium plan only."
+        limit:
+          type: integer
+          required: false
+          min: 1
+          max: 100
+          default: 100
+          note: Companies per page. Premium plan only; changing it on a Free plan returns 400 pagination_error.
+        offset:
+          type: integer
+          required: false
+          min: 0
+          max: 10000
+          default: 0
+          note: Companies to skip. Premium plan only; changing it on a Free plan returns 400 pagination_error.
+      bodyType: json
+    test_request: { body: { organization: { domain: [stripe.com] } } }
+    cost: { type: free }
+    output:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required: [domain, organization, emails_count]
+            properties:
+              domain: { type: string }
+              organization: { type: [string, "null"] }
+              emails_count:
+                type: object
+                properties:
+                  personal: { type: [integer, "null"] }
+                  generic: { type: [integer, "null"] }
+                  total: { type: [integer, "null"] }
+              description: { type: [string, "null"] }
+              industry: { type: [string, "null"] }
+              technologies: { type: array, items: { type: string } }
+              country: { type: [string, "null"] }
+              state: { type: [string, "null"] }
+              city: { type: [string, "null"] }
+              headcount: { type: [string, "null"] }
+              company_type: { type: [string, "null"] }
+              year_founded: { type: [integer, "null"] }
+              keywords: { type: [array, "null"], items: { type: string } }
+              already_saved: { type: boolean }
+        meta:
+          type: object
+          required: [results, limit, offset]
+          properties:
+            results: { type: integer }
+            limit: { type: integer }
+            offset: { type: integer }
+            params: { type: object }
+            filters: { type: object }
+            permalink: { type: [string, "null"] }
+
+  - id: hunter.company.enrich
+    capability: company.enrich
+    platform: company
+    domain: enrichment
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /companies/find
+    name: Company industry, size, tech and funding from its domain
+    summary: Returns all the information associated with a domain name, such as the industry, the description, or headquarters' location.
+    docs_url: https://hunter.io/api-documentation/v2#company-enrichment
+    input:
+      queryParams:
+        domain:
+          type: string
+          required: true
+          example: stripe.com
+          note: The company's domain. An unknown domain answers 404.
+    test_request: { queryParams: { domain: stripe.com } }
+    cost:
+      type: per_success
+      value: 0.2
+      currency: credit
+      unit: domain
+      source: docs
+      source_url: https://help.hunter.io/en/articles/1911617-how-do-credits-work-in-hunter
+      checked: 2026-10-05
+      confidence: documented
+      note: "All-in-one plans: 0.2 credit per enriched domain or email. Data Platform plans: 1 Search credit. The credit article does not say whether a 404 (domain unknown) is charged; it prices an enriched item, so a 404 is treated as free."
+    output:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [id, domain]
+          properties:
+            id: { type: string }
+            name: { type: [string, "null"] }
+            legalName: { type: [string, "null"] }
+            domain: { type: string }
+            domainAliases: { type: array, items: { type: string } }
+            description: { type: [string, "null"] }
+            foundedYear: { type: [integer, "null"] }
+            location: { type: [string, "null"] }
+            phone: { type: [string, "null"] }
+            logo: { type: string }
+            type: { type: [string, "null"] }
+            companyType: { type: [string, "null"] }
+            ticker: { type: [string, "null"] }
+            tags: { type: [array, "null"], items: { type: string } }
+            site:
+              type: object
+              properties:
+                phoneNumbers: { type: array, items: { type: string } }
+                emailAddresses: { type: array, items: { type: string } }
+            category:
+              type: object
+              properties:
+                sector: { type: [string, "null"] }
+                industryGroup: { type: [string, "null"] }
+                industry: { type: [string, "null"] }
+                subIndustry: { type: [string, "null"] }
+                sicCode: { type: [string, "null"] }
+                naicsCode: { type: [string, "null"] }
+            geo:
+              type: object
+              properties:
+                streetAddress: { type: [string, "null"] }
+                city: { type: [string, "null"] }
+                postalCode: { type: [string, "null"] }
+                state: { type: [string, "null"] }
+                country: { type: [string, "null"] }
+                countryCode: { type: [string, "null"] }
+                lat: { type: [number, "null"] }
+                lng: { type: [number, "null"] }
+            metrics:
+              type: object
+              properties:
+                employees: { type: [string, "null"] }
+                employeesCount: { type: [integer, "null"] }
+                marketCap: { type: [integer, "null"] }
+                raised: { type: [number, "null"] }
+                annualRevenue: { type: [integer, "null"] }
+                estimatedAnnualRevenue: { type: [integer, "null"] }
+            tech: { type: array, items: { type: string } }
+            techCategories: { type: array, items: { type: string } }
+            fundingRounds:
+              type: array
+              items:
+                type: object
+                properties:
+                  date: { type: string }
+                  type: { type: [string, "null"] }
+                  amount: { type: string }
+                  investors: { type: array, items: { type: string } }
+            emailsCount:
+              type: object
+              properties:
+                personal: { type: [integer, "null"] }
+                generic: { type: [integer, "null"] }
+                total: { type: [integer, "null"] }
+            linkedin:
+              type: object
+              properties:
+                handle: { type: [string, "null"] }
+            twitter:
+              type: object
+              properties:
+                handle: { type: [string, "null"] }
+                followers: { type: [integer, "null"] }
+            parent:
+              type: object
+              properties:
+                domain: { type: [string, "null"] }
+            ultimateParent:
+              type: object
+              properties:
+                domain: { type: [string, "null"] }
+        meta:
+          type: object
+          properties:
+            domain: { type: string }
+
+  - id: hunter.company.domain.find
+    capability: company.domain.find
+    platform: company
+    domain: finder
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /domain-finder
+    name: Domain candidates for a company name, with email counts
+    summary: This API endpoint returns the most likely domain name(s) for a given company name.
+    docs_url: https://hunter.io/api-documentation/v2#domain-finder
+    input:
+      queryParams:
+        company:
+          type: string
+          required: true
+          min: 3
+          example: stripe
+          note: Company name to resolve, at least 3 characters.
+        limit:
+          type: integer
+          required: false
+          min: 1
+          max: 10
+          default: 5
+          note: Maximum suggestions returned.
+        perfect_match:
+          type: boolean
+          required: false
+          default: false
+          note: true returns only suggestions very similar to the name, for one confident answer instead of a list.
+    test_request: { queryParams: { company: stripe, limit: 1 } }
+    cost: { type: free }
+    output:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required: [domain, company_name]
+            properties:
+              domain: { type: string }
+              company_name: { type: string }
+              logo: { type: string }
+              email_count:
+                {
+                  type: integer,
+                  description: "Emails Hunter holds for the domain; 0 can mean a privacy-suppressed domain",
+                }
+        meta:
+          type: object
+          properties:
+            results: { type: integer }
+            params: { type: object }
+
+  - id: hunter.people.enrich
+    capability: people.enrich
+    platform: people
+    domain: enrichment
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /people/find
+    name: Person profile from an email or LinkedIn handle, with role
+    summary: Returns all the information associated with an email address or LinkedIn handle, such as a person's name, location and social handles.
+    docs_url: https://hunter.io/api-documentation/v2#email-enrichment
+    input:
+      queryParams:
+        email:
+          type: string
+          required: false
+          note: Email address to enrich. Give email or linkedin_handle; linkedin_handle wins when both are given.
+        linkedin_handle:
+          type: string
+          required: false
+          note: LinkedIn profile handle to enrich.
+    untestable: Needs a specific person's email address or LinkedIn handle and answers with that person's name, location, employer and social profiles.
+    cost:
+      type: per_success
+      value: 0.2
+      currency: credit
+      unit: email
+      source: docs
+      source_url: https://help.hunter.io/en/articles/1911617-how-do-credits-work-in-hunter
+      checked: 2026-10-05
+      confidence: documented
+      note: "All-in-one plans: 0.2 credit per enriched email or domain. Data Platform plans: 1 Search credit. The credit article does not say whether a 404 (nothing found) or a 451 (person asked not to be processed) is charged; it prices an enriched item, so both are treated as free."
+    output:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [id, email]
+          properties:
+            id: { type: string }
+            name:
+              type: object
+              properties:
+                fullName: { type: [string, "null"] }
+                givenName: { type: [string, "null"] }
+                familyName: { type: [string, "null"] }
+            email: { type: string }
+            location: { type: [string, "null"] }
+            timeZone: { type: [string, "null"] }
+            geo:
+              type: object
+              properties:
+                city: { type: [string, "null"] }
+                state: { type: [string, "null"] }
+                country: { type: [string, "null"] }
+                countryCode: { type: [string, "null"] }
+            bio: { type: [string, "null"] }
+            site: { type: [string, "null"] }
+            avatar: { type: [string, "null"] }
+            employment:
+              type: object
+              properties:
+                domain: { type: [string, "null"] }
+                name: { type: [string, "null"] }
+                title: { type: [string, "null"] }
+                role: { type: [string, "null"] }
+                subRole: { type: [string, "null"] }
+                seniority: { type: [string, "null"] }
+            linkedin:
+              type: object
+              properties:
+                handle: { type: [string, "null"] }
+            twitter:
+              type: object
+              properties:
+                handle: { type: [string, "null"] }
+            github:
+              type: object
+              properties:
+                handle: { type: [string, "null"] }
+            phone: { type: [string, "null"] }
+            fuzzy: { type: boolean }
+        meta:
+          type: object
+          properties:
+            email: { type: string }
+
+  - id: hunter.people.enrich.combined
+    capability: people.enrich.combined
+    platform: people
+    domain: enrichment
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: data
+    method: GET
+    path: /combined/find
+    name: Person and company profile from an email or LinkedIn handle
+    summary: Returns all the information associated with an email address and its domain name.
+    docs_url: https://hunter.io/api-documentation/v2#combined-enrichment
+    input:
+      queryParams:
+        email:
+          type: string
+          required: false
+          note: Email address to enrich. The docs page names only email; Hunter's OpenAPI also accepts linkedin_handle. Give one of them.
+        linkedin_handle:
+          type: string
+          required: false
+          note: LinkedIn profile handle to enrich. Listed in Hunter's OpenAPI, not on the docs page.
+    untestable: Needs a specific person's email address or LinkedIn handle and answers with that person's profile beside the employer's.
+    cost:
+      type: per_success
+      currency: credit
+      unit: email
+      source: docs
+      source_url: https://help.hunter.io/en/articles/1911617-how-do-credits-work-in-hunter
+      checked: 2026-10-05
+      confidence: unknown
+      note: The credit article prices enrichment at 0.2 credit per enriched email or domain on All-in-one plans and names no rate for the combined route, which returns a person and a company.
+    output:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [person, company]
+          properties:
+            person:
+              type: object
+              properties:
+                id: { type: string }
+                name:
+                  type: object
+                  properties:
+                    fullName: { type: [string, "null"] }
+                    givenName: { type: [string, "null"] }
+                    familyName: { type: [string, "null"] }
+                email: { type: string }
+                location: { type: [string, "null"] }
+                bio: { type: [string, "null"] }
+                avatar: { type: [string, "null"] }
+                employment:
+                  type: object
+                  properties:
+                    domain: { type: [string, "null"] }
+                    name: { type: [string, "null"] }
+                    title: { type: [string, "null"] }
+                    role: { type: [string, "null"] }
+                    seniority: { type: [string, "null"] }
+                linkedin:
+                  type: object
+                  properties:
+                    handle: { type: [string, "null"] }
+                twitter:
+                  type: object
+                  properties:
+                    handle: { type: [string, "null"] }
+                phone: { type: [string, "null"] }
+            company:
+              type: object
+              properties:
+                id: { type: string }
+                name: { type: [string, "null"] }
+                legalName: { type: [string, "null"] }
+                domain: { type: string }
+                description: { type: [string, "null"] }
+                foundedYear: { type: [integer, "null"] }
+                location: { type: [string, "null"] }
+                category:
+                  type: object
+                  properties:
+                    sector: { type: [string, "null"] }
+                    industryGroup: { type: [string, "null"] }
+                    industry: { type: [string, "null"] }
+                    subIndustry: { type: [string, "null"] }
+                metrics:
+                  type: object
+                  properties:
+                    employees: { type: [string, "null"] }
+                    employeesCount: { type: [integer, "null"] }
+                    annualRevenue: { type: [integer, "null"] }
+                    estimatedAnnualRevenue: { type: [integer, "null"] }
+                tech: { type: array, items: { type: string } }
+                techCategories: { type: array, items: { type: string } }
+                fundingRounds:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      date: { type: string }
+                      type: { type: [string, "null"] }
+                      amount: { type: string }
+                      investors: { type: array, items: { type: string } }
+        meta:
+          type: object
+          properties:
+            email: { type: string }
+
+  - id: hunter.account.usage
+    capability: account.usage
+    platform: account
+    domain: account
+    scope: any_account
+    principal: organization
+    auth: api_key
+    kind: account
+    method: GET
+    path: /account
+    name: Plan, credits used and credits left on the key's account
+    summary: This API endpoint enables you to get information regarding your Hunter account at any time.
+    docs_url: https://hunter.io/api-documentation/v2#account
+    input: {}
+    test_request: {}
+    cost: { type: free }
+    output:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required:
+            [first_name, last_name, email, plan_name, plan_level, reset_date, team_id, requests]
+          properties:
+            first_name: { type: [string, "null"] }
+            last_name: { type: [string, "null"] }
+            email: { type: string }
+            plan_name: { type: string }
+            plan_level: { type: integer }
+            reset_date: { type: string, description: "ISO date the period's quota resets" }
+            team_id: { type: integer }
+            requests:
+              type: object
+              required: [searches, verifications]
+              properties:
+                credits:
+                  type: object
+                  description: Present only when the team is on a unified credits bucket.
+                  required: [used, available, remaining]
+                  properties:
+                    used: { type: number }
+                    available: { type: number }
+                    remaining: { type: number }
+                    over_quota: { type: number }
+                searches:
+                  type: object
+                  required: [used, available, remaining]
+                  properties:
+                    used: { type: number }
+                    available: { type: number }
+                    remaining: { type: number }
+                    over_quota: { type: number }
+                verifications:
+                  type: object
+                  required: [used, available, remaining]
+                  properties:
+                    used: { type: number }
+                    available: { type: number }
+                    remaining: { type: number }
+                    over_quota: { type: number }
+            calls:
+              type: object
+              description: Deprecated; use requests.
+              properties:
+                used: { type: number }
+                available: { type: number }

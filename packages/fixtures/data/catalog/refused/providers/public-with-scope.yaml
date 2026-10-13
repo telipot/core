@@ -1,0 +1,18 @@
+provider: public-with-scope
+display_name: Test public-with-scope
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+endpoints:
+  - id: public-with-scope.data.get
+    capability: test.data.get
+    platform: test
+    method: GET
+    path: /data
+    name: Test record by id
+    summary: Gets a record
+    input: {}
+    output: { type: object }
+    auth: public
+    scope: any_account

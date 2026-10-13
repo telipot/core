@@ -1,0 +1,19 @@
+{
+  "requestId": "3601539a56015e854455a44813897a03",
+  "results": [
+    {
+      "id": "https://openrouter.ai/",
+      "title": "OpenRouter",
+      "url": "https://openrouter.ai/",
+      "image": "https://openrouter.ai/dynamic-og?pathname=default&title=OpenRouter&description=The+unified+interface+for+every+model.+Find+the+best+models+%26+prices+for+your+prompts&v=2",
+      "entities": [{}]
+    }
+  ],
+  "searchTime": 7.4,
+  "costDollars": {
+    "total": 0.004,
+    "search": {
+      "neural": 0.004
+    }
+  }
+}

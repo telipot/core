@@ -1,0 +1,27 @@
+{
+  "dimensionCompatibilities": [
+    {
+      "compatibility": "COMPATIBLE",
+      "dimensionMetadata": {
+        "apiName": "city",
+        "uiName": "City",
+        "description": "The city the user activity came from.",
+        "category": "Geography",
+        "customDefinition": false
+      }
+    }
+  ],
+  "metricCompatibilities": [
+    {
+      "compatibility": "COMPATIBLE",
+      "metricMetadata": {
+        "apiName": "sessions",
+        "uiName": "Sessions",
+        "description": "The number of sessions that began on the site or app.",
+        "category": "Session",
+        "type": "TYPE_INTEGER",
+        "customDefinition": false
+      }
+    }
+  ]
+}

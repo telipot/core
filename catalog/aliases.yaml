@@ -1,0 +1,8 @@
+# Query word -> catalog word. Nouns only: a verb alias floods its matches.
+# A key reads every word of its stem: `meeting` reads "meetings" too.
+aliases:
+  hn: hackernews
+  meeting: event
+  appointment: event
+  visitor: analytics
+  pageview: analytics

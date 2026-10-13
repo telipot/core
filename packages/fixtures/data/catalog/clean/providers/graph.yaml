@@ -1,0 +1,34 @@
+provider: graph
+display_name: Graph
+base_url: https://graph.example.com
+docs_url: https://docs.graph.example
+source:
+  {
+    docs: https://docs.graph.example,
+    openapi: https://graph.example.com/openapi.json,
+    curated: 2026-10-04,
+  }
+version: 2026-10-04
+# The node id is the first path segment, so placeholder names tell routes apart.
+route_match: exact
+endpoints:
+  - id: graph.page.insights
+    capability: social.page.insights
+    platform: social
+    auth: public
+    method: GET
+    path: /{page_id}/insights
+    name: Page reach and engagement by page id
+    summary: Insights for a page
+    input:
+      pathParams:
+        page_id: { type: string, required: true, example: "1" }
+    output: { type: object }
+    cost:
+      type: per_call
+      value: 3
+      currency: credit
+      source: docs
+      source_url: https://docs.graph.example/credits
+      checked: 2026-10-04
+      confidence: documented

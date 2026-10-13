@@ -1,0 +1,24 @@
+provider: probe-misses-a-principal
+display_name: Test probe-misses-a-principal
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-11 }
+version: 2026-10-11
+# An end user pastes a key in a scheme of their own, which the probe the auth names never takes.
+auth:
+  schemes:
+    org_key: { type: api_key, in: header, name: X-API-Key, principals: [organization] }
+    user_key: { type: bearer, principals: [user] }
+probe: { path: /me, auth: org_key, expect: { status: 200 } }
+endpoints:
+  - id: probe-misses-a-principal.data.get
+    capability: test.data.get
+    platform: test
+    method: GET
+    path: /data
+    name: Test record by id
+    summary: Gets a record
+    input: {}
+    output: { type: object }
+    auth: org_key
+    scope: any_account

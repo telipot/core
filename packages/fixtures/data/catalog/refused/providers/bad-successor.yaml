@@ -1,0 +1,20 @@
+provider: bad-successor
+display_name: Test bad-successor
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+endpoints:
+  - id: bad-successor.data.get
+    capability: test.data.get
+    platform: test
+    auth: public
+    method: GET
+    path: /data
+    name: Test record by id
+    summary: Gets a record
+    input: {}
+    output: { type: object }
+    status: retired
+    status_note: Replaced by the v2 route
+    superseded_by: bad-successor.data.gone

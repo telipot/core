@@ -1,0 +1,56 @@
+provider: jina-reader
+display_name: Jina Reader
+base_url: https://r.jina.ai
+docs_url: https://jina.ai/reader/
+source:
+  { docs: https://jina.ai/reader/, openapi: https://r.jina.ai/openapi.json, curated: 2026-10-05 }
+version: 2026-10-05
+limits: 20 requests per minute per IP address without an API key; the limit is tracked by key once one is sent
+proposed_capabilities:
+  web.page.text: The text of one web page at a URL
+endpoints:
+  - id: jina-reader.web.page.text
+    capability: web.page.text
+    platform: web
+    auth: public
+    kind: data
+    method: GET
+    path: /{url}
+    name: Page title and text by URL
+    summary: Converts a URL to LLM-friendly text
+    docs_url: https://jina.ai/reader/
+    input:
+      pathParams:
+        url: { type: string, required: true, example: https://example.com, note: The page to read }
+      headers:
+        Accept:
+          type: string
+          required: true
+          const: application/json
+          note: The answer is the JSON envelope; without it the page text comes back as plain markdown
+    test_request:
+      pathParams: { url: https://example.com }
+      headers: { Accept: application/json }
+    cost: { type: free }
+    verified: 2026-10-05
+    example_response: examples/jina-reader.web.page.text.json
+    output:
+      type: object
+      required: [code, status]
+      properties:
+        code: { type: number }
+        status: { type: number }
+        data:
+          type: object
+          properties:
+            title: { type: string }
+            description: { type: string }
+            url: { type: string }
+            content: { type: string }
+            publishedTime: { type: string }
+            warning: { type: string }
+            httpStatus: { type: number }
+            usage:
+              type: object
+              properties:
+                tokens: { type: number }

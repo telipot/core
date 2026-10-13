@@ -1,0 +1,34 @@
+provider: notes
+display_name: Notes
+base_url: https://api.notes.example
+docs_url: https://docs.notes.example
+source: { docs: https://docs.notes.example, openapi: null, curated: 2026-10-12 }
+version: 2026-10-12
+# Signed in to over OAuth, on an app neither telipot nor an organization holds.
+auth:
+  schemes:
+    oauth2:
+      type: oauth2
+      authorization_url: https://notes.example/oauth/authorize
+      token_url: https://notes.example/oauth/token
+      pkce: true
+      refresh: static
+      principals: [user]
+      scopes:
+        pages: https://notes.example/auth/pages
+identity: { task: notes.pages.list, account_path: account, label_path: account }
+endpoints:
+  - id: notes.pages.list
+    capability: notes.pages.list
+    platform: notes
+    auth: oauth2
+    scope: own_account
+    principal: user
+    required_scopes: [pages]
+    method: GET
+    path: /pages
+    name: Pages in the end user's notebook
+    summary: Lists pages
+    input: {}
+    untestable: needs a notebook only the end user holds
+    output: { type: object }

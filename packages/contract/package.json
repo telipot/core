@@ -1,0 +1,29 @@
+{
+  "name": "@telipot/contract",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cursor": "./src/cursor.ts",
+    "./free-text": "./src/free-text.ts",
+    "./origins": "./src/origins.ts",
+    "./problem": "./src/problem.ts",
+    "./receipt": "./src/receipt.ts",
+    "./*": "./src/*/index.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "vitest run --silent=passed-only"
+  },
+  "dependencies": {
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/platform-bun": "catalog:",
+    "@effect/vitest": "catalog:",
+    "@telipot/config": "workspace:*",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

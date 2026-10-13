@@ -1,0 +1,5 @@
+# No rates: a price in any currency but USD is refused, which the one pricing
+# fixture here relies on. price.test.ts covers each rate rule.
+rates_to_usd: {}
+credit_rates_usd: {}
+meter_rates_usd: {}

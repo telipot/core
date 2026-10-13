@@ -1,0 +1,7 @@
+# Read only by `Catalog.validate`, which measures it only once no other rule
+# refuses the folder, so it is never reported here.
+mean_reciprocal_rank_at_least: 0
+queries:
+  # Names no live task.
+  - task: test record by id
+    finds: nothing.data.get

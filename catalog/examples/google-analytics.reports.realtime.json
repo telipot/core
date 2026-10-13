@@ -1,0 +1,10 @@
+{
+  "dimensionHeaders": [{ "name": "country" }],
+  "metricHeaders": [{ "name": "activeUsers", "type": "TYPE_INTEGER" }],
+  "rows": [
+    { "dimensionValues": [{ "value": "United States" }], "metricValues": [{ "value": "14" }] },
+    { "dimensionValues": [{ "value": "Germany" }], "metricValues": [{ "value": "3" }] }
+  ],
+  "rowCount": 5,
+  "kind": "analyticsData#runRealtimeReport"
+}

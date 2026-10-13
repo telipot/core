@@ -1,0 +1,4 @@
+aliases:
+  # A key live tasks here are found by. The alias rules wait until no other
+  # rule refuses the folder, so it is never reported here.
+  record: entry

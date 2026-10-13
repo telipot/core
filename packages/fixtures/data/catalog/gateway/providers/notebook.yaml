@@ -1,0 +1,45 @@
+provider: notebook
+display_name: Notebook
+base_url: https://api.notebook.example
+docs_url: https://docs.notebook.example
+source: { docs: https://docs.notebook.example, openapi: null, curated: 2026-10-11 }
+version: 2026-10-11
+# Each end user pastes a key of their own, as with a personal integration key.
+auth:
+  schemes:
+    key: { type: bearer, principals: [user] }
+identity: { task: notebook.me.get, account_path: user.id, label_path: user.name }
+probe: { path: /keys/check, expect: { json_path: active, equals: true } }
+endpoints:
+  - id: notebook.pages.list
+    capability: notes.pages.list
+    platform: notes
+    auth: key
+    scope: own_account
+    principal: user
+    method: GET
+    path: /pages
+    name: Notes in a notebook
+    summary: Lists the end user's notes
+    input:
+      queryParams:
+        q: { type: string, required: false, note: A search query }
+    untestable: needs a notebook only the end user holds
+    output: { type: object }
+    cost: { type: free }
+  - id: notebook.me.get
+    capability: account.profile
+    platform: account
+    auth: key
+    scope: own_account
+    principal: user
+    kind: account
+    method: GET
+    path: /me
+    name: The notebook account a key acts as
+    summary: Returns the end user the key belongs to, and their name
+    input: {}
+    untestable: needs a notebook only the end user holds
+    output: { type: object }
+    example_response: examples/notebook.me.get.json
+    cost: { type: free }

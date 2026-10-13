@@ -1,0 +1,8 @@
+platforms:
+  calendar: Calendars
+  mail: Email
+  notes: Notes
+capabilities:
+  calendar.events.list: Events on a calendar
+  mail.messages.list: Messages in a mailbox
+  notes.pages.list: Pages in a notebook

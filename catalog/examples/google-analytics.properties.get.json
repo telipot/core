@@ -1,0 +1,13 @@
+{
+  "name": "properties/123456789",
+  "propertyType": "PROPERTY_TYPE_ORDINARY",
+  "parent": "accounts/100200300",
+  "account": "accounts/100200300",
+  "displayName": "example.com",
+  "industryCategory": "TECHNOLOGY",
+  "timeZone": "America/Los_Angeles",
+  "currencyCode": "USD",
+  "serviceLevel": "GOOGLE_ANALYTICS_STANDARD",
+  "createTime": "2024-01-15T10:20:30.123Z",
+  "updateTime": "2025-06-02T08:00:00.456Z"
+}

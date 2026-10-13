@@ -1,0 +1,14 @@
+platforms:
+  web: Web pages
+  seo: Search engine data
+  account: The account behind a credential
+
+capabilities:
+  web.page.text: The text of one web page at a URL
+  seo.keywords.volume: Search volume of a keyword
+  seo.keywords.related: Keywords related to a keyword
+  seo.domain.overview: Search summary of a domain
+  seo.contacts.find: Contact details found at a domain
+  seo.keywords.lookup: Where a keyword ranks
+  seo.keywords.search: Keywords found by a prompt
+  account.usage: Credits left on the credential's account

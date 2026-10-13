@@ -1,0 +1,13 @@
+{
+  "rows": [
+    { "keys": ["agent tools"], "clicks": 128, "impressions": 4210, "ctr": 0.0304, "position": 6.4 },
+    {
+      "keys": ["tool gateway for agents"],
+      "clicks": 41,
+      "impressions": 1388,
+      "ctr": 0.0295,
+      "position": 8.1
+    }
+  ],
+  "responseAggregationType": "byProperty"
+}

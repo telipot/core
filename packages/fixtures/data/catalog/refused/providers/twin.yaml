@@ -1,0 +1,35 @@
+provider: twin
+display_name: Test twin
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+endpoints:
+  - id: twin.data.get
+    capability: test.data.get
+    platform: test
+    method: GET
+    path: /data/{id}
+    name: Test record by id
+    summary: Gets a record
+    input:
+      pathParams:
+        id: { type: string, required: true }
+    output: { type: object }
+    auth: public
+  - id: twin.data.old
+    capability: test.data.get
+    platform: test
+    method: GET
+    path: /data/v0/{id}
+    name: Test record by id, first version
+    summary: Gets a record
+    input:
+      pathParams:
+        id: { type: string, required: true }
+    output: { type: object }
+    auth: public
+    status: retired
+    status_note: Replaced by the generated route
+    # The generated route is a twin of twin.data.get, so the catalog never serves it.
+    superseded_by: twin.x.data

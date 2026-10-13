@@ -1,0 +1,927 @@
+provider: google-calendar
+display_name: Google Calendar
+base_url: https://www.googleapis.com
+docs_url: https://developers.google.com/workspace/calendar/api
+source:
+  docs: https://developers.google.com/workspace/calendar/api
+  openapi: https://calendar-json.googleapis.com/$discovery/rest?version=v3
+  curated: 2026-10-05
+version: 2026-10-05
+auth:
+  schemes:
+    oauth:
+      type: oauth2
+      authorization_url: https://accounts.google.com/o/oauth2/v2/auth
+      token_url: https://oauth2.googleapis.com/token
+      revocation_url: https://oauth2.googleapis.com/revoke
+      authorization_params: { access_type: offline }
+      pkce: true
+      refresh: static
+      token_type: Bearer
+      principals: [user]
+      scopes:
+        calendar.readonly: https://www.googleapis.com/auth/calendar.readonly
+        calendar.events: https://www.googleapis.com/auth/calendar.events
+oauth_app: { byo: true }
+identity:
+  task: google-calendar.profile.get
+  account_path: id
+  label_path: summary
+proposed_capabilities:
+  calendar.profile: The address and time zone of the account behind a connected calendar
+  calendar.calendars.list: Calendars on a user's calendar list, with their access role and colors
+  calendar.events.list: Events on a calendar between two times, or that match a search
+  calendar.events.get: One event on a calendar by its id
+  calendar.events.create: Add an event to a calendar
+  calendar.events.update: Change fields of an event on a calendar
+  calendar.freebusy.query: The times calendars are busy between two times
+endpoints:
+  - id: google-calendar.profile.get
+    capability: calendar.profile
+    platform: calendar
+    scope: own_account
+    principal: user
+    auth: oauth
+    required_scopes: [calendar.readonly]
+    kind: utility
+    method: GET
+    path: /calendar/v3/calendars/primary
+    name: Address and time zone of the connected Calendar account
+    summary: Returns metadata for a calendar.
+    docs_url: https://developers.google.com/workspace/calendar/api/v3/reference/calendars/get
+    input: {}
+    cost: { type: free }
+    example_response: examples/google-calendar.profile.get.json
+    output:
+      type: object
+      required: [id]
+      properties:
+        id:
+          {
+            type: string,
+            description: The address of the account and the id of its primary calendar,
+          }
+        summary: { type: string, description: The title of the primary calendar; it is the address }
+        description: { type: string }
+        location: { type: string }
+        timeZone: { type: string, description: An IANA time zone name }
+        conferenceProperties:
+          type: object
+          properties:
+            allowedConferenceSolutionTypes:
+              type: array
+              items: { type: string }
+        etag: { type: string }
+        kind: { type: string }
+
+  - id: google-calendar.calendars.list
+    capability: calendar.calendars.list
+    platform: calendar
+    domain: calendars
+    scope: own_account
+    principal: user
+    auth: oauth
+    required_scopes: [calendar.readonly]
+    kind: data
+    method: GET
+    path: /calendar/v3/users/me/calendarList
+    name: Calendars on the connected account's list, with access role
+    summary: Returns the calendars on the user's calendar list.
+    docs_url: https://developers.google.com/workspace/calendar/api/v3/reference/calendarList/list
+    input:
+      queryParams:
+        minAccessRole:
+          type: string
+          required: false
+          enum: [freeBusyReader, reader, writer, writerWithoutPrivateAccess, owner]
+          note: Keep only calendars the user holds at least this role on
+        maxResults:
+          type: integer
+          required: false
+          min: 1
+          max: 250
+          default: 100
+          note: Entries on one page
+        pageToken:
+          type: string
+          required: false
+          note: The nextPageToken of the previous page
+        showDeleted:
+          type: boolean
+          required: false
+          default: false
+          note: Whether to include entries deleted from the list
+        showHidden:
+          type: boolean
+          required: false
+          default: false
+          note: Whether to include entries hidden from the list
+    cost: { type: free }
+    example_response: examples/google-calendar.calendars.list.json
+    output:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                {
+                  type: string,
+                  description: "The calendar id; for a user's own calendar it is an address",
+                }
+              summary: { type: string }
+              summaryOverride: { type: string, description: The title the user gave it }
+              description: { type: string }
+              timeZone: { type: string }
+              accessRole: { type: string, description: "freeBusyReader, reader, writer or owner" }
+              primary: { type: boolean, description: True for the user's own calendar }
+              selected: { type: boolean }
+              hidden: { type: boolean }
+              deleted: { type: boolean }
+              backgroundColor: { type: string }
+              foregroundColor: { type: string }
+              colorId: { type: string }
+              defaultReminders:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    method: { type: string }
+                    minutes: { type: integer }
+              etag: { type: string }
+              kind: { type: string }
+        nextPageToken: { type: string, description: Absent on the last page }
+        nextSyncToken: { type: string }
+        etag: { type: string }
+        kind: { type: string }
+
+  - id: google-calendar.events.list
+    capability: calendar.events.list
+    platform: calendar
+    domain: events
+    scope: own_account
+    principal: user
+    auth: oauth
+    required_scopes: [calendar.readonly]
+    kind: data
+    method: GET
+    path: /calendar/v3/calendars/{calendarId}/events
+    name: Events on a calendar between two times or matching a search
+    summary: Returns events on the specified calendar.
+    docs_url: https://developers.google.com/workspace/calendar/api/v3/reference/events/list
+    input:
+      pathParams:
+        calendarId:
+          type: string
+          required: true
+          example: primary
+          note: primary for the connected account's own calendar, or an id from google-calendar.calendars.list
+      queryParams:
+        timeMin:
+          type: string
+          required: false
+          example: "2026-10-12T00:00:00Z"
+          note: Keep events that end after this RFC 3339 time, which needs an offset
+        timeMax:
+          type: string
+          required: false
+          example: "2026-10-19T00:00:00Z"
+          note: Keep events that start before this RFC 3339 time, which needs an offset
+        q:
+          type: string
+          required: false
+          example: planning
+          note: Free text matched against the title, description, location and the attendees' and organizer's names and addresses
+        singleEvents:
+          type: boolean
+          required: false
+          default: false
+          note: true expands a recurring event into its instances and leaves out the recurring event itself
+        orderBy:
+          type: string
+          required: false
+          enum: [startTime, updated]
+          note: startTime needs singleEvents true; an unspecified, stable order when absent
+        maxResults:
+          type: integer
+          required: false
+          min: 1
+          max: 2500
+          default: 250
+          note: Events on one page, which may hold fewer even when more match; a nextPageToken says there are more
+        pageToken:
+          type: string
+          required: false
+          note: The nextPageToken of the previous page
+        showDeleted:
+          type: boolean
+          required: false
+          default: false
+          note: Whether to include cancelled events
+        updatedMin:
+          type: string
+          required: false
+          note: Keep events changed after this RFC 3339 time, deleted ones included
+        timeZone:
+          type: string
+          required: false
+          example: America/Los_Angeles
+          note: The time zone of the times in the answer; the calendar's own when absent
+    cost: { type: free }
+    example_response: examples/google-calendar.events.list.json
+    output:
+      type: object
+      properties:
+        items:
+          type: array
+          description: Cancelled events appear only with showDeleted or updatedMin
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              status: { type: string, description: "confirmed, tentative or cancelled" }
+              summary: { type: string, description: The title }
+              description: { type: string, description: The description; it can hold HTML }
+              location: { type: string }
+              htmlLink:
+                { type: string, description: A link to the event in the Google Calendar web app }
+              created: { type: string, description: RFC 3339 time }
+              updated:
+                {
+                  type: string,
+                  description: RFC 3339 time of the last change to the main event data,
+                }
+              creator:
+                type: object
+                properties:
+                  email: { type: string }
+                  displayName: { type: string }
+                  self: { type: boolean }
+              organizer:
+                type: object
+                properties:
+                  email: { type: string }
+                  displayName: { type: string }
+                  self: { type: boolean }
+              start:
+                type: object
+                description: A date for an all-day event, or a dateTime with its offset
+                properties:
+                  date: { type: string }
+                  dateTime: { type: string }
+                  timeZone: { type: string }
+              end:
+                type: object
+                description: Exclusive; a date for an all-day event, or a dateTime with its offset
+                properties:
+                  date: { type: string }
+                  dateTime: { type: string }
+                  timeZone: { type: string }
+              recurrence:
+                type: array
+                description: RRULE, EXRULE, RDATE and EXDATE lines of a recurring event
+                items: { type: string }
+              recurringEventId:
+                { type: string, description: The id of the recurring event this is an instance of }
+              originalStartTime:
+                type: object
+                properties:
+                  date: { type: string }
+                  dateTime: { type: string }
+                  timeZone: { type: string }
+              attendees:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    email: { type: string }
+                    displayName: { type: string }
+                    responseStatus:
+                      { type: string, description: "needsAction, declined, tentative or accepted" }
+                    organizer: { type: boolean }
+                    self: { type: boolean }
+                    resource: { type: boolean }
+                    optional: { type: boolean }
+              attendeesOmitted: { type: boolean }
+              hangoutLink: { type: string }
+              conferenceData:
+                { type: object, description: The conference details such as a Google Meet link }
+              visibility: { type: string, description: "default, public, private or confidential" }
+              transparency:
+                {
+                  type: string,
+                  description: "opaque when the event blocks time, transparent when it does not",
+                }
+              eventType:
+                {
+                  type: string,
+                  description: "default, birthday, focusTime, fromGmail, outOfOffice or workingLocation",
+                }
+              colorId: { type: string }
+              iCalUID: { type: string }
+              sequence: { type: integer }
+              reminders:
+                type: object
+                properties:
+                  useDefault: { type: boolean }
+                  overrides:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        method: { type: string }
+                        minutes: { type: integer }
+              etag: { type: string }
+              kind: { type: string }
+        summary: { type: string, description: The title of the calendar }
+        description: { type: string }
+        timeZone: { type: string }
+        accessRole: { type: string, description: "none, freeBusyReader, reader, writer or owner" }
+        updated: { type: string, description: RFC 3339 time of the last change to the calendar }
+        defaultReminders:
+          type: array
+          items:
+            type: object
+            properties:
+              method: { type: string }
+              minutes: { type: integer }
+        nextPageToken: { type: string, description: Absent on the last page }
+        nextSyncToken: { type: string }
+        etag: { type: string }
+        kind: { type: string }
+
+  - id: google-calendar.events.get
+    capability: calendar.events.get
+    platform: calendar
+    domain: events
+    scope: own_account
+    principal: user
+    auth: oauth
+    required_scopes: [calendar.readonly]
+    kind: data
+    method: GET
+    path: /calendar/v3/calendars/{calendarId}/events/{eventId}
+    name: One event on a calendar by its id, with attendees and times
+    summary: Returns an event based on its Google Calendar ID. To retrieve an event using its iCalendar ID, call the events.list method using the iCalUID parameter.
+    docs_url: https://developers.google.com/workspace/calendar/api/v3/reference/events/get
+    input:
+      pathParams:
+        calendarId:
+          type: string
+          required: true
+          example: primary
+          note: primary for the connected account's own calendar, or an id from google-calendar.calendars.list
+        eventId:
+          type: string
+          required: true
+          example: 3vq8k2nd5ho1c7a9f0b4lmetoe
+          note: The event id, as google-calendar.events.list returns it
+      queryParams:
+        timeZone:
+          type: string
+          required: false
+          example: America/Los_Angeles
+          note: The time zone of the times in the answer; the calendar's own when absent
+        maxAttendees:
+          type: integer
+          required: false
+          min: 1
+          note: The most attendees to return; the answer marks any it left out with attendeesOmitted
+    cost: { type: free }
+    example_response: examples/google-calendar.events.get.json
+    output:
+      type: object
+      properties:
+        id: { type: string }
+        status: { type: string, description: "confirmed, tentative or cancelled" }
+        summary: { type: string, description: The title }
+        description: { type: string, description: The description; it can hold HTML }
+        location: { type: string }
+        htmlLink: { type: string, description: A link to the event in the Google Calendar web app }
+        created: { type: string, description: RFC 3339 time }
+        updated:
+          { type: string, description: RFC 3339 time of the last change to the main event data }
+        creator:
+          type: object
+          properties:
+            email: { type: string }
+            displayName: { type: string }
+            self: { type: boolean }
+        organizer:
+          type: object
+          properties:
+            email: { type: string }
+            displayName: { type: string }
+            self: { type: boolean }
+        start:
+          type: object
+          description: A date for an all-day event, or a dateTime with its offset
+          properties:
+            date: { type: string }
+            dateTime: { type: string }
+            timeZone: { type: string }
+        end:
+          type: object
+          description: Exclusive; a date for an all-day event, or a dateTime with its offset
+          properties:
+            date: { type: string }
+            dateTime: { type: string }
+            timeZone: { type: string }
+        recurrence:
+          type: array
+          description: RRULE, EXRULE, RDATE and EXDATE lines of a recurring event
+          items: { type: string }
+        recurringEventId:
+          { type: string, description: The id of the recurring event this is an instance of }
+        originalStartTime:
+          type: object
+          properties:
+            date: { type: string }
+            dateTime: { type: string }
+            timeZone: { type: string }
+        attendees:
+          type: array
+          items:
+            type: object
+            properties:
+              email: { type: string }
+              displayName: { type: string }
+              responseStatus:
+                { type: string, description: "needsAction, declined, tentative or accepted" }
+              organizer: { type: boolean }
+              self: { type: boolean }
+              resource: { type: boolean }
+              optional: { type: boolean }
+        attendeesOmitted: { type: boolean }
+        hangoutLink: { type: string }
+        conferenceData:
+          { type: object, description: The conference details such as a Google Meet link }
+        visibility: { type: string, description: "default, public, private or confidential" }
+        transparency:
+          {
+            type: string,
+            description: "opaque when the event blocks time, transparent when it does not",
+          }
+        eventType:
+          {
+            type: string,
+            description: "default, birthday, focusTime, fromGmail, outOfOffice or workingLocation",
+          }
+        colorId: { type: string }
+        iCalUID: { type: string }
+        sequence: { type: integer }
+        reminders:
+          type: object
+          properties:
+            useDefault: { type: boolean }
+            overrides:
+              type: array
+              items:
+                type: object
+                properties:
+                  method: { type: string }
+                  minutes: { type: integer }
+        etag: { type: string }
+        kind: { type: string }
+
+  - id: google-calendar.events.create
+    capability: calendar.events.create
+    platform: calendar
+    domain: events
+    scope: own_account
+    principal: user
+    auth: oauth
+    required_scopes: [calendar.events]
+    kind: action
+    method: POST
+    path: /calendar/v3/calendars/{calendarId}/events
+    name: Add an event with a title, times and guests to a calendar
+    summary: Creates an event.
+    docs_url: https://developers.google.com/workspace/calendar/api/v3/reference/events/insert
+    input:
+      pathParams:
+        calendarId:
+          type: string
+          required: true
+          example: primary
+          note: primary for the connected account's own calendar, or an id from google-calendar.calendars.list
+      body:
+        id:
+          type: string
+          required: false
+          example: planning2026101201
+          note: "An id you choose, 5 to 1024 characters from a to v and 0 to 9; a retried create with the same id answers 409 and adds no second event"
+        start:
+          type: object
+          required: true
+          example: { dateTime: "2026-10-12T10:00:00-07:00", timeZone: America/Los_Angeles }
+          note: "An object with a dateTime and its offset, or a date for an all-day event, and optionally a timeZone"
+        end:
+          type: object
+          required: true
+          example: { dateTime: "2026-10-12T10:30:00-07:00", timeZone: America/Los_Angeles }
+          note: "Exclusive; an object with a dateTime and its offset, or a date for an all-day event, and optionally a timeZone"
+        summary:
+          type: string
+          required: false
+          example: Planning
+          note: The title
+        description:
+          type: string
+          required: false
+          note: The description; it can hold HTML
+        location:
+          type: string
+          required: false
+          note: Free text
+        attendees:
+          type: array
+          required: false
+          example:
+            - { email: contact@example.com }
+          note: The guests, each an object with an email, and optionally optional, displayName or comment
+        recurrence:
+          type: array
+          required: false
+          example: ["RRULE:FREQ=WEEKLY;COUNT=4"]
+          note: RRULE, EXRULE, RDATE and EXDATE lines; give the start and end a timeZone when it recurs
+        reminders:
+          type: object
+          required: false
+          example: { useDefault: false, overrides: [{ method: popup, minutes: 10 }] }
+          note: The reminders for the connected account on this event
+        visibility:
+          type: string
+          required: false
+          enum: [default, public, private, confidential]
+          note: Who can see the event's details
+        transparency:
+          type: string
+          required: false
+          enum: [opaque, transparent]
+          note: opaque blocks time on the calendar and transparent leaves it free
+        colorId:
+          type: string
+          required: false
+          note: An id from the event colors the Calendar API lists
+      bodyType: json
+      queryParams:
+        sendUpdates:
+          type: string
+          required: false
+          enum: [all, externalOnly, none]
+          note: Which guests get an email about the change; none when absent
+    cost: { type: free }
+    example_response: examples/google-calendar.events.create.json
+    output:
+      type: object
+      properties:
+        id: { type: string }
+        status: { type: string, description: "confirmed, tentative or cancelled" }
+        summary: { type: string, description: The title }
+        description: { type: string, description: The description; it can hold HTML }
+        location: { type: string }
+        htmlLink: { type: string, description: A link to the event in the Google Calendar web app }
+        created: { type: string, description: RFC 3339 time }
+        updated:
+          { type: string, description: RFC 3339 time of the last change to the main event data }
+        creator:
+          type: object
+          properties:
+            email: { type: string }
+            displayName: { type: string }
+            self: { type: boolean }
+        organizer:
+          type: object
+          properties:
+            email: { type: string }
+            displayName: { type: string }
+            self: { type: boolean }
+        start:
+          type: object
+          description: A date for an all-day event, or a dateTime with its offset
+          properties:
+            date: { type: string }
+            dateTime: { type: string }
+            timeZone: { type: string }
+        end:
+          type: object
+          description: Exclusive; a date for an all-day event, or a dateTime with its offset
+          properties:
+            date: { type: string }
+            dateTime: { type: string }
+            timeZone: { type: string }
+        recurrence:
+          type: array
+          description: RRULE, EXRULE, RDATE and EXDATE lines of a recurring event
+          items: { type: string }
+        recurringEventId:
+          { type: string, description: The id of the recurring event this is an instance of }
+        originalStartTime:
+          type: object
+          properties:
+            date: { type: string }
+            dateTime: { type: string }
+            timeZone: { type: string }
+        attendees:
+          type: array
+          items:
+            type: object
+            properties:
+              email: { type: string }
+              displayName: { type: string }
+              responseStatus:
+                { type: string, description: "needsAction, declined, tentative or accepted" }
+              organizer: { type: boolean }
+              self: { type: boolean }
+              resource: { type: boolean }
+              optional: { type: boolean }
+        attendeesOmitted: { type: boolean }
+        hangoutLink: { type: string }
+        conferenceData:
+          { type: object, description: The conference details such as a Google Meet link }
+        visibility: { type: string, description: "default, public, private or confidential" }
+        transparency:
+          {
+            type: string,
+            description: "opaque when the event blocks time, transparent when it does not",
+          }
+        eventType:
+          {
+            type: string,
+            description: "default, birthday, focusTime, fromGmail, outOfOffice or workingLocation",
+          }
+        colorId: { type: string }
+        iCalUID: { type: string }
+        sequence: { type: integer }
+        reminders:
+          type: object
+          properties:
+            useDefault: { type: boolean }
+            overrides:
+              type: array
+              items:
+                type: object
+                properties:
+                  method: { type: string }
+                  minutes: { type: integer }
+        etag: { type: string }
+        kind: { type: string }
+
+  - id: google-calendar.events.update
+    capability: calendar.events.update
+    platform: calendar
+    domain: events
+    scope: own_account
+    principal: user
+    auth: oauth
+    required_scopes: [calendar.events]
+    kind: action
+    method: PATCH
+    path: /calendar/v3/calendars/{calendarId}/events/{eventId}
+    name: Change the title, times or guests of an event by its id
+    summary: Updates an event. This method supports patch semantics.
+    docs_url: https://developers.google.com/workspace/calendar/api/v3/reference/events/patch
+    input:
+      pathParams:
+        calendarId:
+          type: string
+          required: true
+          example: primary
+          note: primary for the connected account's own calendar, or an id from google-calendar.calendars.list
+        eventId:
+          type: string
+          required: true
+          example: 3vq8k2nd5ho1c7a9f0b4lmetoe
+          note: The event id, as google-calendar.events.list returns it
+      body:
+        start:
+          type: object
+          required: false
+          example: { dateTime: "2026-10-12T10:00:00-07:00", timeZone: America/Los_Angeles }
+          note: "An object with a dateTime and its offset, or a date for an all-day event, and optionally a timeZone"
+        end:
+          type: object
+          required: false
+          example: { dateTime: "2026-10-12T10:30:00-07:00", timeZone: America/Los_Angeles }
+          note: "Exclusive; an object with a dateTime and its offset, or a date for an all-day event, and optionally a timeZone"
+        summary:
+          type: string
+          required: false
+          example: Planning
+          note: The title
+        description:
+          type: string
+          required: false
+          note: The description; it can hold HTML
+        location:
+          type: string
+          required: false
+          note: Free text
+        attendees:
+          type: array
+          required: false
+          example:
+            - { email: contact@example.com }
+          note: The guests, each an object with an email, and optionally optional, displayName or comment; the list replaces the event's guests, so send everyone who stays
+        recurrence:
+          type: array
+          required: false
+          example: ["RRULE:FREQ=WEEKLY;COUNT=4"]
+          note: RRULE, EXRULE, RDATE and EXDATE lines, which replace the event's own; give the start and end a timeZone when it recurs
+        reminders:
+          type: object
+          required: false
+          example: { useDefault: false, overrides: [{ method: popup, minutes: 10 }] }
+          note: The reminders for the connected account on this event
+        visibility:
+          type: string
+          required: false
+          enum: [default, public, private, confidential]
+          note: Who can see the event's details
+        transparency:
+          type: string
+          required: false
+          enum: [opaque, transparent]
+          note: opaque blocks time on the calendar and transparent leaves it free
+        colorId:
+          type: string
+          required: false
+          note: An id from the event colors the Calendar API lists
+      bodyType: json
+      queryParams:
+        sendUpdates:
+          type: string
+          required: false
+          enum: [all, externalOnly, none]
+          note: Which guests get an email about the change; none when absent
+    cost: { type: free }
+    example_response: examples/google-calendar.events.update.json
+    output:
+      type: object
+      properties:
+        id: { type: string }
+        status: { type: string, description: "confirmed, tentative or cancelled" }
+        summary: { type: string, description: The title }
+        description: { type: string, description: The description; it can hold HTML }
+        location: { type: string }
+        htmlLink: { type: string, description: A link to the event in the Google Calendar web app }
+        created: { type: string, description: RFC 3339 time }
+        updated:
+          { type: string, description: RFC 3339 time of the last change to the main event data }
+        creator:
+          type: object
+          properties:
+            email: { type: string }
+            displayName: { type: string }
+            self: { type: boolean }
+        organizer:
+          type: object
+          properties:
+            email: { type: string }
+            displayName: { type: string }
+            self: { type: boolean }
+        start:
+          type: object
+          description: A date for an all-day event, or a dateTime with its offset
+          properties:
+            date: { type: string }
+            dateTime: { type: string }
+            timeZone: { type: string }
+        end:
+          type: object
+          description: Exclusive; a date for an all-day event, or a dateTime with its offset
+          properties:
+            date: { type: string }
+            dateTime: { type: string }
+            timeZone: { type: string }
+        recurrence:
+          type: array
+          description: RRULE, EXRULE, RDATE and EXDATE lines of a recurring event
+          items: { type: string }
+        recurringEventId:
+          { type: string, description: The id of the recurring event this is an instance of }
+        originalStartTime:
+          type: object
+          properties:
+            date: { type: string }
+            dateTime: { type: string }
+            timeZone: { type: string }
+        attendees:
+          type: array
+          items:
+            type: object
+            properties:
+              email: { type: string }
+              displayName: { type: string }
+              responseStatus:
+                { type: string, description: "needsAction, declined, tentative or accepted" }
+              organizer: { type: boolean }
+              self: { type: boolean }
+              resource: { type: boolean }
+              optional: { type: boolean }
+        attendeesOmitted: { type: boolean }
+        hangoutLink: { type: string }
+        conferenceData:
+          { type: object, description: The conference details such as a Google Meet link }
+        visibility: { type: string, description: "default, public, private or confidential" }
+        transparency:
+          {
+            type: string,
+            description: "opaque when the event blocks time, transparent when it does not",
+          }
+        eventType:
+          {
+            type: string,
+            description: "default, birthday, focusTime, fromGmail, outOfOffice or workingLocation",
+          }
+        colorId: { type: string }
+        iCalUID: { type: string }
+        sequence: { type: integer }
+        reminders:
+          type: object
+          properties:
+            useDefault: { type: boolean }
+            overrides:
+              type: array
+              items:
+                type: object
+                properties:
+                  method: { type: string }
+                  minutes: { type: integer }
+        etag: { type: string }
+        kind: { type: string }
+
+  - id: google-calendar.freebusy.query
+    capability: calendar.freebusy.query
+    platform: calendar
+    domain: freebusy
+    scope: own_account
+    principal: user
+    auth: oauth
+    required_scopes: [calendar.readonly]
+    kind: data
+    method: POST
+    path: /calendar/v3/freeBusy
+    name: Busy times of calendars between two times
+    summary: Returns free/busy information for a set of calendars.
+    docs_url: https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query
+    input:
+      body:
+        timeMin:
+          type: string
+          required: true
+          example: "2026-10-12T00:00:00Z"
+          note: The start of the interval, an RFC 3339 time with an offset
+        timeMax:
+          type: string
+          required: true
+          example: "2026-10-19T00:00:00Z"
+          note: The end of the interval, an RFC 3339 time with an offset
+        items:
+          type: array
+          required: true
+          example:
+            - { id: primary }
+          note: The calendars to query, each an object with an id from google-calendar.calendars.list, or primary
+        timeZone:
+          type: string
+          required: false
+          default: UTC
+          note: The time zone of the times in the answer
+        calendarExpansionMax:
+          type: integer
+          required: false
+          note: The most calendars to answer for
+      bodyType: json
+    cost: { type: free }
+    example_response: examples/google-calendar.freebusy.query.json
+    output:
+      type: object
+      properties:
+        timeMin: { type: string }
+        timeMax: { type: string }
+        calendars:
+          type: object
+          description: One entry per queried calendar id
+          additionalProperties:
+            type: object
+            properties:
+              busy:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    start: { type: string }
+                    end: { type: string }
+              errors:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    domain: { type: string }
+                    reason: { type: string }
+        groups: { type: object }
+        kind: { type: string }

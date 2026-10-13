@@ -1,0 +1,36 @@
+provider: calendar
+display_name: Calendar
+base_url: https://api.calendar.example
+docs_url: https://docs.calendar.example
+source: { docs: https://docs.calendar.example, openapi: null, curated: 2026-10-12 }
+version: 2026-10-12
+# telipot holds an OAuth app, and an organization may set its own.
+auth:
+  schemes:
+    oauth2:
+      type: oauth2
+      authorization_url: https://calendar.example/oauth/authorize
+      token_url: https://calendar.example/oauth/token
+      revocation_url: https://calendar.example/oauth/revoke
+      pkce: true
+      refresh: static
+      principals: [user]
+      scopes:
+        events: https://calendar.example/auth/events
+oauth_app: { byo: true }
+identity: { task: calendar.events.list, account_path: account, label_path: account }
+endpoints:
+  - id: calendar.events.list
+    capability: calendar.events.list
+    platform: calendar
+    auth: oauth2
+    scope: own_account
+    principal: user
+    required_scopes: [events]
+    method: GET
+    path: /events
+    name: Events on the end user's calendar
+    summary: Lists events
+    input: {}
+    untestable: needs a calendar only the end user holds
+    output: { type: object }

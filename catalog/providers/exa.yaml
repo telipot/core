@@ -1,0 +1,1053 @@
+provider: exa
+display_name: Exa
+base_url: https://api.exa.ai
+docs_url: https://docs.exa.ai/reference/getting-started
+source:
+  docs: https://docs.exa.ai/reference/getting-started
+  openapi: https://exa.ai/docs/exa-spec.yaml
+  curated: 2026-10-05
+version: 2026-10-05
+pricing_url: https://exa.ai/docs/admin/pricing
+limits: Team-wide queries per second across all keys, answered with 429 and Retry-After when exceeded; /search and /answer 10 QPS (deep search types 5), /contents 100 QPS, /agent/runs 5 QPS and 50 active runs; reads of run status and run lists do not count against QPS.
+auth:
+  schemes:
+    api_key: { type: api_key, in: header, name: x-api-key, principals: [organization] }
+proposed_capabilities:
+  web.search: Web pages that match a query, with their text
+  web.page.text: The text of one web page at a URL
+  web.page.similar: Web pages similar to the page at a URL
+  web.answer: A sourced answer to a question asked in plain words
+  web.research.start: Start a research run that answers a question from many web sources
+  web.research.status: Progress, answer and sources of a web research run
+  web.research.cancel: Stop a web research run before it finishes
+  web.research.list: Web research runs started on the credential's account, newest first
+endpoints:
+  - id: exa.web.search
+    capability: web.search
+    platform: web
+    domain: search
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: data
+    method: POST
+    path: /search
+    name: Web pages by query, ranked, with titles, URLs and dates
+    summary: "Perform a search with an Exa prompt-engineered query and retrieve a list of relevant results. Optionally get contents."
+    docs_url: https://exa.ai/docs/reference/search
+    input:
+      body:
+        query:
+          type: string
+          required: true
+          min: 1
+          example: recent techniques for improving retrieval in RAG systems
+          note: The query string for the search. Write it in natural language, naming the subject and, when it matters, the kind of source and the time period.
+        numResults:
+          type: integer
+          required: false
+          min: 1
+          max: 100
+          default: 10
+          note: Number of results to return. Limits vary by search type. The maximum public limit is 100 results; contact sales (hello@exa.ai) for more. The base price covers up to 10 results and each result above 10 is billed at $1 per 1,000 results.
+        type:
+          type: string
+          required: false
+          enum: [instant, fast, auto, deep-lite, deep, deep-reasoning]
+          default: auto
+          note: The search mode. auto is balanced and recommended for most applications; fast has reduced latency; instant has the minimum response time; deep-lite is lightweight research with synthesized results at a consistent 4 seconds; deep is multi-step research with synthesis; deep-reasoning adds stronger reasoning. instant is billed at $4 per 1,000 requests, fast and auto at $7, deep-lite and deep at $12, deep-reasoning at $15.
+        category:
+          type: string
+          required: false
+          note: A data category to focus on. Known categories are company, publication, news, personal site, financial report and people; other strings are accepted as category hints. The people category returns profiles of named individuals and company returns company pages, and this one task serves both. The company and people categories do not support startPublishedDate, endPublishedDate or excludeDomains, and using them returns a 400.
+        includeDomains:
+          type: array
+          required: false
+          max: 1200
+          note: Domains or domain paths to search, each a hostname such as example.com, a hostname with a path prefix such as example.com/docs, or a wildcard subdomain such as *.example.com. Use this instead of a site operator in the query.
+        excludeDomains:
+          type: array
+          required: false
+          max: 1200
+          note: Domains or domain paths to leave out, in the same forms as includeDomains.
+        startPublishedDate:
+          type: string
+          required: false
+          example: "2026-01-15T00:00:00Z"
+          note: Only links with a published date after this are returned. ISO 8601 date-time.
+        endPublishedDate:
+          type: string
+          required: false
+          example: "2026-09-30T00:00:00Z"
+          note: Only links with a published date before this are returned. ISO 8601 date-time.
+        userLocation:
+          type: string
+          required: false
+          example: US
+          note: The two-letter ISO country code of the user.
+        moderation:
+          type: boolean
+          required: false
+          default: false
+          note: Enable content moderation to filter unsafe content from search results.
+        contents:
+          type: object
+          required: false
+          example: { highlights: true }
+          note: "What to return for each result, nested under this field, such as { highlights: true } for query-relevant excerpts or { text: { maxCharacters: 2000 } } for page text, with maxAgeHours, subpages and extras as further options. Without it each result carries metadata such as title, URL and publication date. AI page summaries are billed at $1 per 1,000 pages."
+        additionalQueries:
+          type: array
+          required: false
+          min: 1
+          max: 10
+          note: Additional query variations used alongside the main query for broader results. Only works with a deep search type.
+        outputSchema:
+          type: object
+          required: false
+          note: JSON schema for synthesized output. Supported root types are text and object. When given, the response includes an output object whose content matches the schema. Works with every search type and adds about 2 seconds of synthesis latency. Object schemas are limited to 10 properties in total and 2 levels of nesting, and every array must define items.
+        objective:
+          type: string
+          required: false
+          max: 4096
+          note: Goal for this search turn; say which documents should rank first, which should be excluded, and what specific facts or figures to pull from them.
+        systemPrompt:
+          type: string
+          required: false
+          note: Additional instructions that guide generated output, such as source preferences, novelty constraints or duplication constraints.
+      bodyType: json
+    test_request:
+      body:
+        query: openrouter
+        numResults: 1
+        type: instant
+    cost:
+      type: per_call
+      table:
+        - { when: { body.type: instant }, value: 4 }
+        - { when: { body.type: fast }, value: 7 }
+        - { when: { body.type: auto }, value: 7 }
+        - { when: { body.type: deep-lite }, value: 12 }
+        - { when: { body.type: deep }, value: 12 }
+        - { when: { body.type: deep-reasoning }, value: 15 }
+      # The dearest search type.
+      fallback: { value: 15 }
+      currency: USD
+      per: 1000
+      unit: request
+      source: docs
+      source_url: https://exa.ai/docs/admin/pricing
+      checked: 2026-10-05
+      confidence: documented
+      note: Base price per request for up to 10 results. Each result above 10 adds $1 per 1,000 results and each AI page summary adds $1 per 1,000 pages, which no row here can carry, so the charge the response reports in costDollars.total is the one to settle on.
+      settle: { type: reported_charge, path: costDollars.total }
+    verified: 2026-10-05
+    example_response: examples/exa.web.search.json
+    output:
+      type: object
+      required: [results]
+      properties:
+        requestId: { type: string }
+        results:
+          type: array
+          items:
+            type: object
+            required: [title, url]
+            properties:
+              title: { type: string }
+              url: { type: string }
+              id:
+                {
+                  type: string,
+                  description: "Temporary document id, accepted by the contents route",
+                }
+              publishedDate:
+                { type: string, description: Estimated creation date parsed from the page }
+              author: { type: [string, "null"] }
+              image: { type: string }
+              favicon: { type: string }
+              text: { type: string, description: "Full page text, present only when requested" }
+              highlights: { type: array, items: { type: string } }
+              summary: { type: string }
+              subpages: { type: array, items: { type: object } }
+              entities: { type: array, items: { type: object } }
+              extras: { type: object }
+        searchTime: { type: number, description: Server-side processing time in milliseconds }
+        costDollars:
+          type: object
+          description: Estimated dollar cost of the completed request; billing is computed from usage counters, not from this object.
+          properties:
+            total: { type: number }
+            search:
+              type: object
+              properties:
+                neural: { type: number }
+                keyword: { type: number }
+            summary: { type: number }
+            contents:
+              type: object
+              properties:
+                text: { type: number }
+                highlights: { type: number }
+                summary: { type: number }
+        output:
+          type: object
+          description: Synthesized output, returned when outputSchema is provided
+          required: [content, grounding]
+          properties:
+            content: { type: [string, object] }
+            grounding:
+              type: array
+              items:
+                type: object
+                properties:
+                  field: { type: string }
+                  citations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        url: { type: string }
+                        title: { type: string }
+                        id: { type: string }
+                  confidence: { type: string }
+  - id: exa.web.page.text
+    capability: web.page.text
+    platform: web
+    domain: contents
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: data
+    method: POST
+    path: /contents
+    name: Web page text and title from URLs, with fetch status
+    summary: Get the full page contents, summaries, and metadata for a list of URLs.
+    docs_url: https://exa.ai/docs/reference/get-contents
+    input:
+      body:
+        urls:
+          type: array
+          required: true
+          min: 1
+          max: 100
+          example: [https://example.com]
+          note: URLs to crawl. Up to 100 per request.
+        text:
+          type: object
+          required: true
+          example: { maxCharacters: 2000 }
+          note: "Options for the text returned for each URL, such as { maxCharacters: 2000 } to limit the text per page; includeHtmlTags, verbosity (compact, standard or full), includeSections and excludeSections are also accepted. The vendor's schema also accepts true for the default settings, which this typed field cannot express, so pass an options object. Text is billed at $1 per 1,000 pages."
+        maxAgeHours:
+          type: integer
+          required: false
+          min: -1
+          max: 720
+          note: Maximum age of cached content in hours. Positive values use cached content if it is less than this many hours old; 0 fetches fresh content; -1 always uses the cache; omitted uses fallback fetching when cached content is unavailable.
+        livecrawlTimeout:
+          type: integer
+          required: false
+          min: 1
+          max: 90000
+          default: 10000
+          note: The timeout for livecrawling in milliseconds.
+      bodyType: json
+    test_request:
+      body:
+        urls: [https://example.com]
+        text: { maxCharacters: 1000 }
+    # A URL that fails is reported in statuses, inside a 200 response.
+    expect: { json_path: "statuses[0].status", equals: success }
+    cost:
+      type: per_result
+      value: 1
+      currency: USD
+      per: 1000
+      unit: page
+      source: docs
+      source_url: https://exa.ai/docs/admin/pricing
+      checked: 2026-10-05
+      confidence: documented
+      note: $1 per 1,000 pages for each content type; a page returned with text and with highlights counts twice, and AI page summaries add $1 per 1,000 pages.
+      settle: { type: reported_charge, path: costDollars.total }
+    verified: 2026-10-05
+    example_response: examples/exa.web.page.text.json
+    output:
+      type: object
+      properties:
+        requestId: { type: string }
+        results:
+          type: array
+          items:
+            type: object
+            required: [title, url]
+            properties:
+              title: { type: string }
+              url: { type: string }
+              id:
+                {
+                  type: string,
+                  description: "Temporary document id, accepted by the contents route",
+                }
+              publishedDate:
+                { type: string, description: Estimated creation date parsed from the page }
+              author: { type: [string, "null"] }
+              image: { type: string }
+              favicon: { type: string }
+              text: { type: string, description: "Full page text, present only when requested" }
+              highlights: { type: array, items: { type: string } }
+              summary: { type: string }
+              subpages: { type: array, items: { type: object } }
+              entities: { type: array, items: { type: object } }
+              extras: { type: object }
+        statuses:
+          type: array
+          description: One entry per requested URL; a URL that failed is reported here, in a 200 response
+          items:
+            type: object
+            required: [id, status]
+            properties:
+              id: { type: string, description: The URL or document id that was requested }
+              status: { type: string, enum: [success, error] }
+              source: { type: string, enum: [cached, crawled] }
+              error:
+                anyOf:
+                  - type: object
+                    properties:
+                      tag:
+                        {
+                          type: string,
+                          description: "Specific error type, such as CRAWL_NOT_FOUND",
+                        }
+                      httpStatusCode:
+                        {
+                          type: [integer, "null"],
+                          description: The status the target page returned,
+                        }
+                  - { type: "null" }
+        searchTime: { type: number }
+        costDollars:
+          type: object
+          description: Estimated dollar cost of the completed request; billing is computed from usage counters, not from this object.
+          properties:
+            total: { type: number }
+            search:
+              type: object
+              properties:
+                neural: { type: number }
+                keyword: { type: number }
+            summary: { type: number }
+            contents:
+              type: object
+              properties:
+                text: { type: number }
+                highlights: { type: number }
+                summary: { type: number }
+  - id: exa.web.page.similar
+    capability: web.page.similar
+    platform: web
+    domain: search
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: data
+    method: POST
+    path: /findSimilar
+    name: Web pages similar to a URL, with titles and scores
+    summary: "Find links similar to the provided URL and optionally retrieve their contents. Deprecated: prefer `/search` with a query describing the source."
+    docs_url: https://exa.ai/docs/exa-spec.yaml
+    input:
+      body:
+        url:
+          type: string
+          required: true
+          min: 3
+          example: https://example.com
+          note: The url for which you would like to find similar links. The vendor marks this route deprecated in its OpenAPI document and prefers /search with a query describing the source.
+        numResults:
+          type: integer
+          required: false
+          min: 1
+          max: 100
+          default: 10
+          note: Number of results to return. The maximum public limit is 100 results; contact sales (hello@exa.ai) for more.
+        excludeSourceDomain:
+          type: boolean
+          required: false
+          note: If true, results from the same domain as the source url are excluded.
+        includeDomains:
+          type: array
+          required: false
+          max: 1200
+          note: Domains or domain paths to search, each a hostname such as example.com, a hostname with a path prefix such as example.com/docs, or a wildcard subdomain such as *.example.com.
+        excludeDomains:
+          type: array
+          required: false
+          max: 1200
+          note: Domains or domain paths to leave out, in the same forms as includeDomains.
+        startPublishedDate:
+          type: string
+          required: false
+          example: "2026-01-15T00:00:00Z"
+          note: Only links with a published date after this are returned. ISO 8601 date-time.
+        endPublishedDate:
+          type: string
+          required: false
+          example: "2026-09-30T00:00:00Z"
+          note: Only links with a published date before this are returned. ISO 8601 date-time.
+        category:
+          type: string
+          required: false
+          note: A data category to focus on. Known categories are company, publication, news, personal site, financial report and people; other strings are accepted as category hints. The company and people categories do not support startPublishedDate, endPublishedDate or excludeDomains, and using them returns a 400.
+        contents:
+          type: object
+          required: false
+          example: { highlights: true }
+          note: "What to return for each result, nested under this field, such as { highlights: true } or { text: { maxCharacters: 2000 } }. Without it each result carries metadata such as title, URL and publication date."
+      bodyType: json
+    test_request:
+      body:
+        url: https://example.com
+        numResults: 1
+    cost:
+      type: per_call
+      currency: USD
+      source: docs
+      source_url: https://exa.ai/docs/admin/pricing
+      checked: 2026-10-05
+      confidence: unknown
+      note: The pricing page lists no rate for this route, and the vendor's OpenAPI document marks it deprecated, so no price is recorded; the response reports its charge in costDollars.total.
+      settle: { type: reported_charge, path: costDollars.total }
+    verified: 2026-10-05
+    example_response: examples/exa.web.page.similar.json
+    output:
+      type: object
+      properties:
+        requestId: { type: string }
+        results:
+          type: array
+          items:
+            type: object
+            required: [title, url]
+            properties:
+              title: { type: string }
+              url: { type: string }
+              id:
+                {
+                  type: string,
+                  description: "Temporary document id, accepted by the contents route",
+                }
+              publishedDate:
+                { type: string, description: Estimated creation date parsed from the page }
+              author: { type: [string, "null"] }
+              image: { type: string }
+              favicon: { type: string }
+              text: { type: string, description: "Full page text, present only when requested" }
+              highlights: { type: array, items: { type: string } }
+              summary: { type: string }
+              subpages: { type: array, items: { type: object } }
+              entities: { type: array, items: { type: object } }
+              extras: { type: object }
+              score:
+                {
+                  type: number,
+                  description: Similarity to the source URL; compare scores only within one response,
+                }
+        searchTime: { type: number, description: Server-side processing time in milliseconds }
+        costDollars:
+          type: object
+          description: Estimated dollar cost of the completed request; billing is computed from usage counters, not from this object.
+          properties:
+            total: { type: number }
+            search:
+              type: object
+              properties:
+                neural: { type: number }
+                keyword: { type: number }
+            summary: { type: number }
+            contents:
+              type: object
+              properties:
+                text: { type: number }
+                highlights: { type: number }
+                summary: { type: number }
+  - id: exa.web.answer
+    capability: web.answer
+    platform: web
+    domain: answer
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: data
+    method: POST
+    path: /answer
+    name: Sourced answer to a question, with citations
+    summary: "Performs a search based on the query and generates either a direct answer or a detailed summary with citations, depending on the query type."
+    docs_url: https://exa.ai/docs/reference/answer
+    input:
+      body:
+        query:
+          type: string
+          required: true
+          min: 1
+          example: What is the capital of France?
+          note: Natural-language question or instructions for the request.
+        text:
+          type: boolean
+          required: false
+          default: false
+          note: If true, returns full page text with default settings. If false, disables text return. Each citation has a text field.
+        model:
+          type: string
+          required: false
+          enum: [exa, exa-pro, exa-research, exa-fast]
+          default: exa
+          note: The model used to generate the answer.
+        systemPrompt:
+          type: string
+          required: false
+          note: Additional instructions that guide generated output, such as source preferences, novelty constraints or duplication constraints.
+        outputSchema:
+          type: object
+          required: false
+          note: A JSON Schema Draft 7 specification for the desired answer structure. When given, the answer is returned as a structured object matching the schema instead of a plain string.
+        userLocation:
+          type: string
+          required: false
+          example: US
+          note: The two-letter ISO country code of the user.
+      bodyType: json
+    test_request:
+      body:
+        query: What is the capital of France?
+    cost:
+      type: per_call
+      value: 5
+      currency: USD
+      per: 1000
+      unit: request
+      source: docs
+      source_url: https://exa.ai/docs/admin/pricing
+      checked: 2026-10-05
+      confidence: documented
+      note: The pricing page lists one rate for /answer and does not say whether model changes it.
+      settle: { type: reported_charge, path: costDollars.total }
+    verified: 2026-10-05
+    example_response: examples/exa.web.answer.json
+    output:
+      type: object
+      required: [answer]
+      properties:
+        requestId: { type: string }
+        answer:
+          type: [string, object]
+          description: A string by default, or an object matching outputSchema when one was given
+        citations:
+          type: array
+          description: Search results used to generate the answer
+          items:
+            type: object
+            required: [title, url]
+            properties:
+              title: { type: string }
+              url: { type: string }
+              id: { type: string }
+              publishedDate: { type: string }
+              author: { type: [string, "null"] }
+              image: { type: string }
+              favicon: { type: string }
+              text: { type: string }
+        costDollars:
+          type: object
+          description: Estimated dollar cost of the completed request; billing is computed from usage counters, not from this object.
+          properties:
+            total: { type: number }
+            search:
+              type: object
+              properties:
+                neural: { type: number }
+                keyword: { type: number }
+            summary: { type: number }
+            contents:
+              type: object
+              properties:
+                text: { type: number }
+                highlights: { type: number }
+                summary: { type: number }
+  - id: exa.web.research.start
+    capability: web.research.start
+    platform: web
+    domain: research
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: data
+    method: POST
+    path: /agent/runs
+    name: Start web research from a question, returns a run id
+    summary: "Create an asynchronous Agent run. By default, the API returns the run object immediately. Set `Accept: text/event-stream` to stream run lifecycle events until the run reaches a terminal status."
+    docs_url: https://exa.ai/docs/reference/agent-api/create-a-run
+    input:
+      body:
+        query:
+          type: string
+          required: true
+          min: 1
+          example: Find five recently launched developer tools for evaluating AI agents.
+          note: Natural-language question or instructions for the run.
+        effort:
+          type: string
+          required: false
+          enum: [minimal, low, medium, high, xhigh, auto, ultra]
+          default: auto
+          note: Cost and reasoning effort preference. auto lets Exa choose and ultra is the highest-effort tier; both are metered by usage up to a cap. minimal, low, medium, high and xhigh bill a flat price per request, $0.012, $0.025, $0.10, $0.50 and $1.00.
+        systemPrompt:
+          type: string
+          required: false
+          note: Additional instructions that guide the run, such as source preferences, novelty constraints or duplication constraints.
+        outputSchema:
+          type: object
+          required: false
+          note: JSON Schema for validated structured output in output.structured. Fields unsupported by evidence may be returned as null. Supports draft-07, 2019-09 and 2020-12 via $schema.
+        input:
+          type: object
+          required: false
+          note: "Records to process and records or entities to exclude from the answer, as { data: [records to process or enrich], exclusion: [records or entities to avoid returning] }."
+        previousRunId:
+          type: string
+          required: false
+          min: 1
+          max: 200
+          note: Id of an earlier run to continue from, such as for a follow-up request like find 10 more results. Ids carry the agent_run_ prefix and use only letters, digits and _ . - and a colon.
+      bodyType: json
+    test_request:
+      body:
+        query: What is the capital of France?
+        effort: minimal
+    cost:
+      type: per_call
+      table:
+        - { when: { body.effort: minimal }, value: 0.012 }
+        - { when: { body.effort: low }, value: 0.025 }
+        - { when: { body.effort: medium }, value: 0.10 }
+        - { when: { body.effort: high }, value: 0.50 }
+        - { when: { body.effort: xhigh }, value: 1.00 }
+        # Metered efforts bill what the run uses up to a per-run cap; these rows
+        # are the caps, not expected charges.
+        - { when: { body.effort: auto }, value: 5 }
+        - { when: { body.effort: ultra }, value: 20 }
+      fallback: { value: 20 }
+      currency: USD
+      unit: request
+      source: docs
+      source_url: https://exa.ai/docs/admin/pricing
+      checked: 2026-10-05
+      confidence: documented
+      note: Fixed efforts bill a flat price per request. auto and ultra bill actual usage (Agent Compute Units at $0.10, search calls at $0.005, email enrichment at $0.02 and phone enrichment at $0.07 each) up to a cap that defaults to $5 for auto and $20 for ultra; the rows hold those default caps. The budget and dataSources fields that would change them are not exposed here. The finished run reports its charge in costDollars.total.
+    verified: 2026-10-05
+    example_response: examples/exa.web.research.start.json
+    output:
+      type: object
+      required:
+        [
+          id,
+          object,
+          status,
+          stopReason,
+          createdAt,
+          completedAt,
+          request,
+          output,
+          usage,
+          costDollars,
+        ]
+      properties:
+        id: { type: string, description: Run id with the agent_run_ prefix }
+        object: { type: string, const: agent_run }
+        status: { type: string, enum: [queued, running, completed, failed, cancelled] }
+        stopReason:
+          anyOf:
+            - {
+                type: string,
+                enum:
+                  [schema_satisfied, budget_reached, time_limit_reached, stopped, error, cancelled],
+              }
+            - { type: "null" }
+          description: Why the run stopped; null while it is queued or running
+        createdAt: { type: string }
+        completedAt: { type: [string, "null"] }
+        request: { type: [object, "null"], description: The request fields stored with the run }
+        output:
+          type: object
+          required: [text, structured, grounding]
+          properties:
+            text: { type: string, description: Natural-language answer or summary }
+            structured: { description: JSON shaped by outputSchema; null when no schema was given }
+            grounding:
+              type: array
+              description: Field-level citations
+              items:
+                type: object
+                required: [field, citations]
+                properties:
+                  field: { type: string }
+                  citations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        url: { type: string }
+                        title: { type: string }
+                  confidence:
+                    anyOf:
+                      - { type: string, enum: [low, medium, high] }
+                      - { type: "null" }
+        usage:
+          type: object
+          required: [agentComputeUnits, searches, emails, phoneNumbers]
+          properties:
+            agentComputeUnits: { type: number }
+            searches: { type: integer }
+            emails: { type: integer }
+            phoneNumbers: { type: integer }
+            dataSources: { type: object }
+        costDollars:
+          type: object
+          required: [total, agentCompute, search, emails, phoneNumbers]
+          properties:
+            total: { type: number }
+            agentCompute: { type: number }
+            search: { type: number }
+            emails: { type: number }
+            phoneNumbers: { type: number }
+            dataSources: { type: object }
+  - id: exa.web.research.status
+    capability: web.research.status
+    platform: web
+    domain: research
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: data
+    method: GET
+    path: /agent/runs/{id}
+    name: Web research run by id, with status, answer and citations
+    summary: Retrieve a single Agent run by ID.
+    docs_url: https://exa.ai/docs/reference/agent-api/get-a-run
+    input:
+      pathParams:
+        id:
+          type: string
+          required: true
+          min: 1
+          max: 200
+          example: agent_run_01j
+          note: Agent run id, as returned when the run was created. Ids carry the agent_run_ prefix.
+    untestable: needs the id of a research task that costs money to start
+    cost:
+      type: per_call
+      currency: USD
+      source: docs
+      source_url: https://exa.ai/docs/admin/pricing
+      checked: 2026-10-05
+      confidence: unknown
+      note: The pricing page lists no rate for reading a run; the run's own charge is reported in its costDollars.total.
+    output:
+      type: object
+      required:
+        [
+          id,
+          object,
+          status,
+          stopReason,
+          createdAt,
+          completedAt,
+          request,
+          output,
+          usage,
+          costDollars,
+        ]
+      properties:
+        id: { type: string, description: Run id with the agent_run_ prefix }
+        object: { type: string, const: agent_run }
+        status: { type: string, enum: [queued, running, completed, failed, cancelled] }
+        stopReason:
+          anyOf:
+            - {
+                type: string,
+                enum:
+                  [schema_satisfied, budget_reached, time_limit_reached, stopped, error, cancelled],
+              }
+            - { type: "null" }
+          description: Why the run stopped; null while it is queued or running
+        createdAt: { type: string }
+        completedAt: { type: [string, "null"] }
+        request: { type: [object, "null"], description: The request fields stored with the run }
+        output:
+          type: object
+          required: [text, structured, grounding]
+          properties:
+            text: { type: string, description: Natural-language answer or summary }
+            structured: { description: JSON shaped by outputSchema; null when no schema was given }
+            grounding:
+              type: array
+              description: Field-level citations
+              items:
+                type: object
+                required: [field, citations]
+                properties:
+                  field: { type: string }
+                  citations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        url: { type: string }
+                        title: { type: string }
+                  confidence:
+                    anyOf:
+                      - { type: string, enum: [low, medium, high] }
+                      - { type: "null" }
+        usage:
+          type: object
+          required: [agentComputeUnits, searches, emails, phoneNumbers]
+          properties:
+            agentComputeUnits: { type: number }
+            searches: { type: integer }
+            emails: { type: integer }
+            phoneNumbers: { type: integer }
+            dataSources: { type: object }
+        costDollars:
+          type: object
+          required: [total, agentCompute, search, emails, phoneNumbers]
+          properties:
+            total: { type: number }
+            agentCompute: { type: number }
+            search: { type: number }
+            emails: { type: number }
+            phoneNumbers: { type: number }
+            dataSources: { type: object }
+  - id: exa.web.research.cancel
+    capability: web.research.cancel
+    platform: web
+    domain: research
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: action
+    method: POST
+    path: /agent/runs/{id}/cancel
+    name: Cancel a web research run by its id
+    summary: Cancel a queued or running Agent run immediately without returning any results. You are billed for usage accrued before cancellation. If the run has already reached a terminal status, the API returns the existing run.
+    docs_url: https://exa.ai/docs/reference/agent-api/cancel-a-run
+    input:
+      pathParams:
+        id:
+          type: string
+          required: true
+          min: 1
+          max: 200
+          example: agent_run_01j
+          note: Agent run id, as returned when the run was created. Ids carry the agent_run_ prefix.
+    untestable: needs the id of a research task that costs money to start
+    cost:
+      type: per_call
+      currency: USD
+      source: docs
+      source_url: https://exa.ai/docs/admin/pricing
+      checked: 2026-10-05
+      confidence: unknown
+      note: The route bills the usage a run accrued before it was cancelled, and the pricing page lists no rate for cancelling itself.
+    output:
+      type: object
+      required:
+        [
+          id,
+          object,
+          status,
+          stopReason,
+          createdAt,
+          completedAt,
+          request,
+          output,
+          usage,
+          costDollars,
+        ]
+      properties:
+        id: { type: string, description: Run id with the agent_run_ prefix }
+        object: { type: string, const: agent_run }
+        status: { type: string, enum: [queued, running, completed, failed, cancelled] }
+        stopReason:
+          anyOf:
+            - {
+                type: string,
+                enum:
+                  [schema_satisfied, budget_reached, time_limit_reached, stopped, error, cancelled],
+              }
+            - { type: "null" }
+          description: Why the run stopped; null while it is queued or running
+        createdAt: { type: string }
+        completedAt: { type: [string, "null"] }
+        request: { type: [object, "null"], description: The request fields stored with the run }
+        output:
+          type: object
+          required: [text, structured, grounding]
+          properties:
+            text: { type: string, description: Natural-language answer or summary }
+            structured: { description: JSON shaped by outputSchema; null when no schema was given }
+            grounding:
+              type: array
+              description: Field-level citations
+              items:
+                type: object
+                required: [field, citations]
+                properties:
+                  field: { type: string }
+                  citations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        url: { type: string }
+                        title: { type: string }
+                  confidence:
+                    anyOf:
+                      - { type: string, enum: [low, medium, high] }
+                      - { type: "null" }
+        usage:
+          type: object
+          required: [agentComputeUnits, searches, emails, phoneNumbers]
+          properties:
+            agentComputeUnits: { type: number }
+            searches: { type: integer }
+            emails: { type: integer }
+            phoneNumbers: { type: integer }
+            dataSources: { type: object }
+        costDollars:
+          type: object
+          required: [total, agentCompute, search, emails, phoneNumbers]
+          properties:
+            total: { type: number }
+            agentCompute: { type: number }
+            search: { type: number }
+            emails: { type: number }
+            phoneNumbers: { type: number }
+            dataSources: { type: object }
+  - id: exa.web.research.list
+    capability: web.research.list
+    platform: web
+    domain: research
+    auth: api_key
+    scope: any_account
+    principal: organization
+    kind: account
+    method: GET
+    path: /agent/runs
+    name: Web research runs on the account, newest first, with status
+    summary: List Agent runs for your team, ordered from newest to oldest.
+    docs_url: https://exa.ai/docs/reference/agent-api/list-runs
+    input:
+      queryParams:
+        limit:
+          type: integer
+          required: false
+          min: 1
+          max: 100
+          default: 20
+          note: Number of results per page.
+        cursor:
+          type: string
+          required: false
+          min: 1
+          max: 200
+          note: Where to resume, the nextCursor of the previous page.
+    test_request:
+      queryParams:
+        limit: 1
+    cost:
+      type: per_call
+      currency: USD
+      source: docs
+      source_url: https://exa.ai/docs/admin/pricing
+      checked: 2026-10-05
+      confidence: unknown
+      note: The pricing page lists no rate for listing runs; the billing page says only that reads of run lists do not count against QPS.
+    verified: 2026-10-05
+    example_response: examples/exa.web.research.list.json
+    output:
+      type: object
+      required: [object, data, hasMore, nextCursor]
+      properties:
+        object: { type: string }
+        data:
+          type: array
+          items:
+            type: object
+            required:
+              [
+                id,
+                object,
+                status,
+                stopReason,
+                createdAt,
+                completedAt,
+                request,
+                output,
+                usage,
+                costDollars,
+              ]
+            properties:
+              id: { type: string, description: Run id with the agent_run_ prefix }
+              object: { type: string }
+              status:
+                { type: string, description: "queued, running, completed, failed or cancelled" }
+              stopReason:
+                type: [string, "null"]
+                description: Why the run stopped; null while it is queued or running
+              createdAt: { type: string }
+              completedAt: { type: [string, "null"] }
+              request:
+                { type: [object, "null"], description: The request fields stored with the run }
+              output:
+                type: object
+                required: [text, structured, grounding]
+                properties:
+                  text: { type: string, description: Natural-language answer or summary }
+                  structured:
+                    { description: JSON shaped by outputSchema; null when no schema was given }
+                  grounding:
+                    type: array
+                    description: Field-level citations
+                    items:
+                      type: object
+                      required: [field, citations]
+                      properties:
+                        field: { type: string }
+                        citations:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              url: { type: string }
+                              title: { type: string }
+                        confidence: { type: [string, "null"] }
+              usage:
+                type: object
+                required: [agentComputeUnits, searches, emails, phoneNumbers]
+                properties:
+                  agentComputeUnits: { type: number }
+                  searches: { type: integer }
+                  emails: { type: integer }
+                  phoneNumbers: { type: integer }
+                  dataSources: { type: object }
+              costDollars:
+                type: object
+                required: [total, agentCompute, search, emails, phoneNumbers]
+                properties:
+                  total: { type: number }
+                  agentCompute: { type: number }
+                  search: { type: number }
+                  emails: { type: number }
+                  phoneNumbers: { type: number }
+                  dataSources: { type: object }
+        hasMore: { type: boolean }
+        nextCursor: { type: [string, "null"], description: Pass as cursor to read the next page }

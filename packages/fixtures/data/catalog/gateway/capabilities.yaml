@@ -1,0 +1,16 @@
+platforms:
+  web: The web at large
+  mail: Email
+  account: Accounts
+  notes: Notes
+  issues: Issue trackers
+  tickets: Support desks
+capabilities:
+  web.page.text: The readable text of a web page
+  web.page.links: The links on a web page
+  web.page.send: A web page's text, sent to an address
+  mail.messages.list: Messages in a mailbox
+  notes.pages.list: Pages in a notebook
+  issues.list: Issues assigned to someone
+  tickets.list: Support tickets
+  account.profile: The account a credential acts as

@@ -1,0 +1,32 @@
+provider: undeclared-scope
+display_name: Test undeclared-scope
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+auth:
+  schemes:
+    oauth:
+      type: oauth2
+      authorization_url: https://auth.example.com/authorize
+      token_url: https://auth.example.com/token
+      pkce: true
+      refresh: static
+      principals: [user]
+      scopes:
+        read: https://scopes.example.com/read
+identity: { task: undeclared-scope.data.get, account_path: email, label_path: email }
+endpoints:
+  - id: undeclared-scope.data.get
+    capability: test.data.get
+    platform: test
+    method: GET
+    path: /data
+    name: Test record by id
+    summary: Gets a record
+    input: {}
+    output: { type: object }
+    auth: oauth
+    scope: own_account
+    principal: user
+    required_scopes: [write]

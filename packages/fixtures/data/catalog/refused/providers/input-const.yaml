@@ -1,0 +1,19 @@
+provider: input-const
+display_name: Test input-const
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+endpoints:
+  - id: input-const.data.get
+    capability: test.data.get
+    platform: test
+    auth: public
+    method: GET
+    path: /data
+    name: Test record by id
+    summary: Gets a record
+    input:
+      queryParams:
+        count: { type: integer, const: one }
+    output: { type: object }

@@ -1,0 +1,8 @@
+{
+  "kind": "calendar#calendar",
+  "etag": "\"EXAMPLEETAG\"",
+  "id": "contact@example.com",
+  "summary": "contact@example.com",
+  "timeZone": "America/Los_Angeles",
+  "conferenceProperties": { "allowedConferenceSolutionTypes": ["hangoutsMeet"] }
+}

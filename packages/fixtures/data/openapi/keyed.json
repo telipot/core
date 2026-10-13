@@ -1,0 +1,127 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Keyed API Documentation", "version": "1.0.0" },
+  "components": {
+    "schemas": {
+      "Mode": { "type": "string", "enum": ["fast", "slow"] },
+      "Clip": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": { "type": "string", "examples": ["Hello"] },
+          "mode": { "anyOf": [{ "type": "null" }, { "$ref": "#/components/schemas/Mode" }] },
+          "volume": {
+            "anyOf": [{ "type": "number", "minimum": 0, "maximum": 2 }, { "type": "null" }]
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/v1/clips": {
+      "get": {
+        "operationId": "list_clips",
+        "summary": "List Clips",
+        "parameters": [
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "integer", "minimum": 5, "maximum": 100 }, { "type": "null" }],
+              "default": 20
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "deprecated": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "x-keyed-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "Your API key."
+            }
+          }
+        ],
+        "responses": { "200": { "description": "Clips" } }
+      },
+      "post": {
+        "operationId": "create_clip",
+        "summary": "Create Clip",
+        "parameters": [
+          {
+            "name": "x-keyed-api-key",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Clip" } } }
+        },
+        "responses": { "200": { "description": "Created" } }
+      }
+    },
+    "/v1/clips/{clip_id}": {
+      "get": {
+        "operationId": "get_clip",
+        "summary": "Get Clip",
+        "parameters": [
+          {
+            "name": "clip_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "examples": ["clip_7"] }
+          },
+          {
+            "name": "x-keyed-api-key",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "A clip" } }
+      }
+    },
+    "/v1/clips/upload": {
+      "post": {
+        "operationId": "upload_clip",
+        "summary": "Upload Clip",
+        "parameters": [
+          {
+            "name": "x-keyed-api-key",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": { "file": { "type": "string", "format": "binary" } }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Uploaded" } }
+      }
+    },
+    "/v1/models": {
+      "get": {
+        "operationId": "get_models",
+        "summary": "Get Models",
+        "responses": { "200": { "description": "Models" } }
+      }
+    }
+  }
+}

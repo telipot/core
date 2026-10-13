@@ -1,0 +1,19 @@
+provider: input-unused-path
+display_name: Test input-unused-path
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+endpoints:
+  - id: input-unused-path.data.get
+    capability: test.data.get
+    platform: test
+    auth: public
+    method: GET
+    path: /data
+    name: Test record by id
+    summary: Gets a record
+    input:
+      pathParams:
+        id: { type: string }
+    output: { type: object }

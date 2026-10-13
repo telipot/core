@@ -1,0 +1,43 @@
+{
+  "kind": "calendar#event",
+  "etag": "\"EXAMPLEETAG\"",
+  "id": "3vq8k2nd5ho1c7a9f0b4lmetoe",
+  "status": "confirmed",
+  "htmlLink": "https://www.google.com/calendar/event?eid=EXAMPLE",
+  "created": "2026-09-28T16:02:10.000Z",
+  "updated": "2026-10-05T09:30:02.114Z",
+  "summary": "Planning, moved",
+  "creator": {
+    "email": "contact@example.com",
+    "self": true
+  },
+  "organizer": {
+    "email": "contact@example.com",
+    "self": true
+  },
+  "start": {
+    "dateTime": "2026-10-12T10:00:00-07:00",
+    "timeZone": "America/Los_Angeles"
+  },
+  "end": {
+    "dateTime": "2026-10-12T10:30:00-07:00",
+    "timeZone": "America/Los_Angeles"
+  },
+  "sequence": 1,
+  "attendees": [
+    {
+      "email": "contact@example.com",
+      "organizer": true,
+      "self": true,
+      "responseStatus": "accepted"
+    },
+    {
+      "email": "guest@example.com",
+      "responseStatus": "needsAction"
+    }
+  ],
+  "reminders": {
+    "useDefault": true
+  },
+  "eventType": "default"
+}

@@ -1,0 +1,2 @@
+platforms: { test: Test data }
+capabilities: { test.data.get: A test record }

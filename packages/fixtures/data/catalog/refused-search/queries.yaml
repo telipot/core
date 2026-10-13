@@ -1,0 +1,7 @@
+# Read only by `Catalog.validate`, never by `Catalog.layer`; search.test.ts
+# holds one row per rule.
+mean_reciprocal_rank_at_least: 0
+queries:
+  # Names no live task.
+  - task: test record by id
+    finds: nothing.data.get

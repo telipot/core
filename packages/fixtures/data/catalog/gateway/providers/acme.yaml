@@ -1,0 +1,81 @@
+provider: acme
+display_name: Acme
+base_url: https://api.acme.example
+docs_url: https://docs.acme.example
+source: { docs: https://docs.acme.example, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+auth:
+  schemes:
+    api_key: { type: api_key, in: header, name: X-API-Key, principals: [organization] }
+identity: { task: acme.account.get, account_path: account.id, label_path: account.name }
+probe: { path: /account, expect: { json_path: account.active, equals: true } }
+endpoints:
+  - id: acme.page.text
+    capability: web.page.text
+    platform: web
+    auth: api_key
+    scope: any_account
+    method: GET
+    path: /page
+    name: Web page text by URL, rendered
+    summary: Renders a page and returns its text
+    input:
+      queryParams:
+        url: { type: string, required: true, example: https://example.com }
+    test_request: { queryParams: { url: https://example.com } }
+    skipped: no key for the replay yet
+    output: { type: object }
+    cost:
+      type: per_call
+      value: 0.006
+      currency: USD
+      source: docs
+      source_url: https://docs.acme.example/pricing
+      checked: 2026-10-04
+      confidence: documented
+      settle: { type: quote }
+  - id: acme.page.old
+    capability: web.page.text
+    platform: web
+    auth: public
+    method: GET
+    path: /old-page
+    name: Web page text by URL, unrendered
+    summary: Returns a page's text
+    input:
+      queryParams:
+        url: { type: string, required: true }
+    output: { type: object }
+    status: retired
+    status_note: Replaced by the rendered route
+    superseded_by: acme.page.text
+  - id: acme.page.cached
+    capability: web.page.text
+    platform: web
+    auth: public
+    method: GET
+    path: /cached-page
+    name: Web page text by URL, from cache
+    summary: Returns a cached page's text
+    input:
+      queryParams:
+        url: { type: string, required: true }
+    output: { type: object }
+    status: broken
+    status_note: The cache answers 500 since the provider moved it
+  - id: acme.account.get
+    capability: account.profile
+    platform: account
+    auth: api_key
+    scope: own_account
+    principal: organization
+    kind: account
+    method: GET
+    path: /me
+    name: The account a key acts as
+    summary: Returns the account the key belongs to, and its name
+    input: {}
+    skipped: no key for the replay yet
+    output: { type: object }
+    example_response: examples/acme.account.get.json
+    cost: { type: free }

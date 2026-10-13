@@ -1,0 +1,28 @@
+{
+  "name": "@telipot/fixtures",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./catalog": "./src/catalog.ts",
+    "./openapi": "./src/openapi.ts",
+    "./filesystem": "./src/filesystem.ts",
+    "./google": "./src/google.ts",
+    "./vendors": "./src/vendors.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "vitest run --silent=passed-only"
+  },
+  "dependencies": {
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/platform-bun": "catalog:",
+    "@effect/vitest": "catalog:",
+    "@telipot/config": "workspace:*",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

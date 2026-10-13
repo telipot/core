@@ -1,0 +1,64 @@
+provider: input-replay
+display_name: Input replay
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+endpoints:
+  - id: input-replay.data.get
+    capability: test.data.get
+    platform: test
+    auth: public
+    method: POST
+    path: /data/{id}
+    name: Test record by id
+    summary: Reads a record from every input location
+    input:
+      pathParams:
+        id:
+          {
+            type: string,
+            required: false,
+            enum: [one, two],
+            const: one,
+            default: one,
+            example: one,
+            min: 1,
+            max: 5,
+          }
+      queryParams:
+        limit: { type: integer, required: true, min: 1, max: 3, default: 2, example: 2 }
+        ratio: { type: number, min: 1, max: 2, default: 1.5 }
+        __proto__: { type: string, required: true, const: safe }
+      headers:
+        constructor: { type: string, required: true, enum: [schema] }
+      body:
+        enabled: { type: boolean, required: true, min: 10, max: 1, default: true }
+        tags: { type: array, min: 1, max: 2, default: [alpha], example: [alpha] }
+        metadata:
+          {
+            type: object,
+            required: true,
+            min: 10,
+            max: 1,
+            default: { edition: 1 },
+            example: { edition: 1 },
+          }
+    test_request:
+      pathParams: { id: one }
+      queryParams: { limit: 2, ratio: 1.5, __proto__: safe }
+      headers: { constructor: schema }
+      body: { enabled: true, tags: [alpha], metadata: { edition: 1 } }
+    output: { type: object }
+  - id: input-replay.data.unreplayed
+    capability: test.data.get
+    platform: test
+    auth: public
+    method: GET
+    path: /data
+    name: Test record without a replay
+    summary: Needs input a caller holds
+    input:
+      queryParams:
+        id: { type: string, required: true }
+    output: { type: object }
