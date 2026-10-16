@@ -9,7 +9,8 @@ import { ProblemDetails } from "../problem";
 import { Principal, RunHeaders, ReceiptOptions } from "../receipt";
 import { Run, Task } from "../tasks";
 
-// Where the MCP server answers, on the API's host, which MCP_URL names to the world.
+// The path the MCP server answers at on each of the API's hosts. Clients are given MCP_URL alone,
+// https://mcp.telipot.com/mcp, since every MCP access token is bound to that exact address.
 export const mcpPath = "/mcp";
 
 // Every field of an answer, optional and nullable, so a client that checks a tool's output
