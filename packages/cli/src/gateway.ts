@@ -1,12 +1,20 @@
-import { cliClientId } from "@telipot/contract";
+import { Api, cliClientId } from "@telipot/contract";
 import { make } from "@telipot/sdk";
 import { Console, Duration, Effect, Option, Predicate, Redacted, Schema } from "effect";
 import { Argument, CliError, Command, Flag } from "effect/cli";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
+import { HttpApiClient } from "effect/http-api";
 
 import { plain } from "./capture";
 import { rendering, vendorJson } from "./render";
-import { apiUrl, savedToken, saveToken } from "./signed-in";
+import {
+  apiUrl,
+  environmentToken,
+  forgetToken,
+  loginToken,
+  savedToken,
+  saveToken,
+} from "./signed-in";
 
 // A refusal's `detail` says why, and its `connect_url`, when it has one, where to fix it.
 const said = (error: unknown) => {
@@ -210,4 +218,47 @@ const login = Command.make(
   }, toUserError),
 ).pipe(Command.withDescription("Sign in with a code you approve in the browser"));
 
-export const gatewayCommands = [login, discover, inspect, run, connect] as const;
+// The API's own routes on one token, for what the four verbs do not cover.
+const accountOn = (token: Redacted.Redacted) =>
+  Effect.flatMap(apiUrl, (baseUrl) =>
+    HttpApiClient.make(Api, {
+      baseUrl,
+      transformClient: HttpClient.mapRequest(HttpClientRequest.bearerToken(token)),
+    }),
+  );
+
+const whoami = Command.make(
+  "whoami",
+  {},
+  Effect.fnUntraced(function* () {
+    const { signedInAs } = yield* rendering;
+    const account = yield* accountOn(yield* savedToken);
+    yield* Console.log(signedInAs(yield* account.me()));
+  }, toUserError),
+).pipe(Command.withDescription("The organization and principal the token signs in as"));
+
+// A token in TELIPOT_TOKEN belongs to whoever set it, so only the one `telipot login` saved ends.
+const logout = Command.make(
+  "logout",
+  {},
+  Effect.fnUntraced(function* () {
+    const { signedOut, notLoggedIn, environmentKept } = yield* rendering;
+    const saved = yield* loginToken;
+    if (Option.isNone(saved)) {
+      yield* Console.log(notLoggedIn);
+    } else {
+      const account = yield* accountOn(saved.value.token);
+      // A token that expired, or was revoked from the dashboard, has ended already.
+      yield* account.tokens
+        .revokeCurrent()
+        .pipe(Effect.catchTag(["InvalidToken", "TokenNotFound"], () => Effect.void));
+
+      yield* forgetToken(saved.value.file);
+      yield* Console.log(signedOut(saved.value.file));
+    }
+
+    if (Option.isSome(yield* environmentToken)) yield* Console.log(environmentKept);
+  }, toUserError),
+).pipe(Command.withDescription("Revoke the token telipot login saved, and remove it"));
+
+export const gatewayCommands = [login, logout, whoami, discover, inspect, run, connect] as const;

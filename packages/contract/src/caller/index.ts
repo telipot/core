@@ -107,19 +107,18 @@ export class Callers extends Context.Service<
     readonly resolveForMcp: (
       headers: Headers.Headers,
     ) => Effect.Effect<Caller, Unauthenticated | InvalidToken>;
-    // True only when every action named is allowed.
     readonly memberAllows: (
       organizationId: string,
       userId: string,
       permission: Permission,
     ) => Effect.Effect<boolean>;
-    // Reads the session cookie only, against `organizationId` rather than the open organization.
     readonly sessionAllows: (
       headers: Headers.Headers,
       organizationId: string,
       permission: Permission,
     ) => Effect.Effect<boolean>;
     readonly organizationName: (organizationId: string) => Effect.Effect<Option.Option<string>>;
+    readonly revokeToken: (organizationId: string, tokenId: string) => Effect.Effect<boolean>;
   }
 >()("@telipot/contract/caller/Callers") {}
 

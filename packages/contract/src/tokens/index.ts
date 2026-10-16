@@ -11,9 +11,8 @@ import { RateLimited } from "../tasks";
 // The one client the auth provider issues a device code to: `telipot login`, whose approval
 // becomes an organization's token.
 export const cliClientId = "telipot-cli";
-
-// The name of the organization key `telipot login` issues, so the dashboard can tell it apart.
 export const cliTokenName = "telipot CLI";
+export const cliTokenLifetime = 90 * 86_400;
 
 // In seconds: a token leaked from a browser dies within the hour unless asked to last longer.
 export const userBoundTokenLifetime = { default: 3600, minimum: 60, maximum: 86_400 } as const;
@@ -105,6 +104,13 @@ export class TokensApi extends HttpApiGroup.make("tokens")
       query: { cursor: Schema.optionalKey(Cursor) },
       success: HeldUserBoundTokens,
       error: [RoleForbidden.problem],
+    }),
+  )
+  .add(
+    // Whichever token the request carries, so `telipot logout` ends the key it saved.
+    HttpApiEndpoint.delete("revokeCurrent", "/tokens/current", {
+      success: HttpApiSchema.NoContent,
+      error: [TokenNotFound.problem],
     }),
   )
   .add(
