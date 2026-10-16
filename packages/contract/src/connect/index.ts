@@ -218,5 +218,6 @@ export class ConnectApi extends HttpApiGroup.make("connect")
     HttpApiEndpoint.put("replaceRedirectUris", "/connect/redirect-uris", {
       payload: RedirectAllowlist,
       success: RedirectAllowlist,
+      error: [RoleForbidden.problem],
     }),
   ) {}
