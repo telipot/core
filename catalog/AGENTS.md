@@ -31,7 +31,7 @@ bun run telipot catalog new <provider>
 
 That records `openapi: null` and leaves the header for you to fill.
 
-The header's first line, `# yaml-language-server: $schema=../provider.schema.json`, points an editor with the YAML language server (VS Code, Zed) at the file's JSON Schema, so a wrong field is underlined as you type. Keep it. After a change to `packages/catalog/src/schema.ts`, regenerate the schema: `bun run telipot catalog schema > catalog/provider.schema.json`.
+The header's first line, `# yaml-language-server: $schema=../provider.schema.json`, points an editor with the YAML language server at the file's JSON Schema, so a wrong field is underlined as you type. Zed has the server built in; VS Code and Cursor need the Red Hat YAML extension, which `.vscode/extensions.json` recommends. Keep the line. After a change to `packages/catalog/src/schema.ts`, regenerate the schema: `bun run telipot catalog schema > catalog/provider.schema.json`.
 
 **Never discover a route by calling it.** The published spec decides the method, and the method and the parameter positions come from the same document, never one from the spec and the other from the docs. With no spec, take both from the same docs page. A call that asks "does this route exist" can cost money and teaches nothing the docs did not.
 
