@@ -1,0 +1,21 @@
+provider: request-dots
+display_name: Test request-dots
+base_url: https://api.example.com
+docs_url: https://docs.example.com
+source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-04 }
+version: 2026-10-04
+endpoints:
+  - id: request-dots.data.get
+    capability: test.data.get
+    platform: test
+    auth: public
+    method: GET
+    path: /data/{id}
+    name: Test record by id
+    summary: Gets a record
+    input:
+      pathParams:
+        id: { type: string, required: true }
+    output: { type: object }
+    test_request:
+      pathParams: { id: ".." }

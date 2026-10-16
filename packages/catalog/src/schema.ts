@@ -1,4 +1,4 @@
-import { BigDecimal, Effect, Result, Schema, SchemaTransformation } from "effect";
+import { BigDecimal, Effect, Predicate, Result, Schema, SchemaTransformation } from "effect";
 
 // Shape only; rules across fields, tasks or files live in rules.ts, and price rules in price.ts.
 // A pattern carries the `u` flag, or Effect leaves it out of the editor's JSON Schema (json-schema.ts).
@@ -237,6 +237,28 @@ export const placeholdersOf = (path: string) =>
 export const blankPlaceholders = (path: string) => path.replace(placeholder, "{}");
 export const fillPlaceholders = (path: string, valueOf: (name: string) => string) =>
   path.replace(placeholder, (_, name: string) => valueOf(name));
+
+// How a call writes a value into its path, query or headers: a string as it is, else as JSON.
+export const asText = (value: Schema.Json) =>
+  Predicate.isString(value) ? value : JSON.stringify(value);
+
+// The path a call is sent to, each placeholder holding its value encoded.
+export const filledPath = (path: string, values: Readonly<Record<string, Schema.Json>>) =>
+  fillPlaceholders(path, (name) =>
+    encodeURIComponent(asText((Object.hasOwn(values, name) ? values[name] : undefined) ?? "")),
+  );
+
+// A URL resolves a `.` or `..` segment away, `%2e` spelling a dot too, so `/repos/{owner}` given
+// `..` reaches `/`, a route the catalog does not describe, price or scope. `encodeURIComponent`
+// keeps dots as they are, so each segment is checked as it is sent. Answers the placeholders of
+// every segment that would be only dots.
+export const offRoute = (path: string, values: Readonly<Record<string, Schema.Json>>) =>
+  path.split("/").flatMap((segment) => {
+    const names = placeholdersOf(segment);
+    return names.length > 0 && /^(?:\.|%2e)+$/i.test(filledPath(segment, values)) ? names : [];
+  });
+
+export const offRouteMessage = "cannot make a path segment of only dots";
 
 const TestRequest = Schema.Struct({
   pathParams: Schema.optionalKey(JsonObject),

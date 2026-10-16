@@ -107,7 +107,7 @@ export const sendOnce = <E>(client: HttpClient.HttpClient.With<E>, maxBytes: num
     readonly input: CallInput;
     readonly credential: string | undefined;
   }) {
-    const sent = request(entry, input, credential);
+    const sent = yield* Effect.fromResult(request(entry, input, credential));
     const response = yield* Predicate.isUndefined(credential)
       ? sender.execute(sent)
       : executeKeepingCredentialOut(sender, sent, schemeOf(entry));

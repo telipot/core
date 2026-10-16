@@ -551,6 +551,11 @@ const rules: ReadonlyArray<readonly [rule: string, file: string, path: string]> 
     "endpoints[0].test_request.pathParams.id",
   ],
   [
+    "a test request that makes a path segment of only dots",
+    "providers/request-dots.yaml",
+    "endpoints[0].test_request.pathParams.id",
+  ],
+  [
     "a path placeholder without a declared input field",
     "providers/input-path.yaml",
     "endpoints[0].input.pathParams.id",
@@ -776,14 +781,14 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
     }),
   );
 
-  it.effect("checks a call's input, refusing a path value of only dots", () =>
+  it.effect("checks a call's input, refusing a path segment of only dots", () =>
     Effect.gen(function* () {
       const { decodeInput } = yield* entry("acme.widget.get");
       assert.deepStrictEqual(decodeInput({ widgetId: "w_1" }), Result.succeed({ widgetId: "w_1" }));
       for (const dots of [".", ".."]) {
         assert.deepStrictEqual(
           decodeInput({ widgetId: dots }),
-          Result.fail([{ path: ["widgetId"], message: "a path value cannot be only dots" }]),
+          Result.fail([{ path: ["widgetId"], message: "cannot make a path segment of only dots" }]),
         );
       }
 

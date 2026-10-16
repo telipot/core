@@ -3,9 +3,11 @@ import { assert, layer } from "@effect/vitest";
 import { Catalog } from "./catalog";
 import type { Entry } from "./rules";
 import { catalogFixtures } from "@telipot/fixtures/catalog";
-import { Effect, Predicate } from "effect";
+import { Effect, Predicate, Result } from "effect";
 
 import { bind, sentForms, valueAt, withoutCredential } from "./bind";
+
+const bindOrThrow = (...args: Parameters<typeof bind>) => Result.getOrThrow(bind(...args));
 
 const entries = Catalog.validate(catalogFixtures.verify).pipe(
   Effect.map(({ tasks }) => (id: string) => {
@@ -29,7 +31,7 @@ layer(BunServices.layer)("bind", (it) => {
   it.effect("puts a public task's input on the base URL and no credential", () =>
     Effect.gen(function* () {
       const entry = (yield* entries)("vendor.page.text");
-      assert.deepStrictEqual(bind(entry, replayOf(entry), undefined), {
+      assert.deepStrictEqual(bindOrThrow(entry, replayOf(entry), undefined), {
         method: "GET",
         url: "http://vendor.test/v1/page",
         params: [["url", "https://example.com"]],
@@ -42,7 +44,10 @@ layer(BunServices.layer)("bind", (it) => {
     Effect.gen(function* () {
       const entry = (yield* entries)("vendor.page.text");
       const other = { ...entry, baseUrl: "http://other.test/v2" };
-      assert.strictEqual(bind(other, replayOf(entry), undefined).url, "http://other.test/v2/page");
+      assert.strictEqual(
+        bindOrThrow(other, replayOf(entry), undefined).url,
+        "http://other.test/v2/page",
+      );
     }),
   );
 
@@ -106,7 +111,7 @@ layer(BunServices.layer)("bind", (it) => {
       const credential = "bén@acme.example:pässwörd €";
       const utf8 = Buffer.from(credential, "utf8").toString("base64");
       assert.strictEqual(
-        bind(pair, replayOf(entry), credential).headers.authorization,
+        bindOrThrow(pair, replayOf(entry), credential).headers.authorization,
         `Basic ${utf8}`,
       );
 
@@ -118,13 +123,13 @@ layer(BunServices.layer)("bind", (it) => {
     Effect.gen(function* () {
       const entry = (yield* entries)("vendor.keywords.volume");
       const input = replayOf(entry);
-      assert.deepStrictEqual(bind(entry, input, "k-1").params, [
+      assert.deepStrictEqual(bindOrThrow(entry, input, "k-1").params, [
         ["phrase", "openrouter"],
         ["limit", "1"],
         ["key", "k-1"],
       ]);
 
-      const header = bind(
+      const header = bindOrThrow(
         credentialed(entry, { type: "api_key", in: "header", name: "X-API-Key" }),
         input,
         "k-1",
@@ -136,7 +141,7 @@ layer(BunServices.layer)("bind", (it) => {
         ["limit", "1"],
       ]);
 
-      const basic = bind(
+      const basic = bindOrThrow(
         credentialed(entry, { type: "api_key", in: "basic", name: "key" }),
         input,
         "k-1",
@@ -144,13 +149,13 @@ layer(BunServices.layer)("bind", (it) => {
 
       assert.deepStrictEqual(basic.headers, { authorization: `Basic ${btoa("k-1:")}` });
 
-      const bearer = bind(credentialed(entry, { type: "bearer" }), input, "k-1");
+      const bearer = bindOrThrow(credentialed(entry, { type: "bearer" }), input, "k-1");
       assert.deepStrictEqual(bearer.headers, { authorization: "Bearer k-1" });
 
-      const oauth = bind(credentialed(entry, { type: "oauth2" }), input, "ya29.t");
+      const oauth = bindOrThrow(credentialed(entry, { type: "oauth2" }), input, "ya29.t");
       assert.deepStrictEqual(oauth.headers, { authorization: "Bearer ya29.t" });
 
-      const pair = bind(credentialed(entry, { type: "basic" }), input, "ana:pw");
+      const pair = bindOrThrow(credentialed(entry, { type: "basic" }), input, "ana:pw");
       assert.deepStrictEqual(pair.headers, { authorization: `Basic ${btoa("ana:pw")}` });
     }),
   );
@@ -159,12 +164,12 @@ layer(BunServices.layer)("bind", (it) => {
     Effect.gen(function* () {
       const get = yield* entries;
       const overview = get("vendor.domain.overview");
-      assert.deepStrictEqual(bind(overview, replayOf(overview), "k").body, {
+      assert.deepStrictEqual(bindOrThrow(overview, replayOf(overview), "k").body, {
         json: { domain: "example.com" },
       });
 
       const search = get("vendor.keywords.search");
-      assert.deepStrictEqual(bind(search, replayOf(search), "k").body, {
+      assert.deepStrictEqual(bindOrThrow(search, replayOf(search), "k").body, {
         form: [["prompt", "openrouter"]],
       });
     }),
@@ -173,7 +178,7 @@ layer(BunServices.layer)("bind", (it) => {
   it.effect("binds each field where the task declares it, whatever order the input has", () =>
     Effect.gen(function* () {
       const entry = (yield* entries)("vendor.keywords.volume");
-      const bound = bind(
+      const bound = bindOrThrow(
         {
           ...entry,
           task: {
@@ -203,7 +208,7 @@ layer(BunServices.layer)("bind", (it) => {
       assert.isUndefined(bound.body);
 
       // Both lowercased, so a declared header and the credential's are one key each.
-      const both = bind(
+      const both = bindOrThrow(
         credentialed(
           {
             ...entry,
@@ -217,6 +222,51 @@ layer(BunServices.layer)("bind", (it) => {
       );
 
       assert.deepStrictEqual(both.headers, { "x-trace": "t-1", "x-api-key": "k" });
+    }),
+  );
+
+  it.effect("refuses a path segment of only dots, which would move the call off its route", () =>
+    Effect.gen(function* () {
+      const entry = (yield* entries)("vendor.page.text");
+      const at = (path: string): Entry => ({
+        ...entry,
+        task: {
+          // oxlint-disable-next-line typescript/no-misused-spread -- `bind` reads the task's fields only.
+          ...entry.task,
+          path,
+          input: { pathParams: { a: { type: "string" }, b: { type: "string" } } },
+        },
+      });
+
+      // A URL resolves `/sites/..` to `/`, and the credential would go with it.
+      for (const [path, input, named] of [
+        ["/sites/{a}", { a: ".." }, "a"],
+        ["/sites/{a}", { a: "." }, "a"],
+        ["/sites/{a}/{b}", { a: "..", b: "x" }, "a"],
+        ["/sites/{a}/{b}", { a: "..", b: ".." }, "a, b"],
+        ["/files/{a}.{b}", { a: "", b: "" }, "a, b"],
+        // A URL reads `%2e` as a dot, so a path's own `%2e` counts as one.
+        ["/files/{a}%2E", { a: "." }, "a"],
+      ] as const) {
+        const said = Result.match(bind(at(path), input, "k"), {
+          onFailure: ({ message }) => message,
+          onSuccess: ({ url }) => `sent to ${url}`,
+        });
+
+        assert.strictEqual(
+          said,
+          `vendor.page.text: ${named} cannot make a path segment of only dots`,
+          path,
+        );
+      }
+
+      // Dots beside other text, or percent-encoded, stay in their segment.
+      for (const value of ["a..b", "v1.2", "...a", "%2e%2e"]) {
+        assert.strictEqual(
+          bindOrThrow(at("/sites/{a}"), { a: value }, "k").url,
+          `http://vendor.test/v1/sites/${encodeURIComponent(value)}`,
+        );
+      }
     }),
   );
 

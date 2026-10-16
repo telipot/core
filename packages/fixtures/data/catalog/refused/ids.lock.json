@@ -50,6 +50,7 @@
   "request-type.data.get",
   "request-unknown.data.get",
   "request-path.data.get",
+  "request-dots.data.get",
   "input-path.data.get",
   "input-unused-path.data.get",
   "input-bounds.data.get",

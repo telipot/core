@@ -14,6 +14,8 @@ import {
   type InputField,
   type Task,
   inputLocations,
+  offRoute,
+  offRouteMessage,
   placeholdersOf,
   reservedInput,
 } from "./schema";
@@ -103,12 +105,9 @@ export type DecodeInput = (
   input: unknown,
 ) => Result.Result<Readonly<Record<string, Schema.Json>>, ReadonlyArray<Problem>>;
 
-// A path value of only dots could reach a vendor route the catalog does not describe, price or scope.
-const dotsOnly = /^\.+$/;
-
 export const inputDecoder = (
   schema: InputSchema,
-  pathFields: ReadonlyArray<string>,
+  path: string,
 ): Result.Result<DecodeInput, string> =>
   Result.map(
     jsonSchemaDecoder(schema),
@@ -117,12 +116,10 @@ export const inputDecoder = (
         onSuccess: (decoded) => {
           // The schema is an object of JSON fields, so what it admits is one.
           const value = decoded as Readonly<Record<string, Schema.Json>>;
-          const routing = pathFields.flatMap((name) => {
-            const field = Object.hasOwn(value, name) ? value[name] : undefined;
-            return Predicate.isString(field) && dotsOnly.test(field)
-              ? [{ path: [name], message: "a path value cannot be only dots" }]
-              : [];
-          });
+          const routing = offRoute(path, value).map((name) => ({
+            path: [name],
+            message: offRouteMessage,
+          }));
 
           return routing.length > 0 ? Result.fail(routing) : Result.succeed(value);
         },
@@ -282,6 +279,11 @@ export const checkInput = ({
           : `the input field is declared in ${declared}, not ${location}`,
       );
     }
+  }
+
+  // A test request is sent with the verifier's credential, so it keeps to its route as a call does.
+  for (const name of offRoute(path, request?.pathParams ?? {})) {
+    report(["test_request", "pathParams", name], offRouteMessage);
   }
 
   if (problems.length > 0) return Result.fail(problems);

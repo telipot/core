@@ -3,6 +3,7 @@ export * from "./catalog";
 // with the executor: the request, and what is masked of the credential.
 export {
   type CallInput,
+  PathOffRoute,
   bind,
   holdsAt,
   inject,

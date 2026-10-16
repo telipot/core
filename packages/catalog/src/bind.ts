@@ -2,11 +2,14 @@ import type { Entry } from "./rules";
 import {
   type AuthScheme,
   type Input,
+  asText,
   credentialPlace,
-  fillPlaceholders,
+  filledPath,
   inputLocations,
+  offRoute,
+  offRouteMessage,
 } from "./schema";
-import { Predicate, type Schema } from "effect";
+import { Predicate, Result, Schema } from "effect";
 import { HttpClientRequest } from "effect/http";
 import { Base64 } from "effect/encoding";
 
@@ -22,16 +25,24 @@ interface Bound {
 
 export type CallInput = Readonly<Record<string, Schema.Json>>;
 
-const isJsonArray = (value: Schema.Json): value is Schema.JsonArray => Array.isArray(value);
+// The gateway's input check and the loader refuse such input first; this holds for every caller.
+export class PathOffRoute extends Schema.TaggedError<PathOffRoute>()("PathOffRoute", {
+  task: Schema.String,
+  placeholders: Schema.Array(Schema.String),
+}) {
+  override get message() {
+    return `${this.task}: ${this.placeholders.join(", ")} ${offRouteMessage}`;
+  }
+}
 
-const text = (value: Schema.Json) => (Predicate.isString(value) ? value : JSON.stringify(value));
+const isJsonArray = (value: Schema.Json): value is Schema.JsonArray => Array.isArray(value);
 
 // An array repeats its name: `a=1&a=2`.
 const pairs = (fields: CallInput): Pairs =>
   Object.entries(fields).flatMap(([name, value]) =>
     (isJsonArray(value) ? value : [value]).map((item): readonly [string, string] => [
       name,
-      text(item),
+      asText(item),
     ]),
   );
 
@@ -149,15 +160,22 @@ export const withoutCredential = (
   return scrub(body);
 };
 
-export const bind = (entry: Entry, input: CallInput, credential: string | undefined): Bound => {
+export const bind = (
+  entry: Entry,
+  input: CallInput,
+  credential: string | undefined,
+): Result.Result<Bound, PathOffRoute> => {
   const { task, access, baseUrl } = entry;
   const [pathParams, queryParams, headerFields, body] = inputLocations.map((location) =>
     fieldsIn(input, task.input, location),
   ) as [CallInput, CallInput, CallInput, CallInput];
 
-  const path = fillPlaceholders(task.path, (name) =>
-    encodeURIComponent(text(pathParams[name] ?? "")),
-  );
+  const placeholders = offRoute(task.path, pathParams);
+  if (placeholders.length > 0) {
+    return Result.fail(new PathOffRoute({ task: task.id, placeholders }));
+  }
+
+  const path = filledPath(task.path, pathParams);
 
   const params = pairs(queryParams);
   const headers: Record<string, string> = {};
@@ -170,26 +188,26 @@ export const bind = (entry: Entry, input: CallInput, credential: string | undefi
   }
 
   const bound = { method: task.method, url: `${baseUrl}${path}`, params, headers };
-  if (Predicate.isUndefined(task.input.body)) return bound;
-  return {
+  if (Predicate.isUndefined(task.input.body)) return Result.succeed(bound);
+  return Result.succeed({
     ...bound,
     body: task.input.bodyType === "form" ? { form: pairs(body) } : { json: body },
-  };
+  });
 };
 
 // Runs and catalog replays both build requests here, so a verified task is the task a caller runs.
-export const request = (entry: Entry, input: CallInput, credential: string | undefined) => {
-  const bound = bind(entry, input, credential);
-  const sent = HttpClientRequest.make(bound.method)(bound.url).pipe(
-    HttpClientRequest.appendUrlParams(bound.params),
-    HttpClientRequest.setHeaders(bound.headers),
-  );
+export const request = (entry: Entry, input: CallInput, credential: string | undefined) =>
+  Result.map(bind(entry, input, credential), (bound) => {
+    const sent = HttpClientRequest.make(bound.method)(bound.url).pipe(
+      HttpClientRequest.appendUrlParams(bound.params),
+      HttpClientRequest.setHeaders(bound.headers),
+    );
 
-  if (Predicate.isUndefined(bound.body)) return sent;
-  return "json" in bound.body
-    ? HttpClientRequest.bodyJsonUnsafe(sent, bound.body.json)
-    : HttpClientRequest.bodyUrlParams(sent, bound.body.form);
-};
+    if (Predicate.isUndefined(bound.body)) return sent;
+    return "json" in bound.body
+      ? HttpClientRequest.bodyJsonUnsafe(sent, bound.body.json)
+      : HttpClientRequest.bodyUrlParams(sent, bound.body.form);
+  });
 
 // The keys and indexes of a `json_path` such as `statuses[0].status`.
 export const jsonPathKeys = (path: string) => path.split(/[.[\]]+/).filter((key) => key !== "");

@@ -500,9 +500,7 @@ const checkTask = (
   const inputSchema = checkInput(task);
   // Each field already decoded on its own, so the whole schema imports too.
   const decodeInput = Result.flatMap(inputSchema, (schema) =>
-    Result.mapError(inputDecoder(schema, Object.keys(task.input.pathParams ?? {})), (message) => [
-      { path: ["input"], message },
-    ]),
+    Result.mapError(inputDecoder(schema, task.path), (message) => [{ path: ["input"], message }]),
   );
 
   const { price, warnings } = checkPrice(task, provider, pricing);
