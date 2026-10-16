@@ -107,6 +107,7 @@ const served = (fields: object, slug = "acme") => {
   if (Result.isFailure(price)) {
     return assert.fail(price.failure.map(({ message }) => message).join("; "));
   }
+
   return price.success;
 };
 
@@ -240,6 +241,7 @@ describe("the pricing rules", () => {
     ]) {
       assert.deepStrictEqual(refusals({ cost }), [], JSON.stringify(cost));
     }
+
     assert.deepStrictEqual(refusals({ cost: { ...documented, currency: "credit" } }, "graph"), []);
     assert.deepStrictEqual(refusals({}), []);
   });
@@ -248,15 +250,18 @@ describe("the pricing rules", () => {
     const task = Schema.decodeUnknownSync(Task)(
       written({ cost: { ...documented, checked: "2026-07-05" } }),
     );
+
     const { price, warnings } = checkPrice(task, { provider: "acme" }, pricing);
     assert.isTrue(Result.isSuccess(price));
     assert.deepStrictEqual(
       warnings.map(({ path }) => formatPath(path)),
       ["cost.checked"],
     );
+
     const onTheDay = Schema.decodeUnknownSync(Task)(
       written({ cost: { ...documented, checked: "2026-07-06" } }),
     );
+
     assert.isEmpty(checkPrice(onTheDay, { provider: "acme" }, pricing).warnings);
   });
 
@@ -266,6 +271,7 @@ describe("the pricing rules", () => {
       credit_rates_usd: { graph: rate(null, "2026-06-01") },
       meter_rates_usd: { acme: { api_unit: rate(0.00004) } },
     });
+
     assert.deepStrictEqual(
       checkRates(pricingOn(today, stale)).map(({ path }) => formatPath(path)),
       ["credit_rates_usd.graph.checked"],
@@ -285,6 +291,7 @@ describe("a quote", () => {
       quoted({ model: "small", resolution: "1080", duration: 3 }),
       Option.some(180_000),
     );
+
     assert.deepStrictEqual(quoted({ model: "small", resolution: "1080" }), Option.some(300_000));
     assert.deepStrictEqual(quoted({ model: "large", duration: 10 }), Option.some(1_500_000));
   });
@@ -324,6 +331,7 @@ describe("a quote", () => {
         fallback: { value: 0.02 },
       },
     });
+
     assert.deepStrictEqual(quote(regional, { region: "eu" }), Option.some(10_000));
     assert.deepStrictEqual(quote(regional, { region: "us" }), Option.some(20_000));
   });
@@ -342,6 +350,7 @@ describe("a quote", () => {
           },
         }),
       );
+
       const input = checkInput(task);
       if (Result.isFailure(input)) return assert.fail("the path input was refused");
       assert.deepStrictEqual(input.success.required, ["model"]);
@@ -362,6 +371,7 @@ describe("a quote", () => {
         fallback: { value: 0.02 },
       },
     });
+
     assert.deepStrictEqual(quote(named, {}), Option.some(10_000));
     assert.deepStrictEqual(quote(named, { constructor: "y" }), Option.some(20_000));
   });
@@ -370,6 +380,7 @@ describe("a quote", () => {
     const rows = served({
       cost: { ...documented, type: "per_result", value: 3, per: 1000, unit: "row" },
     });
+
     assert.deepStrictEqual(quote(rows, {}), Option.some(3000));
     assert.deepStrictEqual(quote(rows, {}, 1500), Option.some(4_500_000));
     // €0.001 at $1.1712 is 1,171.2 micro-USD: a call rounds up, a thousand do not
@@ -397,6 +408,7 @@ describe("a reserve", () => {
     const rows = served({
       cost: { ...documented, type: "per_result", value: 3, per: 1000, unit: "row" },
     });
+
     assert.deepStrictEqual(reserve(rows, 250), Option.some(750_000));
   });
 
@@ -413,6 +425,7 @@ describe("a settlement", () => {
     const price = served({
       cost: { ...unpublished, settle: { type: "reported_charge", path: "usage.cost" } },
     });
+
     assert.deepInclude(price, { currency: "USD", native: undefined, microUsd: undefined });
     assert.deepStrictEqual(settle(price, BigDecimal.fromStringUnsafe("0.004")), Option.some(4000));
     assert.deepStrictEqual(settle(price, BigDecimal.fromStringUnsafe("0.0000001")), Option.some(1));
@@ -430,10 +443,12 @@ describe("a settlement", () => {
         settle: { type: "reported_charge", path: "usage.credits" },
       },
     });
+
     assert.deepStrictEqual(
       settle(credits, BigDecimal.fromStringUnsafe("2.5")),
       Option.some(30_000),
     );
+
     const meter = served({
       cost: {
         ...documented,
@@ -444,6 +459,7 @@ describe("a settlement", () => {
         settle: { type: "usage", header: "X-Units-Used" },
       },
     });
+
     assert.deepStrictEqual(settle(meter, BigDecimal.fromBigInt(37n)), Option.some(1480));
     const euro = served({ cost: { ...documented, currency: "EUR", value: 0.001 } });
     assert.deepStrictEqual(settle(euro, BigDecimal.fromStringUnsafe("0.004")), Option.some(4685));
@@ -459,9 +475,11 @@ describe("a settlement", () => {
       served({ cost: { ...unpublished, currency: "credit" } }),
       served({ cost: { ...unpublished, currency: "meter", unit: "api_unit" } }),
     ];
+
     for (const price of prices) {
       assert.isTrue(Option.isNone(settle(price, BigDecimal.fromStringUnsafe("0.004"))));
     }
+
     assert.deepStrictEqual(settle({ type: "free" }, BigDecimal.fromBigInt(3n)), Option.some(0));
   });
 });
@@ -479,6 +497,7 @@ describe("cheapest first", () => {
       ],
       ["free", { type: "free" }],
     ];
+
     assert.deepStrictEqual(
       prices.toSorted(([, a], [, b]) => cheapestFirst(a, b)).map(([label]) => label),
       ["free", "$3 per 1,000 rows", "$0.006 a call", "no USD figure", "unknown USD", "unpriced"],

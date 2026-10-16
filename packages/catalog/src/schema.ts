@@ -1,4 +1,4 @@
-import { BigDecimal, Effect, Schema, SchemaTransformation } from "effect";
+import { BigDecimal, Effect, Result, Schema, SchemaTransformation } from "effect";
 
 // Shape only; rules across fields, tasks or files live in rules.ts, and price rules in price.ts.
 
@@ -14,15 +14,9 @@ const Reason = Schema.NonEmptyString;
 export const ExamplePath = Schema.String.check(
   Schema.isPattern(/^examples\/[A-Za-z0-9._-]+\.json$/),
 );
+
 const isPattern = Schema.makeFilter<string>(
-  (source) => {
-    try {
-      new RegExp(source);
-      return true;
-    } catch {
-      return false;
-    }
-  },
+  (source) => Result.isSuccess(Result.try(() => new RegExp(source))),
   { expected: "a regular expression" },
 );
 
@@ -96,6 +90,7 @@ export const Settle = Schema.Union([
   Schema.Struct({ type: Schema.Literal("reported_charge"), path: Schema.NonEmptyString }),
   Schema.Struct({ type: Schema.Literal("usage"), header: Schema.NonEmptyString }),
 ]);
+
 export type Settle = typeof Settle.Type;
 
 export const Confidence = Schema.Literals(["verified", "documented", "inferred", "unknown"]);
@@ -153,18 +148,22 @@ const paidRules = Schema.makeFilter<{
   if (has("table") && !has("fallback")) {
     refuse("fallback", "required with a table, as the ceiling a reserve holds");
   }
+
   if (!has("table") && has("fallback")) refuse("fallback", "only a table has a fallback");
   if (cost.confidence === "unknown") {
     for (const field of ["value", "table"] as const) {
       if (has(field)) refuse(field, "absent when confidence is unknown");
     }
+
     if (!Object.hasOwn(cost, "note")) refuse("note", "says why the price is unknown");
   } else if (!has("value") && !has("table")) {
     refuse("value", "required unless confidence is unknown or a table prices the task");
   }
+
   if (published.includes(cost.confidence) && !Object.hasOwn(cost, "source_url")) {
     refuse("source_url", `required when confidence is ${cost.confidence}`);
   }
+
   return issues;
 });
 
@@ -212,6 +211,7 @@ const Input = Schema.Struct({
   body: Schema.optionalKey(InputFields),
   bodyType: Schema.optionalKey(Schema.Literals(["json", "form"])),
 });
+
 export type Input = typeof Input.Type;
 export type InputField = typeof InputField.Type;
 
@@ -231,6 +231,7 @@ export const taskMethods = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
 const placeholder = /\{([^}]*)\}/g;
 export const placeholdersOf = (path: string) =>
   [...path.matchAll(placeholder)].map(([, name = ""]) => name);
+
 // So routes that differ only in placeholder names compare equal.
 export const blankPlaceholders = (path: string) => path.replace(placeholder, "{}");
 export const fillPlaceholders = (path: string, valueOf: (name: string) => string) =>
@@ -324,6 +325,7 @@ const ProbeAnswer = Schema.Struct({
     (answer) => Object.keys(answer).length > 0 || "names a status, a json_path or a body_pattern",
   ),
 );
+
 export type ProbeAnswer = typeof ProbeAnswer.Type;
 
 // A free request that checks a pasted key before it is saved, on `path` under the
@@ -347,6 +349,7 @@ export const Probe = Schema.Struct({
       "names a path or a url, not both",
   ),
 );
+
 export type Probe = typeof Probe.Type;
 
 // `providers/<provider>.yaml`, curated by a person.
@@ -414,12 +417,14 @@ export const CapabilitiesFile = Schema.Struct({
   platforms: Schema.Record(Slug, Schema.String),
   capabilities: Schema.Record(CapabilityId, Schema.String),
 });
+
 export type CapabilitiesFile = typeof CapabilitiesFile.Type;
 
 // Query word -> catalog word. Nouns only: a verb alias floods its matches.
 export const AliasesFile = Schema.Struct({
   aliases: Schema.Record(Schema.String, Schema.String),
 });
+
 export type AliasesFile = typeof AliasesFile.Type;
 
 export const QueriesFile = Schema.Struct({
@@ -428,6 +433,7 @@ export const QueriesFile = Schema.Struct({
     Schema.Struct({ task: Schema.NonEmptyString, finds: Schema.String }),
   ),
 });
+
 export type QueriesFile = typeof QueriesFile.Type;
 
 // `usd: null`: the provider publishes no USD price, so show the native price, never a guess.
@@ -440,6 +446,7 @@ export const FxFile = Schema.Struct({
   credit_rates_usd: Schema.Record(Slug, rate(Schema.NullOr(Amount))),
   meter_rates_usd: Schema.Record(Slug, Schema.Record(Schema.String, rate(Schema.NullOr(Amount)))),
 });
+
 export type FxFile = typeof FxFile.Type;
 
 // Every task id ever published.

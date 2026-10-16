@@ -10,6 +10,7 @@ const kept = (body: unknown, options?: Partial<Parameters<typeof capture>[1]>) =
     output: undefined,
     ...options,
   });
+
   assert.isTrue(Result.isSuccess(result), JSON.stringify(result));
   return Result.getOrThrow(result);
 };
@@ -103,6 +104,7 @@ describe("capture", () => {
     const wide = Object.fromEntries(
       Array.from({ length: 1_000 }, (_, i) => [`field_${i}`, "value"]),
     );
+
     const refused = capture(wide, { secrets: [], masked: false, output: undefined });
     assert.isTrue(Result.isFailure(refused));
     if (Result.isFailure(refused)) assert.include(refused.failure, "10 KB");
@@ -159,6 +161,7 @@ describe("capture", () => {
           error: { anyOf: [{ type: "object", properties: { tag: { type: "string" } } }] },
         },
       };
+
       assert.deepStrictEqual(kept({ error: { tag: "x", detail: "y" } }, { output: anyOf }), {
         error: { tag: "x", detail: "y" },
       });

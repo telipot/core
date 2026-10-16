@@ -18,6 +18,7 @@ const before = (task: YAMLMap) => {
   const at = task.items.findIndex((pair) =>
     ["example_response", "output"].some((name) => keyOf(pair) === name),
   );
+
   return at === -1 ? task.items.length : at;
 };
 
@@ -33,6 +34,7 @@ export const stamp = (
   const task = isSeq(endpoints)
     ? endpoints.items.find((item): item is YAMLMap => isMap(item) && item.get("id") === id)
     : undefined;
+
   if (Predicate.isUndefined(task)) return Result.fail(`${id} is not a task in this file`);
 
   for (const name of verificationStates) task.delete(name);
@@ -41,6 +43,7 @@ export const stamp = (
   if (verification.state === "verified" && !task.has("example_response")) {
     task.items.splice(before(task), 0, document.createPair("example_response", example));
   }
+
   return Result.succeed(document.toString({ lineWidth: 0 }));
 };
 
@@ -59,18 +62,22 @@ export const recordVerification = Effect.fnUntraced(function* (
   if (found.state === "verified" && !isExamplePath(example)) {
     return yield* Effect.die(`${id}'s example is not in examples/`);
   }
+
   const verification: Verification =
     found.state === "verified"
       ? { state: found.state, date: found.date }
       : { state: found.state, reason: found.reason };
+
   const providerFile = path.join(directory, "providers", `${entry.provider.provider}.yaml`);
   const stamped = yield* Effect.fromResult(
     stamp(yield* fs.readFileString(providerFile), id, verification, example),
   ).pipe(Effect.orDie);
+
   if (found.state === "verified") {
     const file = path.join(directory, example);
     yield* fs.makeDirectory(path.dirname(file), { recursive: true });
     yield* fs.writeFileString(file, `${JSON.stringify(found.example, null, 2)}\n`);
   }
+
   yield* fs.writeFileString(providerFile, stamped);
 });

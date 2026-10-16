@@ -1,6 +1,6 @@
 import { BunServices } from "@effect/platform-bun";
 import { assert, layer } from "@effect/vitest";
-import { Catalog, type Verification } from "@telipot/catalog";
+import { Catalog } from "@telipot/catalog";
 import { catalogFixtures } from "@telipot/fixtures/catalog";
 import { copyDirectory } from "@telipot/fixtures/filesystem";
 import {
@@ -58,9 +58,10 @@ const vendor = (script: (seen: Seen, nth: number) => Reply | undefined = () => u
         method: request.method,
         path: url.pathname,
         query: url.searchParams,
-        headers: request.headers as Readonly<Record<string, string>>,
+        headers: request.headers,
         body: request.body._tag === "Uint8Array" ? new TextDecoder().decode(request.body.body) : "",
       };
+
       const nth = calls.filter(({ path }) => path === seen.path).length;
       calls.push(seen);
       const reply = script(seen, nth) ?? answers[seen.path] ?? { status: 404 };
@@ -74,6 +75,7 @@ const vendor = (script: (seen: Seen, nth: number) => Reply | undefined = () => u
           }),
         );
       }
+
       return Effect.succeed(
         HttpClientResponse.fromWeb(
           request,
@@ -85,6 +87,7 @@ const vendor = (script: (seen: Seen, nth: number) => Reply | undefined = () => u
       );
     }),
   );
+
   return { calls, layer: Layer.succeed(HttpClient.HttpClient, client) };
 };
 
@@ -115,6 +118,7 @@ const run = Effect.fnUntraced(function* (
       Layer.merge(boundary.layer, ConfigProvider.layer(ConfigProvider.fromUnknown(env))),
     ),
   );
+
   return { report, seen: boundary.calls };
 });
 
@@ -123,7 +127,7 @@ const verification = Effect.fnUntraced(function* (directory: string, id: string)
   const entry = tasks.find(({ task }) => task.id === id);
   assert.isDefined(entry, id);
   return {
-    state: entry?.verification as Verification | undefined,
+    state: entry?.verification,
     example: entry?.example,
   };
 });
@@ -133,12 +137,27 @@ const read = Effect.fnUntraced(function* (file: string) {
   return yield* fs.readFileString(file);
 });
 
+// A line of a provider's verify log.
+interface LogLine {
+  readonly task: string;
+  readonly cost_usd_micro: number | null;
+  readonly cost_source: string;
+  readonly [field: string]: unknown;
+}
+
+const logLines = (text: string) =>
+  text
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line) as LogLine);
+
 const everyFile = Effect.fnUntraced(function* (directory: string) {
   const fs = yield* FileSystem.FileSystem;
   const files = yield* fs.readDirectory(directory, { recursive: true });
   const contents = yield* Effect.forEach(files, (file) =>
     fs.readFileString(`${directory}/${file}`).pipe(Effect.orElseSucceed(() => "")),
   );
+
   return contents.join("\n");
 });
 
@@ -165,6 +184,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
             ["vendor.keywords.similar", undefined],
           ],
         );
+
         assert.strictEqual(yield* everyFile(directory), before);
       }),
     ),
@@ -184,6 +204,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
             "      table:\n        - { when: { body.domain: example.com }, value: 0.02 }\n      fallback: { value: 9 }\n",
           ),
         );
+
         const { report } = yield* run(directory, { dryRun: true }, undefined, {});
         assert.deepStrictEqual(
           report.queue.find(({ id }) => id === "vendor.domain.overview"),
@@ -209,6 +230,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
           domain: "example.com",
           owner_email: "contact@example.com",
         });
+
         const account = yield* verification(directory, "vendor.credits.left");
         assert.deepStrictEqual(account.example, { credits: 500, email: "masked" });
 
@@ -234,6 +256,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
         assert.deepStrictEqual(JSON.parse(at("/v1/domains/overview")?.body ?? ""), {
           domain: "example.com",
         });
+
         assert.strictEqual(at("/v1/search")?.body, "prompt=openrouter");
       }),
     ),
@@ -248,11 +271,13 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
             ? { status: 401, body: { error: { message: `Invalid API key ${secret}` } } }
             : undefined,
         );
+
         const volume = yield* verification(directory, "vendor.keywords.volume");
         assert.deepStrictEqual(volume.state, {
           state: "unverified",
           reason: "401: Invalid API key ***",
         });
+
         assert.deepStrictEqual(
           report.failed.map(({ id, status }) => [id, status]),
           [
@@ -261,11 +286,13 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
             ["vendor.keywords.volume.again", 401],
           ],
         );
+
         const again = yield* verification(directory, "vendor.keywords.volume.again");
         assert.deepStrictEqual(again.state, {
           state: "unverified",
           reason: "same request as vendor.keywords.volume: 401: Invalid API key ***",
         });
+
         assert.strictEqual(paths(seen).filter((path) => path === "/v1/keywords").length, 2);
       }),
     ),
@@ -287,11 +314,13 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
             "{ type: api_key, in: basic, name: key, principals: [organization] }",
           ),
         );
+
         yield* run(directory, {}, ({ path, headers }) =>
           path === "/v1/keywords"
             ? { status: 401, body: { error: { message: `Refused ${headers.authorization}` } } }
             : undefined,
         );
+
         const volume = yield* verification(directory, "vendor.keywords.volume");
         assert.deepStrictEqual(volume.state, {
           state: "unverified",
@@ -308,6 +337,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
         yield* run(directory, {}, ({ path }) =>
           path === "/v1/keywords" ? { unreachable: `refused, key ${secret}` } : undefined,
         );
+
         const { state } = yield* verification(directory, "vendor.keywords.volume");
         assert.strictEqual(state?.state, "unverified");
         assert.match(state?.state === "unverified" ? state.reason : "", /^no response: /);
@@ -326,6 +356,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
             ? { text: huge, headers: { "content-type": "text/plain" } }
             : undefined,
         );
+
         const { state } = yield* verification(directory, "vendor.page.text");
         assert.deepStrictEqual(state, {
           state: "unverified",
@@ -344,6 +375,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
             ? { text: JSON.stringify({ text: "hello" }), headers: { "content-type": "text/plain" } }
             : undefined,
         );
+
         const { state, example } = yield* verification(directory, "vendor.page.text");
         assert.strictEqual(state?.state, "unverified");
         assert.match(state?.state === "unverified" ? state.reason : "", /^200: /);
@@ -365,6 +397,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
           file,
           text.replace(replay, `${replay}    expect: { json_path: status, equals: ok }\n`),
         );
+
         yield* run(directory);
         const { state } = yield* verification(directory, "vendor.page.text");
         assert.deepStrictEqual(state, { state: "unverified", reason: '200: status was not "ok"' });
@@ -381,6 +414,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
             ? { status: 400, body: { errors: [{ details: "phrase is too long" }] } }
             : undefined,
         );
+
         const volume = yield* verification(directory, "vendor.keywords.volume");
         assert.deepStrictEqual(volume.state, {
           state: "unverified",
@@ -397,6 +431,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
         const { seen } = yield* run(directory, {}, ({ path }, nth) =>
           path === "/v1/keywords" && nth === 0 ? { status: 500, text: "boom" } : undefined,
         );
+
         const volume = yield* verification(directory, "vendor.keywords.volume");
         assert.strictEqual(volume.state?.state, "verified");
         assert.strictEqual(paths(seen).filter((path) => path === "/v1/keywords").length, 2);
@@ -413,6 +448,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
         assert.deepStrictEqual(report.skipped, [
           { id: "vendor.keywords.volume.again", sibling: "vendor.keywords.volume" },
         ]);
+
         const again = yield* verification(directory, "vendor.keywords.volume.again");
         assert.deepStrictEqual(again.state, {
           state: "skipped",
@@ -429,6 +465,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
         yield* run(directory, {}, ({ path }) =>
           path === "/v1/page" ? { body: { text: 7 } } : undefined,
         );
+
         const page = yield* verification(directory, "vendor.page.text");
         assert.strictEqual(page.state?.state, "unverified");
         const reason = page.state && "reason" in page.state ? page.state.reason : "";
@@ -446,6 +483,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
             ? { text: "ERROR 50 :: NOTHING FOUND", headers: { "content-type": "text/plain" } }
             : undefined,
         );
+
         const lookup = yield* verification(directory, "vendor.keywords.lookup");
         assert.strictEqual(lookup.state?.state, "unverified");
 
@@ -465,6 +503,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
         yield* run(directory, {}, ({ path }) =>
           path === "/v1/keywords" ? { status: 503, text: "down" } : undefined,
         );
+
         const second = yield* run(directory);
         assert.deepStrictEqual(paths(second.seen), ["/v1/keywords"]);
         const volume = yield* verification(directory, "vendor.keywords.volume");
@@ -489,12 +528,14 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
           "vendor.keywords.volume",
           "vendor.domain.overview",
         ]);
+
         assert.strictEqual(report.spentMicroUsd, 30_000);
         assert.deepStrictEqual(report.stoppedBefore, {
           id: "vendor.keywords.search",
           listMicroUsd: 30_000,
           leftMicroUsd: 15_000,
         });
+
         assert.notInclude(paths(seen), "/v1/search");
         const search = yield* verification(directory, "vendor.keywords.search");
         assert.isUndefined(search.state);
@@ -517,6 +558,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
           "vendor.keywords.lookup",
           "vendor.keywords.similar",
         ]);
+
         assert.notInclude(paths(seen), "/v1/lookup");
 
         // Without a budget they run. Lookup reports nothing, so its cost is unknown,
@@ -536,6 +578,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
         const { report } = yield* run(directory, {}, ({ path }) =>
           path === "/v1/search" ? { status: 500, text: "boom" } : undefined,
         );
+
         // Similar has no price and reports 0.004.
         assert.strictEqual(report.spentMicroUsd, 10_000 + 20_000 + 40_000 + 4_000);
       }),
@@ -549,6 +592,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
         const { seen } = yield* run(directory, {}, ({ path }, nth) =>
           path === "/v1/keywords" && nth < 2 ? { status: 429, text: "slow down" } : undefined,
         );
+
         assert.strictEqual(paths(seen).filter((path) => path === "/v1/keywords").length, 3);
         const volume = yield* verification(directory, "vendor.keywords.volume");
         assert.strictEqual(volume.state?.state, "verified");
@@ -563,6 +607,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
         const { report, seen } = yield* run(directory, {}, ({ path }) =>
           path === "/v1/keywords" ? { status: 429, text: "slow down" } : undefined,
         );
+
         assert.strictEqual(report.rateLimited, "vendor.keywords.volume");
         assert.isUndefined((yield* verification(directory, "vendor.keywords.volume")).state);
         assert.notInclude(paths(seen), "/v1/domains/overview");
@@ -584,6 +629,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
           calledAt.push(clock.currentTimeMillisUnsafe());
           return { status: 500, text: "boom" };
         });
+
         const fiber = yield* verifyProvider(options(directory, { routeRate: 1 })).pipe(
           Effect.provide(
             Layer.merge(
@@ -593,6 +639,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
           ),
           Effect.forkChild,
         );
+
         // The clock moves in steps while the run is really waiting on its files and
         // on the limiter, so each sleep it sets is reached, until the run ends.
         yield* Fiber.join(fiber).pipe(
@@ -605,6 +652,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
             ),
           ),
         );
+
         const [first, second] = calledAt;
         assert.isDefined(first);
         assert.isDefined(second);
@@ -623,6 +671,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
           if (path !== "/v1/keywords") return undefined;
           return nth === 0 ? { status: 500, text: "boom" } : { status: 429, text: "slow down" };
         });
+
         assert.strictEqual(report.rateLimited, "vendor.keywords.volume");
         const volume = yield* verification(directory, "vendor.keywords.volume");
         assert.deepStrictEqual(volume.state, { state: "unverified", reason: "500: boom" });
@@ -636,10 +685,8 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
         const directory = yield* copyDirectory(catalogFixtures.verify);
         yield* run(directory);
         const log = `${directory}/.verify/vendor.jsonl`;
-        const lines = (yield* read(log))
-          .trim()
-          .split("\n")
-          .map((line) => JSON.parse(line));
+        const lines = logLines(yield* read(log));
+
         const fs = yield* FileSystem.FileSystem;
         // Every call so far was made by the tool as it is; the volume call, by an older one.
         yield* fs.writeFileString(
@@ -652,6 +699,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
             )
             .join("\n") + "\n",
         );
+
         const again = yield* run(directory);
         assert.deepStrictEqual(paths(again.seen), ["/v1/keywords"]);
       }),
@@ -665,6 +713,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
         const { report } = yield* run(directory, {}, ({ path }) =>
           path === "/v1/lookup" ? { status: 500, text: "boom" } : undefined,
         );
+
         assert.deepStrictEqual(report.unknownCost, ["vendor.keywords.lookup"]);
       }),
     ),
@@ -675,10 +724,8 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
       Effect.gen(function* () {
         const directory = yield* copyDirectory(catalogFixtures.verify);
         yield* run(directory);
-        const lines = (yield* read(`${directory}/.verify/vendor.jsonl`))
-          .trim()
-          .split("\n")
-          .map((line) => JSON.parse(line));
+        const lines = logLines(yield* read(`${directory}/.verify/vendor.jsonl`));
+
         const related = lines.find(({ task }) => task === "vendor.keywords.related");
         assert.deepStrictEqual(
           { ...related, at: undefined },
@@ -693,13 +740,14 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
             verifier: 2,
           },
         );
+
         const lookup = lines.find(({ task }) => task === "vendor.keywords.lookup");
-        assert.strictEqual(lookup.cost_usd_micro, null);
-        assert.strictEqual(lookup.cost_source, "unknown");
+        assert.strictEqual(lookup?.cost_usd_micro, null);
+        assert.strictEqual(lookup?.cost_source, "unknown");
         // No list price, but the vendor reports 0.004 USD.
         const similar = lines.find(({ task }) => task === "vendor.keywords.similar");
-        assert.strictEqual(similar.cost_usd_micro, 4_000);
-        assert.strictEqual(similar.cost_source, "reported");
+        assert.strictEqual(similar?.cost_usd_micro, 4_000);
+        assert.strictEqual(similar?.cost_source, "reported");
         assert.strictEqual(lines.length, 8);
       }),
     ),
@@ -710,7 +758,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
       Effect.gen(function* () {
         const directory = yield* copyDirectory(catalogFixtures.verify);
         const refused = yield* run(directory, {}, undefined, {}).pipe(Effect.flip);
-        assert.include(String(refused.message), "VENDOR_API_KEY");
+        assert.include(refused.message, "VENDOR_API_KEY");
         assert.isUndefined((yield* verification(directory, "vendor.page.text")).state);
       }),
     ),
@@ -721,7 +769,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
       Effect.gen(function* () {
         const directory = yield* copyDirectory(catalogFixtures.verify);
         const refused = yield* run(directory, { provider: "nobody" }).pipe(Effect.flip);
-        assert.include(String(refused.message), "nobody");
+        assert.include(refused.message, "nobody");
       }),
     ),
   );
@@ -774,11 +822,13 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
           queue: report.queue,
           followers: ["vendor.keywords.volume.again"],
         });
+
         assert.strictEqual(report.callable, report.queue.length);
 
         const passed = rest.find(
           (event) => event.kind === "passed" && event.id === "vendor.keywords.related",
         );
+
         assert.deepStrictEqual(passed && { ...passed, waitedMs: 0 }, {
           kind: "passed",
           id: "vendor.keywords.related",
@@ -787,6 +837,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
           micro: 40_000,
           source: "reported",
         });
+
         const failed = rest.find((event) => event.kind === "failed");
         assert.strictEqual(failed?.kind === "failed" && failed.id, "vendor.keywords.search");
         assert.deepStrictEqual(
@@ -819,6 +870,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
         const told = events.flatMap((event) =>
           event.kind === "passed" || event.kind === "failed" ? [event] : [],
         );
+
         const volume = told.find(({ id }) => id === "vendor.keywords.volume");
         assert.strictEqual(volume?.kind, "passed");
         assert.strictEqual(volume?.calls, 2);
@@ -854,6 +906,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
           const failed = events.filter(
             (event) => event.kind === "failed" && event.id.startsWith("vendor.keywords.volume"),
           );
+
           assert.deepStrictEqual(
             failed.map(
               (event) => event.kind === "failed" && [event.id, event.message, event.calls],
@@ -867,6 +920,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
               ],
             ],
           );
+
           assert.deepStrictEqual(failed[1], {
             kind: "failed",
             id: "vendor.keywords.volume.again",
@@ -874,6 +928,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
             calls: 0,
             micro: 0,
           });
+
           assert.isFalse(events.some((event) => event.kind === "skipped"));
         }),
       ),
@@ -888,6 +943,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
         const { report } = yield* run(directory, {
           progress: (event) => Effect.sync(() => void events.push(event)),
         });
+
         assert.deepStrictEqual(events, []);
         assert.deepStrictEqual(report.queue, []);
         assert.strictEqual(report.skipped.length, 1);
@@ -908,6 +964,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
             if (path === "/v1/keywords") {
               return { status: 401, body: { error: { message: "bad\u001b[2J\rfake ‮" } } };
             }
+
             return path === "/v1/page" ? { body: { text: "hello", "tra\u001bce": 1 } } : undefined;
           },
         );
@@ -934,6 +991,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
         yield* run(directory, {}, ({ path }) =>
           path === "/v1/page" ? { status: 401, body: { error: "bad key" } } : undefined,
         );
+
         assert.isFalse(yield* fs.exists(`${directory}/.verify/vendor/vendor.page.text.json`));
       }),
     ),

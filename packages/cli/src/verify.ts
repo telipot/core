@@ -132,6 +132,7 @@ const vendorMessage = (body: Schema.Json, secrets: ReadonlyArray<string>) => {
   const found = messagePaths
     .map((path) => valueAt(body, path))
     .find((value): value is string => Predicate.isString(value) && value !== "");
+
   const said = found ?? (Predicate.isString(body) ? body : JSON.stringify(body));
   return shorten(scrub(plain(said.split("\n")[0] ?? ""), secrets), 200);
 };
@@ -203,12 +204,14 @@ export const verifyProvider = Effect.fnUntraced(
         message: `${options.directory} does not validate; run telipot catalog validate first`,
       });
     }
+
     const core = tasks.filter(
       ({ provider, tier, tombstone }) =>
         provider.provider === options.provider &&
         tier === "core" &&
         Predicate.isUndefined(tombstone),
     );
+
     if (core.length === 0) {
       return yield* new VerifyRefused({
         message: `${options.provider} has no core tasks in ${options.directory}`,
@@ -219,10 +222,12 @@ export const verifyProvider = Effect.fnUntraced(
     const candidates = core
       .filter(({ task }) => Predicate.isNotUndefined(task.test_request))
       .toSorted(byPrice);
+
     const groups = new Map<string, Array<Entry>>();
     for (const entry of candidates) {
       groups.set(requestKey(entry), [...(groups.get(requestKey(entry)) ?? []), entry]);
     }
+
     const leaders = [...groups.values()].flatMap((group) => group.slice(0, 1));
     // A task with no log line counts as current, since the log stays on the machine it ran on.
     const logFile = path.join(options.directory, ".verify", `${options.provider}.jsonl`);
@@ -234,6 +239,7 @@ export const verifyProvider = Effect.fnUntraced(
         if (Option.isSome(logged)) calledBy.set(logged.value.task, logged.value.verifier ?? 0);
       }
     }
+
     const outdated = ({ task }: Entry) => (calledBy.get(task.id) ?? verifier) !== verifier;
     const queue = leaders.filter(
       (entry) => options.again || entry.verification?.state !== "verified" || outdated(entry),
@@ -256,6 +262,7 @@ export const verifyProvider = Effect.fnUntraced(
       unbounded: [],
       rateLimited: undefined,
     };
+
     if (options.dryRun) return empty;
 
     const credential = needsKey
@@ -267,6 +274,7 @@ export const verifyProvider = Effect.fnUntraced(
           ),
         )
       : undefined;
+
     // Every encoding a queued task sends, so an echoed encoded header is scrubbed too.
     const secrets = Predicate.isUndefined(credential)
       ? []
@@ -278,6 +286,7 @@ export const verifyProvider = Effect.fnUntraced(
     const answering = HttpClient.transform(client, (effect) =>
       Effect.timeout(effect, "30 seconds"),
     );
+
     const limited = answering.pipe(
       HttpClient.withRateLimiter({
         limiter,
@@ -323,23 +332,28 @@ export const verifyProvider = Effect.fnUntraced(
         example: undefined,
         undeclared: [],
       });
+
       if (answer.status < 200 || answer.status > 299) {
         return failure(vendorMessage(answer.body, secrets));
       }
+
       if (Predicate.isNotUndefined(task.expect) && !meetsExpect(entry, answer.body)) {
         return failure(`${task.expect.json_path} was not ${JSON.stringify(task.expect.equals)}`);
       }
+
       const captured = capture(answer.body, {
         secrets,
         masked: task.kind === "account",
         output: task.output,
       });
+
       if (Result.isFailure(captured)) return failure(captured.failure);
       const first = firstMismatch(task, captured.success);
       if (Predicate.isNotUndefined(first)) {
         const where = first.path.length === 0 ? "" : `${formatPath(first.path)}: `;
         return failure(`the response does not fit the output schema: ${where}${first.message}`);
       }
+
       return {
         ok: true,
         status: answer.status,
@@ -354,12 +368,14 @@ export const verifyProvider = Effect.fnUntraced(
       if (price?.type === "per_success" && !ok) {
         return { micro: 0, source: "not_charged" } as const;
       }
+
       const reported = reportedCharge(price?.type === "free" ? undefined : price?.settle, answer);
       if (Predicate.isNumber(reported) && Number.isFinite(reported)) {
         const figure = BigDecimal.fromNumberUnsafe(reported);
         const micro = settle(price, figure);
         if (Option.isSome(micro)) return { micro: micro.value, source: "reported" } as const;
       }
+
       const listed = listPrice(entry);
       return Predicate.isNotUndefined(listed)
         ? ({ micro: listed, source: "listed" } as const)
@@ -384,6 +400,7 @@ export const verifyProvider = Effect.fnUntraced(
         verifier,
         ...(verdict.ok ? {} : { message: verdict.message }),
       };
+
       yield* fs.writeFileString(logFile, `${JSON.stringify(line)}\n`, { flag: "a" });
     });
 
@@ -393,6 +410,7 @@ export const verifyProvider = Effect.fnUntraced(
       const [file, text] = Predicate.isString(answer.body)
         ? [`${id}.txt`, answer.body]
         : [`${id}.json`, JSON.stringify(answer.body, null, 2)];
+
       yield* fs.writeFileString(path.join(answers, file), `${withoutSecrets(text, secrets)}\n`);
     });
 
@@ -408,6 +426,7 @@ export const verifyProvider = Effect.fnUntraced(
         outcomes.set(entry.task.id, { ok: true, message: "" });
       }
     }
+
     let stoppedBefore: Report["stoppedBefore"];
     let rateLimited: string | undefined;
 
@@ -420,6 +439,7 @@ export const verifyProvider = Effect.fnUntraced(
       const followers = queue.flatMap((leader) =>
         (groups.get(requestKey(leader)) ?? []).slice(1).map(({ task }) => task.id),
       );
+
       yield* tell({ kind: "queue", provider: options.provider, queue: planned, followers });
     }
 
@@ -430,12 +450,14 @@ export const verifyProvider = Effect.fnUntraced(
         unbounded.push(id);
         continue;
       }
+
       if (!withinBudget(list)) {
         stoppedBefore = {
           id,
           listMicroUsd: list ?? 0,
           leftMicroUsd: (options.budget ?? 0) - spent,
         };
+
         break;
       }
 
@@ -447,6 +469,7 @@ export const verifyProvider = Effect.fnUntraced(
             readonly charged: ReturnType<typeof cost>;
           }
         | undefined;
+
       let before: Verdict | undefined;
       let calls = 0;
       let total: number | undefined = 0;
@@ -460,16 +483,18 @@ export const verifyProvider = Effect.fnUntraced(
               body: `no response: ${
                 error._tag === "AnswerTooLarge"
                   ? `the answer ran past ${error.limit} bytes`
-                  : scrub(String(error.message ?? error), secrets)
+                  : scrub(error.message, secrets)
               }`,
               waitedMs: 0,
             }),
           ),
         );
+
         if (answer.status === 429) {
           rateLimited = id;
           break;
         }
+
         const verdict: Verdict =
           answer.status === 0
             ? {
@@ -480,6 +505,7 @@ export const verifyProvider = Effect.fnUntraced(
                 undeclared: [],
               }
             : judge(entry, answer);
+
         const charged = cost(entry, answer, verdict.ok);
         yield* record(entry, answer, verdict, charged);
         yield* keep(id, answer);
@@ -489,14 +515,17 @@ export const verifyProvider = Effect.fnUntraced(
           Predicate.isUndefined(total) || Predicate.isUndefined(charged.micro)
             ? undefined
             : total + charged.micro;
+
         if (Predicate.isUndefined(charged.micro) && !unknownCost.includes(id)) {
           unknownCost.push(id);
         }
+
         last = { answer, verdict, charged };
         if (verdict.ok) break;
         if (Predicate.isNotUndefined(before) && before.message === verdict.message) break;
         before = verdict;
       }
+
       // A 429 on the first call leaves the task as it was; after a billed call, the task
       // records what that call found before the run stops.
       if (Predicate.isNotUndefined(last)) {
@@ -507,6 +536,7 @@ export const verifyProvider = Effect.fnUntraced(
             date: DateTime.formatIsoDateUtc(yield* DateTime.now),
             example: verdict.example,
           });
+
           passed.push(id);
           if (verdict.undeclared.length > 0) undeclared.push({ id, paths: verdict.undeclared });
           yield* tell({
@@ -525,10 +555,13 @@ export const verifyProvider = Effect.fnUntraced(
             message: verdict.message,
             family: familyOf(entry),
           });
+
           yield* tell({ kind: "failed", id, message: verdict.message, calls, micro: total });
         }
+
         outcomes.set(id, { ok: verdict.ok, message: verdict.message });
       }
+
       if (Predicate.isNotUndefined(rateLimited)) break;
     }
 
@@ -547,6 +580,7 @@ export const verifyProvider = Effect.fnUntraced(
           ) {
             yield* write(follower, { state: "skipped", reason });
           }
+
           skipped.push({ id, sibling: leader.task.id });
           if (queue.includes(leader)) yield* tell({ kind: "skipped", id, sibling: leader.task.id });
         } else if (queue.includes(leader)) {

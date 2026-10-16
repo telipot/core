@@ -62,6 +62,7 @@ const bothWays = (directory: string) =>
     const shipped = yield* Schema.decodeUnknownEffect(Snapshot)(
       JSON.parse(JSON.stringify(snapshot)),
     );
+
     const fromSnapshot = yield* observe(Catalog.fromSnapshot(shipped));
     return { fromFolder, fromSnapshot };
   }).pipe(Effect.provide(BunServices.layer));
@@ -90,6 +91,7 @@ describe("a catalog loaded from a snapshot", () => {
       const snapshot = yield* buildSnapshot(rootCatalog, publications).pipe(
         Effect.provide(BunServices.layer),
       );
+
       assert.deepStrictEqual(snapshot.publications, publications);
       assert.isTrue("providers/hackernews.yaml" in snapshot.files);
       assert.isFalse("queries.yaml" in snapshot.files, "CI's measurement stays out");

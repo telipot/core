@@ -98,12 +98,14 @@ export const routing = (routes: ReadonlyArray<VendorRoute>) => {
       placeholders: route.url.split("{").length - 1,
     }))
     .toSorted((one, other) => one.placeholders - other.placeholders);
+
   return (request: HttpClientRequest.HttpClientRequest, url: URL) => {
     const address = `${url.origin}${url.pathname}`;
     for (const { route, address: pattern } of matchers) {
       const found = route.method === request.method ? pattern.exec(address) : null;
       if (Predicate.isNotNull(found)) return { route, path: found.groups ?? {} };
     }
+
     return undefined;
   };
 };
@@ -155,10 +157,12 @@ export const readInput = (
   const sentIn = new Map<string, Location>();
   const typeOf = (name: string) =>
     (Object.hasOwn(route.fields, name) ? route.fields[name]?.type : undefined) ?? "string";
+
   const put = (name: string, value: unknown, location: Location) => {
     input[name] = value;
     sentIn.set(name, location);
   };
+
   const read = (from: URLSearchParams, location: Location) => {
     for (const name of new Set(from.keys())) {
       const values = from.getAll(name);
@@ -169,6 +173,7 @@ export const readInput = (
   for (const [name, value] of Object.entries(path)) {
     put(name, typed(typeOf(name), decodeURIComponent(value)), "pathParams");
   }
+
   const placed = route.credential;
   const query = new URLSearchParams(url.searchParams);
   let credential: string | undefined;
@@ -178,11 +183,13 @@ export const readInput = (
   } else if (Predicate.isNotUndefined(placed)) {
     credential = request.headers[placed.name.toLowerCase()];
   }
+
   read(query, "queryParams");
   for (const [name, field] of Object.entries(route.fields)) {
     const value = field.in === "headers" ? request.headers[name.toLowerCase()] : undefined;
     if (Predicate.isNotUndefined(value)) put(name, typed(field.type, value), "headers");
   }
+
   const text = textOf(request.body);
   if (request.body._tag !== "Empty" && /json/i.test(request.body.contentType ?? "")) {
     const body = Schema.decodeOption(JsonText)(text);
@@ -202,6 +209,7 @@ export const readInput = (
       ? [`${name} was sent in ${location}, but ${route.task} declares it in ${declared}`]
       : [];
   });
+
   return { input, credential, problems: [...route.check(input), ...misplaced] };
 };
 
@@ -246,6 +254,7 @@ export class Vendors extends Context.Service<
                 ...(Predicate.isUndefined(credential) ? {} : { credential }),
               },
             ]);
+
             if (problems.length > 0) {
               return json(
                 request,
@@ -263,10 +272,12 @@ export class Vendors extends Context.Service<
                 }),
               });
             }
+
             if (Predicate.isNotUndefined(fault) && "status" in fault) {
               const body = "text" in fault ? fault.text : JSON.stringify(fault.body ?? {});
               return json(request, fault.status, body, fault.headers);
             }
+
             if (Predicate.isNotUndefined(fault)) yield* Effect.sleep(fault.delay);
             return json(request, 200, JSON.stringify(route.example));
           }),

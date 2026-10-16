@@ -41,6 +41,7 @@ describe("contact details", () => {
       "1234567890123",
       "call +44 20 7946 0958 today",
     ];
+
     for (const text of fine) {
       assert.deepStrictEqual(contactIn(text), [], text);
       assert.strictEqual(scrubContact(text), text, text);
@@ -135,6 +136,7 @@ describe("redact", () => {
       redact({ to: "ana.lopez@acme.io", note: ["write to bob@mail.example.com"], ok: true }),
       { to: "contact@example.com", note: ["write to contact@example.com"], ok: true },
     );
+
     assert.strictEqual(redact("+44 20 7946 0958"), "+1 555 0100");
     assert.strictEqual(redact(null), null);
   });

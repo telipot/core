@@ -27,6 +27,7 @@ const schemes = schemesOf({
   apiKey: { type: "api_key", in: "header", name: "X-Widgetly-Key" },
   oauth: { type: "oauth2", principals: ["user"] },
 });
+
 const { tasks } = tasksOf(widgetly(), "widgetly", schemes);
 const routes = routesOf(widgetly());
 const nothing = { route_match: "normalized", endpoints: [] } as const;
@@ -81,11 +82,13 @@ layer(BunServices.layer)("extendedFile", (it) => {
       const changed = tasks.map((one) =>
         one.id === "widgetly.x.get-status" ? { ...one, summary: "Whether Widgetly answers" } : one,
       );
+
       const again = yield* regenerate({
         previous: written(first.text),
         tasks: changed,
         today: "2026-11-30",
       });
+
       assert.notStrictEqual(again.file.digest, first.file.digest);
       assert.strictEqual(again.file.version, "2026-11-30");
       assert.strictEqual(again.file.source.curated, "2026-11-30");
@@ -100,6 +103,7 @@ layer(BunServices.layer)("extendedFile", (it) => {
           ? { ...one, name: "Widgets by owner", capability: "widgets.list", kind: "action" }
           : one,
       );
+
       const again = yield* regenerate({ previous: edited, today: "2026-11-30" });
       const list = task(again.file, "widgetly.x.list-widgets");
       assert.strictEqual(list.name, "Widgets by owner");
@@ -119,6 +123,7 @@ layer(BunServices.layer)("extendedFile", (it) => {
         const { kind: _, ...rest } = one;
         return rest;
       });
+
       const again = yield* regenerate({ previous: edited });
       assert.notProperty(task(again.file, "widgetly.x.create-widget"), "kind");
     }),
@@ -132,6 +137,7 @@ layer(BunServices.layer)("extendedFile", (it) => {
           endpoints: [{ id: "widgetly.widgets.get", method: "GET", path: "/widgets/{id}" }],
         },
       });
+
       assert.deepStrictEqual(twins, ["widgetly.x.get-widget"]);
       assert.notInclude(
         file.endpoints.map(({ id }) => id),
@@ -148,6 +154,7 @@ layer(BunServices.layer)("extendedFile", (it) => {
           endpoints: [{ id: "widgetly.widgets.get", method: "GET", path: "/widgets/{id}" }],
         },
       });
+
       assert.deepStrictEqual(twins, []);
     }),
   );
@@ -163,6 +170,7 @@ layer(BunServices.layer)("extendedFile", (it) => {
           endpoints: [{ id: "widgetly.widgets.get", method: "GET", path: "/widgets/{widgetId}" }],
         },
       });
+
       const gone = task(again.file, "widgetly.x.get-widget");
       assert.strictEqual(gone.status, "retired");
       assert.strictEqual(gone.status_note, "widgetly.widgets.get curates this route now");
@@ -170,6 +178,7 @@ layer(BunServices.layer)("extendedFile", (it) => {
       assert.deepStrictEqual(again.tombstoned, [
         { id: "widgetly.x.get-widget", note: "widgetly.widgets.get curates this route now" },
       ]);
+
       // Told once, as the tombstone it became, not again as a twin.
       assert.deepStrictEqual(again.twins, []);
     }),
@@ -178,16 +187,18 @@ layer(BunServices.layer)("extendedFile", (it) => {
   it.effect("keeps a locked id the spec no longer offers, and drops one never locked", () =>
     Effect.gen(function* () {
       const first = yield* regenerate();
-      const withdrawn = ["/status", "/widgets/{widgetId}"];
+      const withdrawn = new Set(["/status", "/widgets/{widgetId}"]);
       const fewer = tasks.filter(
         ({ id }) => id !== "widgetly.x.get-status" && id !== "widgetly.x.delete-widget",
       );
+
       const again = yield* regenerate({
         previous: written(first.text),
         tasks: fewer,
-        routes: routes.filter(({ path }) => !withdrawn.includes(path)),
+        routes: routes.filter(({ path }) => !withdrawn.has(path)),
         lock: ["widgetly.x.get-status"],
       });
+
       const gone = task(again.file, "widgetly.x.get-status");
       assert.strictEqual(gone.status, "retired");
       assert.strictEqual(gone.status_note, "the provider's spec no longer offers this route");
@@ -210,6 +221,7 @@ layer(BunServices.layer)("extendedFile", (it) => {
         ),
         lock: ["widgetly.x.get-status"],
       });
+
       assert.strictEqual(
         task(again.file, "widgetly.x.get-status").status_note,
         "the provider's spec marks this route deprecated",
@@ -229,6 +241,7 @@ layer(BunServices.layer)("extendedFile", (it) => {
           tasks: tasks.filter(({ id }) => id !== "widgetly.x.get-widget"),
           lock: first.file.endpoints.map(({ id }) => id),
         });
+
         assert.deepStrictEqual(again.stale, ["widgetly.x.get-widget"]);
         assert.deepStrictEqual(again.tombstoned, []);
         assert.deepStrictEqual(
@@ -255,6 +268,7 @@ layer(BunServices.layer)("extendedFile", (it) => {
               }
             : one,
         );
+
         const again = yield* regenerate({ previous: recorded, today: "2026-11-30" });
         const widget = task(again.file, "widgetly.x.get-widget");
         assert.strictEqual(widget.verified, "2026-10-01");
@@ -297,6 +311,7 @@ layer(BunServices.layer)("extendedFile", (it) => {
           ? { ...one, scope: "own_account", principal: "user" }
           : one,
       );
+
       const again = yield* regenerate({ previous: edited });
       const widget = task(again.file, "widgetly.x.get-widget");
       assert.notProperty(widget, "test_request");
@@ -321,6 +336,7 @@ layer(BunServices.layer)("extendedFile", (it) => {
           },
         ],
       });
+
       assert.notMatch(text, /&a|\*a/);
       assert.strictEqual(text.match(/text: Alice/g)?.length, 2);
     }),

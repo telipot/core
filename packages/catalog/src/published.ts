@@ -70,6 +70,7 @@ const openApiRoutes = (
       if (Predicate.isUndefined(sent)) return [];
       const declared: ReadonlyArray<typeof Server.Type | undefined> =
         servers ?? openapi.spec.servers ?? [];
+
       return (declared.length > 0 ? declared : [undefined]).map((server) =>
         resolveServer(server, url).pipe(
           Result.map((at): ReadonlyArray<PublishedRoute> =>
@@ -88,6 +89,7 @@ const swaggerRoutes = (spec: typeof Swagger.Type, url: string): ReadonlyArray<Pu
   const servers = (spec.schemes ?? [document.protocol.slice(0, -1)]).map(
     (scheme) => new URL(`${scheme}://${spec.host ?? document.host}${spec.basePath ?? "/"}`),
   );
+
   return Object.entries(spec.paths).flatMap(([path, operations]) =>
     servers.flatMap((server) =>
       Object.keys(operations).flatMap((name) => {

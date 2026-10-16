@@ -31,6 +31,7 @@ const document = (
     }),
     address,
   );
+
   return Result.isSuccess(read) ? read.success : assert.fail(read.failure);
 };
 
@@ -45,10 +46,12 @@ const generation = (over: Partial<Parameters<typeof generateProvider>[0]> = {}) 
     lock: [],
     ...over,
   });
+
 type Generated = Effect.Success<ReturnType<typeof generateProvider>>;
 const extended = (made: Generated) => made.extended ?? assert.fail("no extended file");
 const task = (made: Generated, id: string) =>
   extended(made).file.endpoints.find((one) => one.id === id) ?? assert.fail(`no ${id}`);
+
 const rerun = (before: Generated, over: Partial<Parameters<typeof generateProvider>[0]> = {}) =>
   generation({
     core: before.created?.text,
@@ -66,11 +69,13 @@ const assertLoads = Effect.fnUntraced(function* (made: Generated, core: string) 
     `${directory}/providers/${provider}.extended.yaml`,
     extended(made).text,
   );
+
   const lock = JSON.parse(yield* fs.readFileString(`${directory}/ids.lock.json`)) as string[];
   yield* fs.writeFileString(
     `${directory}/ids.lock.json`,
     JSON.stringify([...new Set([...lock, ...made.lock])]),
   );
+
   assert.deepStrictEqual((yield* Catalog.validate(directory)).issues.map(formatIssue), []);
 }, Effect.scoped);
 
@@ -112,6 +117,7 @@ const keyAndOAuth = (paths: ReadonlyArray<string>) => {
     }),
     address,
   );
+
   return Result.isSuccess(read) ? read.success : assert.fail(read.failure);
 };
 
@@ -138,6 +144,7 @@ layer(BunServices.layer)("provider generation", (it) => {
             verified: "2026-10-01",
           })),
         };
+
         const again = yield* rerun(first, {
           previous: stringify(edited),
           document: document([
@@ -145,6 +152,7 @@ layer(BunServices.layer)("provider generation", (it) => {
             { path: "/status", operationId: "getStatus" },
           ]),
         });
+
         const status = task(again, "widgetly.x.get-status");
         assert.strictEqual(status.path, "/status");
         assert.strictEqual(status.name, "Reviewed availability");
@@ -162,10 +170,12 @@ layer(BunServices.layer)("provider generation", (it) => {
       const again = yield* rerun(first, {
         document: document([{ path: "/status", operationId: "healthCheck" }]),
       });
+
       assert.deepStrictEqual(
         extended(again).file.endpoints.map(({ id }) => id),
         ["widgetly.x.get-status"],
       );
+
       assert.deepStrictEqual(extended(again).stale, []);
       assert.strictEqual(task(again, "widgetly.x.get-status").path, "/status");
     }),
@@ -178,11 +188,13 @@ layer(BunServices.layer)("provider generation", (it) => {
         const core = stringify({
           endpoints: [{ id: "widgetly.x.get-status-2", method: "GET", path: "/core-only" }],
         });
+
         const first = yield* generation({ core, lock: ["widgetly.x.get-status-2"] });
         const moved = yield* rerun(first, {
           core,
           document: document([{ path: "/other", operationId: "getStatus" }]),
         });
+
         assert.strictEqual(task(moved, "widgetly.x.get-status").path, "/status");
         assert.strictEqual(task(moved, "widgetly.x.get-status").status, "retired");
         assert.strictEqual(task(moved, "widgetly.x.get-status-3").path, "/other");
@@ -195,6 +207,7 @@ layer(BunServices.layer)("provider generation", (it) => {
           previous: extended(moved).text,
           lock: moved.lock,
         });
+
         assert.notProperty(task(restored, "widgetly.x.get-status"), "status");
         assert.strictEqual(task(restored, "widgetly.x.get-status").path, "/status");
         assert.strictEqual(task(restored, "widgetly.x.get-status-3").path, "/other");
@@ -209,6 +222,7 @@ layer(BunServices.layer)("provider generation", (it) => {
           { path: "/status", operationId: "getStatus" },
         ]),
       });
+
       const again = yield* rerun(first);
       assert.strictEqual(task(again, "widgetly.x.get-status").path, "/aaa");
       assert.strictEqual(task(again, "widgetly.x.get-status").status, "retired");
@@ -224,6 +238,7 @@ layer(BunServices.layer)("provider generation", (it) => {
         lock: [],
         document: document([{ path: "/other", operationId: "getStatus" }]),
       });
+
       assert.strictEqual(task(again, "widgetly.x.get-status-2").path, "/other");
       assert.notInclude(
         extended(again).file.endpoints.map(({ id }) => id),
@@ -241,20 +256,24 @@ layer(BunServices.layer)("provider generation", (it) => {
         core.set("endpoints", [
           { ...task(first, "widgetly.x.get-status"), id: "widgetly.status.get" },
         ]);
+
         const promoted = yield* rerun(first, {
           core: String(core),
           lock: [...first.lock, "widgetly.status.get"],
         });
+
         assert.strictEqual(task(promoted, "widgetly.x.get-status").status, "retired");
         assert.strictEqual(
           task(promoted, "widgetly.x.get-status").superseded_by,
           "widgetly.status.get",
         );
+
         const restored = yield* generation({
           core: first.created?.text,
           previous: extended(promoted).text,
           lock: promoted.lock,
         });
+
         assert.notProperty(task(restored, "widgetly.x.get-status"), "status");
         assert.notProperty(task(restored, "widgetly.x.get-status"), "superseded_by");
       }),
@@ -271,6 +290,7 @@ layer(BunServices.layer)("provider generation", (it) => {
         }),
         lock: [...first.lock, duplicate.id],
       });
+
       assert.notProperty(task(again, "widgetly.x.get-status"), "status");
       assert.strictEqual(task(again, duplicate.id).status, "retired");
       assert.strictEqual(task(again, duplicate.id).superseded_by, "widgetly.x.get-status");
@@ -279,15 +299,18 @@ layer(BunServices.layer)("provider generation", (it) => {
       core.set("endpoints", [
         { ...task(first, "widgetly.x.get-status"), id: "widgetly.status.get" },
       ]);
+
       const promoted = yield* generation({
         core: String(core),
         previous: extended(again).text,
         lock: [...again.lock, "widgetly.status.get"],
       });
+
       assert.strictEqual(
         task(promoted, "widgetly.x.get-status").superseded_by,
         "widgetly.status.get",
       );
+
       assert.strictEqual(task(promoted, duplicate.id).superseded_by, "widgetly.status.get");
 
       core.set("endpoints", []);
@@ -297,6 +320,7 @@ layer(BunServices.layer)("provider generation", (it) => {
         previous: extended(promoted).text,
         lock: promoted.lock,
       });
+
       assert.notProperty(task(gone, "widgetly.x.get-status"), "superseded_by");
       assert.notProperty(task(gone, duplicate.id), "superseded_by");
     }),
@@ -335,6 +359,7 @@ layer(BunServices.layer)("provider generation", (it) => {
         readFileSync(openApiFixtures.jobs, "utf8"),
         "https://api.jobs.example/openapi.json",
       );
+
       const jobs = Result.isSuccess(read) ? read.success : assert.fail(read.failure);
       const first = yield* generation({ provider: "jobs", document: jobs });
       const poll = task(first, "jobs.x.jobs-get");
@@ -350,6 +375,7 @@ layer(BunServices.layer)("provider generation", (it) => {
         input: { pathParams: { id: poll.input?.pathParams?.job_id } },
         test_request: { pathParams: { id: "job_1" } },
       };
+
       core.set("endpoints", [
         {
           ...curatedPoll,
@@ -360,6 +386,7 @@ layer(BunServices.layer)("provider generation", (it) => {
         },
         curatedPoll,
       ]);
+
       const again = yield* generation({
         provider: "jobs",
         document: jobs,
@@ -372,10 +399,12 @@ layer(BunServices.layer)("provider generation", (it) => {
         }),
         lock: [...first.lock, "jobs.jobs.old", "jobs.jobs.get"],
       });
+
       assert.deepStrictEqual(task(again, "jobs.x.jobs-create").async?.poll, {
         task: "jobs.jobs.get",
         param: { in: "pathParams", name: "id" },
       });
+
       assert.strictEqual(task(again, "jobs.x.jobs-get").superseded_by, "jobs.jobs.get");
 
       const fs = yield* FileSystem.FileSystem;
@@ -385,21 +414,25 @@ layer(BunServices.layer)("provider generation", (it) => {
       const existing = JSON.parse(
         yield* fs.readFileString(`${directory}/ids.lock.json`),
       ) as string[];
+
       yield* fs.writeFileString(
         `${directory}/ids.lock.json`,
         JSON.stringify([...new Set([...existing, ...again.lock])]),
       );
+
       assert.deepStrictEqual((yield* Catalog.validate(directory)).issues.map(formatIssue), []);
       const catalog = yield* Catalog.pipe(Effect.provide(Catalog.layer(directory)));
       const old =
         Option.getOrUndefined(catalog.get("jobs.x.jobs-get")) ??
         assert.fail("published poll id vanished");
+
       assert.strictEqual(old.task.status, "retired");
       assert.strictEqual(old.task.superseded_by, "jobs.jobs.get");
       assert.notInclude(
         catalog.serving("web.job.state").map(({ task }) => task.id),
         old.task.id,
       );
+
       const found = catalog.search("state submitted job");
       assert.strictEqual(found._tag, "Found");
       if (found._tag === "Found")
@@ -438,18 +471,21 @@ layer(BunServices.layer)("provider generation", (it) => {
               },
             },
           ]);
+
           const made = yield* generation({
             provider: "jobs",
             document: jobs,
             core: String(core),
             lock: ["jobs.jobs.get"],
           });
+
           if (required) assert.notProperty(task(made, "jobs.x.jobs-create"), "async");
           else
             assert.deepStrictEqual(task(made, "jobs.x.jobs-create").async?.poll, {
               task: "jobs.jobs.get",
               param: { in: "pathParams", name: "job_id" },
             });
+
           yield* assertLoads(made, String(core));
         }
       }
@@ -467,9 +503,11 @@ layer(BunServices.layer)("provider generation", (it) => {
           },
         },
       ]);
+
       const withRequiredQuery = Result.isSuccess(patched)
         ? patched.success
         : assert.fail(patched.failure);
+
       const made = yield* generation({ provider: "jobs", document: withRequiredQuery });
       assert.notProperty(task(made, "jobs.x.jobs-create"), "async");
       yield* assertLoads(made, made.created?.text ?? assert.fail("no core"));
@@ -517,13 +555,16 @@ layer(BunServices.layer)("provider generation", (it) => {
         },
         { op: "remove", path: "/paths/~1jobs~1{job_id}" },
       ]);
+
       const withTwoPaths = Result.isSuccess(twoPaths)
         ? twoPaths.success
         : assert.fail(twoPaths.failure);
+
       assert.notProperty(
         task(yield* generation({ provider: "jobs", document: withTwoPaths }), "jobs.x.jobs-create"),
         "async",
       );
+
       const core = parseDocument(first.created?.text ?? assert.fail("no core"));
       core.set("endpoints", [
         {
@@ -535,6 +576,7 @@ layer(BunServices.layer)("provider generation", (it) => {
           },
         },
       ]);
+
       assert.notProperty(
         task(
           yield* generation({ provider: "jobs", document: withTwoPaths, core: String(core) }),
@@ -548,7 +590,11 @@ layer(BunServices.layer)("provider generation", (it) => {
   it.effect("without a document writes only a new core header and leaves the lock alone", () =>
     Effect.gen(function* () {
       const made = yield* generation({ document: undefined, lock: ["published.id"] });
-      assert.strictEqual(parse(made.created?.text ?? assert.fail("no core")).source.openapi, null);
+      const created = parse(made.created?.text ?? assert.fail("no core")) as {
+        readonly source: { readonly openapi: string | null };
+      };
+
+      assert.strictEqual(created.source.openapi, null);
       assert.isUndefined(made.extended);
       assert.deepStrictEqual(made.lock, ["published.id"]);
       assert.isUndefined(made.lockText);

@@ -35,6 +35,7 @@ const paid = Effect.fnUntraced(function* (id: string) {
   const { price } = yield* entry(id);
   if (Predicate.isUndefined(price) || price.type === "free")
     return assert.fail(`${id} is not paid`);
+
   const { native } = price;
   return {
     ...price,
@@ -100,24 +101,28 @@ layer(catalogAt(realCatalog))("the real catalog", (it) => {
         const own = tasks.filter(
           ({ provider, tier }) => provider.provider === slug && tier === "core",
         );
+
         assert.isAtLeast(own.length, 8, `${slug} curates 8 to 15 tasks`);
         assert.isAtMost(own.length, 15, `${slug} curates 8 to 15 tasks`);
         for (const found of own) {
           assert.strictEqual(credentialed(found).principal, "organization", found.task.id);
         }
       }
+
       const ownAccount = tasks
         .filter(
           ({ task, provider }) =>
             task.scope === "own_account" && keyBasedProviders.includes(provider.provider),
         )
         .map(({ task }) => task.id);
+
       assert.deepStrictEqual(ownAccount.toSorted(), [
         "apollo.account.profile",
         "apollo.email.sequences.search",
         "apollo.people.contacts.create",
         "apollo.people.contacts.search",
       ]);
+
       assert.strictEqual((yield* entry("apollo.people.search")).task.scope, "any_account");
     }),
   );
@@ -132,6 +137,7 @@ layer(catalogAt(realCatalog))("the real catalog", (it) => {
           const own = tasks.filter(
             ({ provider, tier }) => provider.provider === slug && tier === "core",
           );
+
           const [first] = own;
           if (Predicate.isUndefined(first)) return assert.fail(`${slug} has no core task`);
           for (const found of own) {
@@ -224,6 +230,7 @@ layer(catalogAt(realCatalog))("the real catalog", (it) => {
           { task: task.id, account_path: "sub", label_path: "email" },
           slug,
         );
+
         assert.strictEqual(task.base_url, "https://openidconnect.googleapis.com", slug);
         assert.deepStrictEqual(task.required_scopes, ["openid", "email"], slug);
       }
@@ -238,6 +245,7 @@ layer(catalogAt(realCatalog))("the real catalog", (it) => {
         "email",
         "webmasters.readonly",
       ]);
+
       assert.deepStrictEqual(catalog.connectScopes("google-search-console", "user"), []);
       assert.deepStrictEqual(catalog.connectScopes("semrush", "organization"), []);
     }),
@@ -249,6 +257,7 @@ layer(catalogAt(realCatalog))("the real catalog", (it) => {
       assert.deepStrictEqual(catalog.connectScopes("google-calendar", "user"), [
         "calendar.readonly",
       ]);
+
       assert.deepStrictEqual((yield* entry("google-calendar.events.create")).task.required_scopes, [
         "calendar.events",
       ]);
@@ -262,16 +271,19 @@ layer(catalogAt(realCatalog))("the real catalog", (it) => {
         "https://www.googleapis.com/auth/userinfo.email",
         "https://www.googleapis.com/auth/webmasters.readonly",
       ];
+
       for (const id of [
         "google-search-console.userinfo.get",
         "google-search-console.search.analytics",
       ]) {
         assert.deepStrictEqual(scopesMissing(yield* entry(id), confirmed), [], id);
       }
+
       const reads = ["https://www.googleapis.com/auth/calendar.readonly"];
       assert.deepStrictEqual(scopesMissing(yield* entry("google-calendar.events.create"), reads), [
         "calendar.events",
       ]);
+
       assert.deepStrictEqual(scopesMissing(yield* entry("google-calendar.events.list"), reads), []);
     }),
   );
@@ -281,6 +293,7 @@ layer(catalogAt(realCatalog))("the real catalog", (it) => {
       const catalog = yield* Catalog;
       const runs = (scopes: ReadonlyArray<string>) =>
         catalog.connectTasks("google-calendar", "user", scopes).map(({ task }) => task.id);
+
       const reads = runs(["calendar.readonly"]);
       assert.include(reads, "google-calendar.events.list");
       assert.notInclude(reads, "google-calendar.events.create");
@@ -288,11 +301,13 @@ layer(catalogAt(realCatalog))("the real catalog", (it) => {
         ...reads,
         "google-calendar.events.create",
       ]);
+
       assert.deepStrictEqual(runs([]), []);
       assert.deepStrictEqual(
         catalog.connectTasks("google-calendar", "organization", ["calendar.readonly"]),
         [],
       );
+
       assert.include(
         catalog.connectTasks("semrush", "organization", []).map(({ task }) => task.id),
         "semrush.seo.keywords.volume",
@@ -337,10 +352,12 @@ layer(catalogAt(realCatalog))("the real catalog", (it) => {
         SchemaRepresentation.fromJsonSchemaDocument(JsonSchema.fromSchemaDraft2020_12(inputSchema))
           .ast,
       );
+
       const admits = (value: unknown) =>
         Result.isSuccess(
           SchemaParser.decodeUnknownResult(input, { onExcessProperty: "error" })(value),
         );
+
       assert.isTrue(admits({ query: "agent tools", hitsPerPage: 2 }));
       assert.isFalse(admits({ hitsPerPage: 2 }), "query is required");
       assert.isFalse(admits({ query: "agent tools", hitsPerPage: 51 }), "50 at most");
@@ -723,10 +740,12 @@ layer(catalogAt(catalogFixtures["clean-input"]))(
             JsonSchema.fromSchemaDraft2020_12(replay.inputSchema),
           ).ast,
         );
+
         const decode = SchemaParser.decodeUnknownResult(schema, { onExcessProperty: "error" });
         const flat = Object.fromEntries(
           Object.values(replay.task.test_request ?? {}).flatMap((fields) => Object.entries(fields)),
         );
+
         assert.isTrue(Result.isSuccess(decode(flat)));
         const { id: _, ...withoutPath } = flat;
         assert.isTrue(Result.isFailure(decode(withoutPath)), "the default does not supply a path");
@@ -752,6 +771,7 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
         (yield* entry("acme.widget.get")).baseUrl,
         "https://widgets.acme.example/v2",
       );
+
       assert.strictEqual((yield* entry("acme.page.text")).baseUrl, "https://api.acme.example");
     }),
   );
@@ -766,6 +786,7 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
           Result.fail([{ path: ["widgetId"], message: "a path value cannot be only dots" }]),
         );
       }
+
       assert.isTrue(Result.isSuccess(decodeInput({ widgetId: "w.1" })));
       assert.isTrue(Result.isFailure(decodeInput({ widgetId: "w_1", extra: 1 })));
     }),
@@ -808,10 +829,12 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
         "graph.page.insights",
         "graph.x.post-insights",
       ];
+
       assert.deepStrictEqual(
         catalog.tasks.map(({ task }) => task.id),
         served,
       );
+
       // acme.x.page shares GET /page and acme.x.widget GET /widgets/{…} with core tasks.
       assert.isTrue(Option.isNone(catalog.get("acme.x.page")));
       assert.isTrue(Option.isNone(catalog.get("acme.x.widget")));
@@ -848,10 +871,12 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
         state: "verified",
         date: "2026-10-04",
       });
+
       assert.deepStrictEqual((yield* entry("acme.widget.get")).verification, {
         state: "untestable",
         reason: "needs a widget id only the caller holds",
       });
+
       assert.isUndefined((yield* entry("acme.widgets.list")).verification);
     }),
   );
@@ -871,6 +896,7 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
           required: ["prompt", "model"],
           additionalProperties: false,
         });
+
         assert.deepStrictEqual((yield* entry("acme.widget.get")).inputSchema, {
           type: "object",
           properties: { widgetId: { type: "string", examples: ["w_1"] } },
@@ -887,6 +913,7 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
         note: "Replaced by the authenticated route",
         supersededBy: "acme.page.text",
       });
+
       assert.isUndefined((yield* entry("acme.page.text")).tombstone);
     }),
   );
@@ -902,6 +929,7 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
       const catalog = yield* Catalog;
       const serving = (capability: string) =>
         catalog.serving(capability).map(({ task }) => task.id);
+
       // €0.001 converts below $0.006, and the retired page task serves nothing.
       assert.deepStrictEqual(serving("web.page.text"), ["acme.page.translate", "acme.page.text"]);
       // Free before unpriced, which never ranks as free.
@@ -909,11 +937,13 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
         "acme.widgets.export",
         "acme.widgets.list",
       ]);
+
       // $0.0004 a result ranks before $3 per 1,000.
       assert.deepStrictEqual(serving("acme.people.search"), [
         "acme.people.enrich",
         "acme.people.search",
       ]);
+
       assert.deepStrictEqual(serving("web.page.unknown"), []);
     }),
   );
@@ -923,22 +953,27 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
       const catalog = yield* Catalog;
       const live = (filters?: Parameters<typeof catalog.live>[0]) =>
         catalog.live(filters).map(({ task }) => task.id);
+
       // The retired page task is no longer live.
       assert.deepStrictEqual(
         live(),
         catalog.tasks.map(({ task }) => task.id).filter((id) => id !== "acme.page.old"),
       );
+
       assert.deepStrictEqual(live({ provider: "graph" }), [
         "graph.page.insights",
         "graph.x.post-insights",
       ]);
+
       assert.deepStrictEqual(live({ provider: "graph", tier: "extended" }), [
         "graph.x.post-insights",
       ]);
+
       assert.deepStrictEqual(live({ capability: "web.page.text" }), [
         "acme.page.text",
         "acme.page.translate",
       ]);
+
       assert.deepStrictEqual(live({ kind: "action" }), []);
       // Text matches an id, a name or a summary, in any case.
       assert.deepStrictEqual(live({ text: "WIDGET" }), [
@@ -946,6 +981,7 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
         "acme.widget.get",
         "acme.widgets.export",
       ]);
+
       assert.deepStrictEqual(live({ text: "translated" }), ["acme.page.translate"]);
       assert.deepStrictEqual(live({ text: "x.gadg" }), ["acme.x.gadgets"]);
       assert.deepStrictEqual(live({ text: "insights", tier: "core" }), ["graph.page.insights"]);
@@ -1008,6 +1044,7 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
       const { cost } = (yield* entry("acme.page.text")).task;
       if (cost?.type !== "per_call" || Predicate.isUndefined(cost.value))
         return assert.fail("not priced per call");
+
       assert.strictEqual(BigDecimal.format(cost.value), "0.006");
     }),
   );
@@ -1173,6 +1210,7 @@ describe("the clean fixture catalog on 4 October 2026", () => {
           "aliases.yaml aliases.gizmo",
         ],
       );
+
       assert.include(warnings.find(({ path }) => path === "aliases.gizmo")?.message, "thingamajig");
     }),
   );
@@ -1189,6 +1227,7 @@ describe("the clean fixture catalog against a previous lock", () => {
         issues.map(({ file, path }) => `${file} ${path}`),
         ["ids.lock.json "],
       );
+
       assert.include(issues[0]?.message, "acme.page.txt");
       assert.isEmpty(tasks);
     }),
@@ -1208,6 +1247,7 @@ layer(catalogAt(catalogFixtures.gateway))("the gateway fixture catalog", (it) =>
       assert.deepStrictEqual((yield* entry("mailbox.messages.list")).vendorScopes, [
         "https://mailbox.example/auth/read",
       ]);
+
       assert.deepStrictEqual((yield* entry("fetcher.page.text")).vendorScopes, []);
       assert.deepStrictEqual((yield* entry("acme.page.text")).vendorScopes, []);
     }),

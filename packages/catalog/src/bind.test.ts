@@ -73,6 +73,7 @@ layer(BunServices.layer)("bind", (it) => {
         ),
         { error: "Rejected password *** for ben@acme.example" },
       );
+
       // A pair with no password sends nothing beyond the whole credential to mask.
       assert.deepStrictEqual(sentForms(pair, "ben:"), ["ben:", btoa("ben:")]);
       // A short password, masked wherever it appears, would rewrite the answer itself, so it is
@@ -85,6 +86,7 @@ layer(BunServices.layer)("bind", (it) => {
           short,
         );
       }
+
       assert.deepStrictEqual(
         withoutCredential(
           pair,
@@ -107,6 +109,7 @@ layer(BunServices.layer)("bind", (it) => {
         bind(pair, replayOf(entry), credential).headers.authorization,
         `Basic ${utf8}`,
       );
+
       assert.include(sentForms(pair, credential), utf8);
     }),
   );
@@ -126,6 +129,7 @@ layer(BunServices.layer)("bind", (it) => {
         input,
         "k-1",
       );
+
       assert.deepStrictEqual(header.headers, { "x-api-key": "k-1" });
       assert.deepStrictEqual(header.params, [
         ["phrase", "openrouter"],
@@ -137,6 +141,7 @@ layer(BunServices.layer)("bind", (it) => {
         input,
         "k-1",
       );
+
       assert.deepStrictEqual(basic.headers, { authorization: `Basic ${btoa("k-1:")}` });
 
       const bearer = bind(credentialed(entry, { type: "bearer" }), input, "k-1");
@@ -157,6 +162,7 @@ layer(BunServices.layer)("bind", (it) => {
       assert.deepStrictEqual(bind(overview, replayOf(overview), "k").body, {
         json: { domain: "example.com" },
       });
+
       const search = get("vendor.keywords.search");
       assert.deepStrictEqual(bind(search, replayOf(search), "k").body, {
         form: [["prompt", "openrouter"]],
@@ -184,6 +190,7 @@ layer(BunServices.layer)("bind", (it) => {
         { exact: true, "X-Trace": "t-1", tag: ["x", "y"], site: "sc-domain:a b/c" },
         "k",
       );
+
       assert.strictEqual(bound.url, "http://vendor.test/v1/sites/sc-domain%3Aa%20b%2Fc/keywords");
       assert.deepStrictEqual(bound.params, [
         ["tag", "x"],
@@ -191,6 +198,7 @@ layer(BunServices.layer)("bind", (it) => {
         ["exact", "true"],
         ["key", "k"],
       ]);
+
       assert.deepStrictEqual(bound.headers, { "x-trace": "t-1" });
       assert.isUndefined(bound.body);
 
@@ -207,6 +215,7 @@ layer(BunServices.layer)("bind", (it) => {
         { "X-Trace": "t-1" },
         "k",
       );
+
       assert.deepStrictEqual(both.headers, { "x-trace": "t-1", "x-api-key": "k" });
     }),
   );
@@ -237,25 +246,30 @@ layer(BunServices.layer)("bind", (it) => {
           count: 3,
         },
       );
+
       const basic = credentialed(entry, { type: "api_key", in: "basic", name: "key" });
       assert.strictEqual(
         withoutCredential(basic, "k-1", `Authorization: Basic ${btoa("k-1:")}`, { failure: false }),
         "Authorization: Basic ***",
       );
+
       assert.deepStrictEqual(
         withoutCredential(basic, "k-1", { authorization: "Basic other" }, { failure: true }),
         { authorization: "***" },
       );
+
       // An answer's own field of that name is its data.
       assert.deepStrictEqual(
         withoutCredential(entry, "a b+", { key: "a b+ and more", Key: "kept" }, { failure: false }),
         { key: "*** and more", Key: "kept" },
       );
+
       // An all-digit key comes back as a JSON number too.
       assert.deepStrictEqual(
         withoutCredential(entry, "12345678", { echoed: [12345678], count: 3 }, { failure: false }),
         { echoed: ["***"], count: 3 },
       );
+
       // JSON escapes a quote, a backslash and a control character, so an answer holds them
       // written differently from the credential.
       const escaped = 'k"1\\2\n3';
@@ -268,6 +282,7 @@ layer(BunServices.layer)("bind", (it) => {
         ),
         { echoed: "key ***", count: 3 },
       );
+
       // An answer that echoes it only as a key, never as a value, is walked too.
       assert.deepStrictEqual(
         withoutCredential(entry, escaped, { [escaped]: 1, count: 3 }, { failure: false }),

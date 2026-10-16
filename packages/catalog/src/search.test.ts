@@ -38,6 +38,7 @@ const entry = (
     input: {},
     ...written,
   });
+
   return {
     task,
     provider: acme,
@@ -83,6 +84,7 @@ describe("a search", () => {
       entry("d", "Text title"),
       ...others(8),
     ]);
+
     assert.deepStrictEqual(ids(search("page text english")), ["b", "a"]);
   });
 
@@ -96,6 +98,7 @@ describe("a search", () => {
       ],
       { aliases: { webpage: "page" } },
     );
+
     for (const sentence of ["webpage text", "page text", "webpage page text"]) {
       assert.deepStrictEqual(ids(search(sentence)), ["a", "b"], sentence);
     }
@@ -109,6 +112,7 @@ describe("a search", () => {
       entry("y", "Gamma", { summary: "Alpha beta" }),
       ...others(2),
     ]);
+
     assert.deepStrictEqual(ids(search("alpha beta gamma")), ["y", "x"]);
   });
 
@@ -121,6 +125,7 @@ describe("a search", () => {
       entry("f", "Gadgets list", {}, free),
       ...others(6),
     ]);
+
     assert.deepStrictEqual(ids(search("newest")), ["y", "x"]);
     assert.deepStrictEqual(ids(search("gadgets")), ["f", "u1", "u2"]);
   });
@@ -133,6 +138,7 @@ describe("a search", () => {
       entry("t", "Translated"),
       ...others(8),
     ]);
+
     assert.deepStrictEqual(ids(search("page text english")), ["b", "a"]);
     assert.deepStrictEqual(ids(search("page translated english")), ["b"]);
     // Six words once the function words go: two may miss.
@@ -151,6 +157,7 @@ describe("a search", () => {
       entry("e2", "Export two"),
       ...others(2),
     ]);
+
     assert.deepStrictEqual(ids(search("graph report")), ["g"]);
     assert.strictEqual(search("graph export")._tag, "Missed");
   });
@@ -163,6 +170,7 @@ describe("a search", () => {
       entry("r3", "Report three"),
       ...others(4),
     ]);
+
     assert.deepStrictEqual(ids(search("graph report", { filters: { provider: "zeta" } })), ["g"]);
     const zeta = header("zeta", "Zeta");
     const ranked = searchOver([
@@ -171,6 +179,7 @@ describe("a search", () => {
       ...["one", "two", "three"].map((n) => entry(`a-${n}`, `Alpha ${n}`)),
       ...others(3),
     ]);
+
     assert.deepStrictEqual(ids(ranked("alpha beta gamma", { filters: { provider: "zeta" } })), [
       "z2",
       "z1",
@@ -184,11 +193,13 @@ describe("a search", () => {
       entry("wa", "Widgets list", { kind: "action" }),
       entry("wz", "Widgets list", {}, { provider: header("zeta", "Zeta") }),
     ]);
+
     assert.lengthOf(ids(search("widgets")), 8);
     assert.deepStrictEqual(ids(search("widgets", { limit: 2 })), ["w1", "w2"]);
     for (const limit of [0, -2]) {
       assert.deepStrictEqual(search("widgets", { limit }), { _tag: "Found", hits: [] });
     }
+
     assert.deepStrictEqual(ids(search("widgets", { filters: { tier: "extended" } })), ["wx"]);
     assert.deepStrictEqual(ids(search("widgets", { filters: { kind: "action" } })), ["wa"]);
     assert.deepStrictEqual(ids(search("widgets", { filters: { provider: "zeta" } })), ["wz"]);
@@ -209,11 +220,13 @@ describe("a search", () => {
       entry("o", "Orders shipped"),
       ...others(2),
     ]);
+
     const nearMisses = (limit?: number) => {
       const found = search("report invoices customer orders", { limit });
       assert(found._tag === "Missed");
       return found.nearMisses.map(({ entry, matched, missed }) => [entry.task.id, matched, missed]);
     };
+
     assert.deepStrictEqual(nearMisses(), [
       ["r3", ["report", "invoices"], ["customer", "orders"]],
       ["c", ["customer"], ["invoices", "orders"]],
@@ -222,6 +235,7 @@ describe("a search", () => {
       ["r1", ["report"], ["invoices", "customer", "orders"]],
       ["r2", ["report"], ["invoices", "customer", "orders"]],
     ]);
+
     assert.deepStrictEqual(nearMisses(1), [["r3", ["report", "invoices"], ["customer", "orders"]]]);
   });
 
@@ -231,6 +245,7 @@ describe("a search", () => {
       entry("b", "Companies"),
       ...others(4),
     ]);
+
     assert.deepStrictEqual(ids(search("saved contacts at openai named john")), ["a"]);
     const missed = search("contacts at openai named john", { filters: { provider: "zeta" } });
     assert.deepStrictEqual(missed, { _tag: "Missed", nearMisses: [] });
@@ -246,6 +261,7 @@ describe("a search", () => {
       entry("e", "Meeting notes"),
       ...others(6),
     ]);
+
     assert.deepStrictEqual(ids(search("calendars")), ["all", "one"]);
     assert.deepStrictEqual(ids(search("calendar")), ["one", "all"]);
     assert.deepStrictEqual(ids(search("meetings notes")), ["e"]);
@@ -255,6 +271,7 @@ describe("a search", () => {
     const search = searchOver([entry("e", "Events on a calendar"), ...others(6)], {
       aliases: { meeting: "event" },
     });
+
     assert.deepStrictEqual(ids(search("upcoming meetings")), ["e"]);
   });
 
@@ -265,6 +282,7 @@ describe("a search", () => {
       entry("v", "Email deliverable"),
       ...others(6),
     ]);
+
     assert.deepStrictEqual(ids(search("get the markdown of https://example.com/a?b=1")), ["t"]);
     assert.deepStrictEqual(ids(search("check if john@example.com is deliverable")), ["v"]);
     assert.deepStrictEqual(ids(search("find the markdown of docs.example.com")), ["t"]);
@@ -296,6 +314,7 @@ describe("a search", () => {
       ],
       { capabilities: { "social.page.insights": "Reach and engagement" } },
     );
+
     assert.deepStrictEqual(ids(search("social")), ["p", "q"]);
     assert.deepStrictEqual(ids(search("profile")), ["p", "s"]);
     for (const word of ["reach", "graph", "networks", "insights"]) {
@@ -309,6 +328,7 @@ describe("a search", () => {
       entry("old", "Page text, first version", {}, retired),
       ...others(2),
     ]);
+
     assert.deepStrictEqual(ids(search("page text")), ["a"]);
     assert.deepStrictEqual(search("version"), { _tag: "Missed", nearMisses: [] });
     // Report is in one of four live tasks, exactly a quarter, so it is hard: a
@@ -319,6 +339,7 @@ describe("a search", () => {
       ...others(2),
       ...["o1", "o2", "o3", "o4"].map((id) => entry(id, "Report old", {}, retired)),
     ]);
+
     assert.strictEqual(counted("page report")._tag, "Missed");
   });
 });
@@ -430,6 +451,7 @@ describe("the aliases.yaml and queries.yaml rules", () => {
       problems: [],
       warnings: ["aliases.yaml aliases.gizmo"],
     });
+
     assert.include(checked(written).warnings[0]?.message, "thingamajig");
   });
 });

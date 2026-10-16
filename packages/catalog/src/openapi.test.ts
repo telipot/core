@@ -5,6 +5,13 @@ import { readFileSync } from "node:fs";
 import { parse } from "yaml";
 import { type OpenApi, type SpecPatch, readOpenApi, scaffold, schemesOf, tasksOf } from "./openapi";
 
+// The parts of a written provider file these tests read into.
+interface Header {
+  readonly auth: { readonly schemes: Readonly<Record<string, unknown>> };
+  readonly source: { readonly openapi: string | null; readonly [field: string]: unknown };
+  readonly [field: string]: unknown;
+}
+
 const specUrl = "https://api.widgetly.example/openapi.json";
 const text = readFileSync(openApiFixtures.widgetly, "utf8");
 
@@ -44,7 +51,7 @@ describe("readOpenApi", () => {
 
 describe("scaffold", () => {
   const filled = () => scaffold("widgetly", "2026-10-06", widgetly());
-  const header = () => parse(filled().text) as Record<string, any>;
+  const header = () => parse(filled().text) as Header;
 
   it("takes the server relative to where the spec was fetched", () => {
     assert.strictEqual(header().base_url, "https://api.widgetly.example/v1");
@@ -58,6 +65,7 @@ describe("scaffold", () => {
       openapi: specUrl,
       curated: "2026-10-06",
     });
+
     assert.strictEqual(header().version, "2026-10-06");
     assert.deepStrictEqual(header().endpoints, []);
   });
@@ -69,6 +77,7 @@ describe("scaffold", () => {
       name: "X-Widgetly-Key",
       principals: ["organization"],
     });
+
     assert.deepStrictEqual(header().auth.schemes.oauth, {
       type: "oauth2",
       authorization_url: "https://auth.widgetly.example/authorize",
@@ -78,6 +87,7 @@ describe("scaffold", () => {
       principals: ["user"],
       scopes: { profile: "profile", "widgets.write": "widgets.write" },
     });
+
     assert.notProperty(header().auth.schemes, "session");
   });
 
@@ -92,6 +102,7 @@ describe("scaffold", () => {
       "auth.schemes.oauth",
       "identity",
     ]);
+
     assert.match(filled().text, /^# Review before/);
   });
 
@@ -101,7 +112,7 @@ describe("scaffold", () => {
 
   it("without a spec records openapi: null and flags what only a person knows", () => {
     const bare = scaffold("widgetly", "2026-10-06");
-    const written = parse(bare.text) as Record<string, any>;
+    const written = parse(bare.text) as Header;
     assert.strictEqual(written.source.openapi, null);
     assert.strictEqual(written.base_url, null);
     assert.strictEqual(written.display_name, "Widgetly");
@@ -109,6 +120,7 @@ describe("scaffold", () => {
       bare.reviews.map(({ path }) => path),
       ["display_name", "base_url", "docs_url", "source.docs"],
     );
+
     assert.deepStrictEqual(bare.schemes, {});
   });
 });
@@ -128,6 +140,7 @@ describe("tasksOf", () => {
         "widgetly.x.list-widgets",
       ],
     );
+
     assert.deepStrictEqual(leftOut, [
       "GET /cookie-only: needs the session scheme, which a provider file does not declare",
       "GET /old-widgets: the spec marks it deprecated",
@@ -198,6 +211,7 @@ describe("tasksOf", () => {
       },
       bodyType: "json",
     });
+
     assert.notProperty(create, "test_request");
     assert.strictEqual(
       create.untestable,
@@ -256,10 +270,12 @@ describe("a spec that declares no security", () => {
     { op: "add", path: "/security", value: [{ key: [] }] },
     { op: "add", path: "/paths/~1v1~1models/get/security", value: [] },
   ];
+
   const keyed = (with_: SpecPatch = []): OpenApi => {
     const read = readOpenApi(keyedText, keyedUrl, with_);
     return Result.isSuccess(read) ? read.success : assert.fail(read.failure);
   };
+
   const made = (with_: SpecPatch = patch) => {
     const { schemes } = scaffold("keyed", "2026-10-06", keyed(with_));
     const { tasks, leftOut } = tasksOf(keyed(with_), "keyed", schemes);
@@ -277,13 +293,14 @@ describe("a spec that declares no security", () => {
   });
 
   it("reads the scheme and the security a patch adds, as if the vendor had written them", () => {
-    const header = parse(scaffold("keyed", "2026-10-06", keyed(patch)).text) as Record<string, any>;
+    const header = parse(scaffold("keyed", "2026-10-06", keyed(patch)).text) as Header;
     assert.deepStrictEqual(header.auth.schemes.key, {
       type: "api_key",
       in: "header",
       name: "x-keyed-api-key",
       principals: ["organization"],
     });
+
     const { byId } = made();
     assert.strictEqual(byId("keyed.x.get-clip").auth, "key");
     assert.strictEqual(byId("keyed.x.get-clip").scope, "any_account");
@@ -298,7 +315,7 @@ describe("a spec that declares no security", () => {
   });
 
   it("takes the server from where the spec was fetched, and the name without the words after it", () => {
-    const header = parse(scaffold("keyed", "2026-10-06", keyed()).text) as Record<string, any>;
+    const header = parse(scaffold("keyed", "2026-10-06", keyed()).text) as Header;
     assert.strictEqual(header.base_url, "https://api.keyed.example");
     assert.strictEqual(header.display_name, "Keyed");
   });
@@ -323,6 +340,7 @@ describe("a spec that declares no security", () => {
         value: { name: "API_KEY", in: "query", required: true, schema: { type: "string" } },
       },
     ]);
+
     assert.notProperty(byId("keyed.x.get-clip").input, "queryParams");
   });
 
@@ -331,6 +349,7 @@ describe("a spec that declares no security", () => {
     assert.deepStrictEqual(clip.input.pathParams, {
       clip_id: { type: "string", required: true, example: "clip_7" },
     });
+
     assert.deepStrictEqual(clip.test_request, { pathParams: { clip_id: "clip_7" } });
   });
 
@@ -368,6 +387,7 @@ describe("a spec that uses more of OpenAPI", () => {
     const read = readOpenApi(jobsText, jobsUrl, patch);
     return Result.isSuccess(read) ? read.success : assert.fail(read.failure);
   };
+
   const made = (patch: SpecPatch = []) => {
     const { schemes } = scaffold("jobs", "2026-10-06", jobs(patch));
     const { tasks, leftOut } = tasksOf(jobs(patch), "jobs", schemes);
@@ -418,6 +438,7 @@ describe("a spec that uses more of OpenAPI", () => {
         },
       },
     ]);
+
     assert.strictEqual(linked.byId("jobs.x.reports-create").async?.id_from, "call_id");
   });
 
@@ -430,6 +451,7 @@ describe("a spec that uses more of OpenAPI", () => {
       made().byId("jobs.x.uploads-list").base_url,
       "https://uploads.jobs.example/v1",
     );
+
     assert.notProperty(made().byId("jobs.x.jobs-get"), "base_url");
   });
 
@@ -452,7 +474,7 @@ describe("a spec that uses more of OpenAPI", () => {
 
   it("reads the bearer scheme the spec declares, and the title without its words", () => {
     const { text, schemes } = scaffold("jobs", "2026-10-06", jobs());
-    const header = parse(text) as Record<string, any>;
+    const header = parse(text) as Header;
     assert.deepStrictEqual(schemes, {
       bearerAuth: {
         type: "bearer",
@@ -460,6 +482,7 @@ describe("a spec that uses more of OpenAPI", () => {
         principals: ["organization"],
       },
     });
+
     assert.strictEqual(header.display_name, "Jobs");
     assert.strictEqual(header.docs_url, "https://docs.jobs.example");
     assert.strictEqual(made().byId("jobs.x.jobs-create").auth, "bearerAuth");

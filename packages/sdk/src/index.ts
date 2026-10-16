@@ -7,7 +7,7 @@ import {
   slugVariable,
   telipotHeader,
 } from "@telipot/contract";
-import { Config, Effect, Layer, Option, Predicate, Redacted, Schema, Struct } from "effect";
+import { Config, Effect, type Layer, Option, Predicate, Redacted, Schema, Struct } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { HttpApiClient } from "effect/http-api";
 
@@ -29,7 +29,7 @@ export class VersionRequired extends Schema.TaggedError<VersionRequired>()("Vers
 }) {}
 
 export interface ClientOptions {
-  readonly token: string | Redacted.Redacted<string>;
+  readonly token: string | Redacted.Redacted;
   readonly baseUrl?: string;
   // Whom every call acts as unless it names another: `organization` or `user:<id>`. Left out,
   // the organization, or the end user a user-bound token is fixed to.
@@ -61,6 +61,7 @@ export const make = Effect.fnUntraced(function* (options: ClientOptions) {
     baseUrl: options.baseUrl ?? defaultBaseUrl,
     transformClient: HttpClient.mapRequest(HttpClientRequest.bearerToken(token)),
   });
+
   const principalOf = (call: CallOptions) => call.as ?? options.as;
   const principalHeaders = (call: CallOptions) =>
     Option.match(Option.fromUndefinedOr(principalOf(call)), {
@@ -82,12 +83,14 @@ export const make = Effect.fnUntraced(function* (options: ClientOptions) {
         yield* Config.option(Config.String(versionVariable(provider))).pipe(Effect.orDie),
       ) ??
       (options.latest === true ? latest : undefined);
+
     if (Predicate.isUndefined(pinned)) {
       return yield* new VersionRequired({
         detail: `Pin ${provider}'s catalog version with the call's version, the client's versions or ${versionVariable(provider)}, or set it to ${latest} to run whatever is served.`,
         provider,
       });
     }
+
     return pinned === latest ? undefined : pinned;
   });
 
@@ -110,6 +113,7 @@ export const make = Effect.fnUntraced(function* (options: ClientOptions) {
         ...(Predicate.isUndefined(principal) ? {} : { principal }),
         ...(Predicate.isUndefined(version) ? {} : { version }),
       };
+
       return yield* client.tasks.run({
         params: { id: task },
         headers: Predicate.isUndefined(call.idempotencyKey)
@@ -128,6 +132,7 @@ export const make = Effect.fnUntraced(function* (options: ClientOptions) {
         const { credential } = yield* client.me();
         principal = (credential._tag === "Token" ? credential.principal : null) ?? "organization";
       }
+
       return yield* client.connect.start({ payload: { ...session, provider, principal } });
     }),
   };

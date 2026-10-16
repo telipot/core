@@ -52,6 +52,7 @@ describe("queue", () => {
         { id: "hunter.company.search", listMicroUsd: undefined },
       ],
     });
+
     assert.strictEqual(
       printed,
       [
@@ -98,6 +99,7 @@ describe("progressPrinter", () => {
       ],
       followers: [],
     });
+
     assert.strictEqual(queued, "exa · 2 calls · $0.004 at list price · 1 with no price\n");
     assert.strictEqual(
       print({
@@ -110,6 +112,7 @@ describe("progressPrinter", () => {
       }),
       "  ✓ exa.web.search         288 ms  $0.004",
     );
+
     assert.strictEqual(
       print({
         kind: "passed",
@@ -121,6 +124,7 @@ describe("progressPrinter", () => {
       }),
       "  ✓ exa.web.page.similar   195 ms  $0.004 reported",
     );
+
     assert.strictEqual(
       print({
         kind: "passed",
@@ -132,6 +136,7 @@ describe("progressPrinter", () => {
       }),
       "  ✓ exa.web.search           5 ms  cost unknown",
     );
+
     assert.strictEqual(
       print({
         kind: "passed",
@@ -143,6 +148,7 @@ describe("progressPrinter", () => {
       }),
       "  ✓ exa.web.search          40 ms  free",
     );
+
     assert.strictEqual(
       print({
         kind: "failed",
@@ -153,6 +159,7 @@ describe("progressPrinter", () => {
       }),
       "  ✗ exa.web.search        401: Invalid API key",
     );
+
     assert.strictEqual(
       print({ kind: "skipped", id: "exa.web.page.similar", sibling: "exa.web.search" }),
       "  – exa.web.page.similar  same request as exa.web.search",
@@ -167,6 +174,7 @@ describe("progressPrinter", () => {
       queue: [{ id: "exa.web.search", listMicroUsd: 4_000 }],
       followers: [],
     });
+
     assert.strictEqual(
       print({
         kind: "passed",
@@ -178,6 +186,7 @@ describe("progressPrinter", () => {
       }),
       "  ✓ exa.web.search    90 ms  $0.012 (3 calls)",
     );
+
     assert.strictEqual(
       print({
         kind: "failed",
@@ -188,6 +197,7 @@ describe("progressPrinter", () => {
       }),
       "  ✗ exa.web.search  500: boom  $0.012 (3 calls)",
     );
+
     assert.strictEqual(
       print({
         kind: "failed",
@@ -208,10 +218,12 @@ describe("progressPrinter", () => {
       queue: [{ id: "exa.web.search", listMicroUsd: 4_000 }],
       followers: [],
     });
+
     assert.strictEqual(
       print({ kind: "failed", id: "exa.web.search", message: "401: no", calls: 2, micro: 0 }),
       "  ✗ exa.web.search  401: no",
     );
+
     assert.strictEqual(
       print({
         kind: "failed",
@@ -232,6 +244,7 @@ describe("progressPrinter", () => {
       queue: [{ id: "vendor.keywords.volume", listMicroUsd: 0 }],
       followers: ["vendor.keywords.volume.again"],
     });
+
     assert.strictEqual(
       print({
         kind: "passed",
@@ -243,6 +256,7 @@ describe("progressPrinter", () => {
       }),
       "  ✓ vendor.keywords.volume          12 ms  free",
     );
+
     assert.strictEqual(
       print({
         kind: "skipped",
@@ -262,6 +276,7 @@ describe("summary", () => {
       skipped: [{ id: "c", sibling: "a" }],
       spentMicroUsd: 26_000,
     });
+
     assert.strictEqual(printed, "2 passed · 0 failed · 1 skipped · spent $0.026");
   });
 
@@ -275,11 +290,13 @@ describe("summary", () => {
       ],
       spentMicroUsd: 12_500,
     });
+
     assert.include(printed, "1 passed · 2 failed · 0 skipped · spent $0.0125");
     assert.include(
       printed,
       "Failed\n  401 × 2 (domains, keywords): a.keywords.volume, a.domains.overview",
     );
+
     assert.include(printed, "every failure is 401: the credential or the tooling");
   });
 
@@ -291,6 +308,7 @@ describe("summary", () => {
         { id: "a.two", status: 0, message: "no response: down", family: "a" },
       ],
     });
+
     assert.include(printed, "no response × 2 (a): a.one, a.two");
     assert.include(printed, "every failure is no response:");
   });
@@ -305,6 +323,7 @@ describe("summary", () => {
         { id: "a.page.links", paths: ["hits[]._highlightResult"] },
       ],
     });
+
     assert.include(printed, "Not named by output, so the example leaves them out");
     assert.include(
       printed,
@@ -316,6 +335,7 @@ describe("summary", () => {
         "    hits[]._highlightResult",
       ].join("\n"),
     );
+
     assert.include(printed, "full answers: .verify/a/ in the catalog folder");
     assert.notInclude(summary("a", { ...finished, passed: ["a.page.text"] }), "Not named");
   });
@@ -329,19 +349,23 @@ describe("summary", () => {
       stoppedBefore: { id: "exa.web.answer", listMicroUsd: 5_000, leftMicroUsd: 1_000 },
       rateLimited: "exa.web.answer",
     });
+
     assert.include(printed, "\n\nCost unknown, not free\n  exa.web.research.list");
     assert.include(
       printed,
       "\n\nNot called, since no price bounds them under --budget\n  exa.web.page.similar",
     );
+
     assert.include(
       printed,
       "! stopped before exa.web.answer: it lists $0.005 and $0.001 of the budget is left",
     );
+
     assert.include(
       printed,
       "! stopped at exa.web.answer: the vendor kept answering 429; run again to resume",
     );
+
     assert.notInclude(printed, "Failed");
   });
 
@@ -351,6 +375,7 @@ describe("summary", () => {
       queue: [],
       skipped: [{ id: "exa.web.again", sibling: "exa.web.search" }],
     });
+
     assert.include(printed, "exa · nothing to replay");
     assert.notInclude(printed, "skipped");
   });

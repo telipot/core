@@ -71,9 +71,11 @@ export const generateProvider = Effect.fnUntraced(function* (input: {
   const header = Predicate.isUndefined(input.core)
     ? scaffold(provider, today, document)
     : undefined;
+
   const created = Predicate.isUndefined(header)
     ? undefined
     : { text: header.text, reviews: header.reviews };
+
   const coreFile = `providers/${provider}.yaml`;
   const extendedPath = `providers/${provider}.extended.yaml`;
   const core: typeof CoreView.Type = Predicate.isUndefined(input.core)
@@ -103,11 +105,13 @@ export const generateProvider = Effect.fnUntraced(function* (input: {
             }),
         ),
       );
+
   if (Predicate.isNotUndefined(previous) && previous.provider !== provider) {
     return yield* new GenerationRefused({
       message: `${extendedPath} describes ${previous.provider}`,
     });
   }
+
   for (const task of core.endpoints) {
     const before = previous?.endpoints.find((one) => one.id === task.id);
     if (
@@ -119,10 +123,12 @@ export const generateProvider = Effect.fnUntraced(function* (input: {
       });
     }
   }
+
   const known = new Set([
     ...core.endpoints.map(({ id }) => id),
     ...(previous?.endpoints ?? []).map(({ id }) => id),
   ]);
+
   const missing = input.lock.filter((id) => id.startsWith(`${provider}.x.`) && !known.has(id));
   if (missing.length > 0) {
     return yield* new GenerationRefused({
@@ -137,6 +143,7 @@ export const generateProvider = Effect.fnUntraced(function* (input: {
       return { ...route, input: Result.isSuccess(read) ? read.success : undefined };
     }),
   };
+
   const generated = tasksOf(
     document,
     provider,
@@ -147,6 +154,7 @@ export const generateProvider = Effect.fnUntraced(function* (input: {
       core: curated,
     },
   );
+
   const extended = yield* extendedFile({
     provider,
     openapi: document.url,
@@ -158,10 +166,12 @@ export const generateProvider = Effect.fnUntraced(function* (input: {
     lock: input.lock,
     today,
   });
+
   const lock = lockedIds(
     input.lock,
     extended.file.endpoints.map(({ id }) => id),
   );
+
   return {
     created,
     extended: { ...extended, leftOut: generated.leftOut },

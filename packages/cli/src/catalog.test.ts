@@ -12,6 +12,14 @@ import { parse, parseDocument } from "yaml";
 
 import { telipot } from "./testing";
 
+// The parts of a written provider file these tests read.
+interface ProviderFile {
+  readonly display_name: string;
+  readonly base_url: string | null;
+  readonly source: { readonly openapi: string | null };
+  readonly auth: { readonly schemes: Readonly<Record<string, { readonly name?: string }>> };
+}
+
 const bin = `${import.meta.dirname}/bin.ts`;
 const repository = `${import.meta.dirname}/../../..`;
 
@@ -30,6 +38,7 @@ const spawned = Effect.fnUntraced(function* (
     ],
     { concurrency: "unbounded" },
   );
+
   return { exitCode: Number(exitCode), stdout, stderr };
 }, Effect.scoped);
 
@@ -75,12 +84,14 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog validat
           "validate",
           catalogFixtures.refused,
         ]);
+
         assert.notStrictEqual(exitCode, 0);
         const lines = stderr.split("\n").map((line) => line.trim());
         assert.include(
           lines,
           "providers/missing-scope.yaml endpoints[0].scope: required unless auth is public",
         );
+
         for (const issue of yield* issues(catalogFixtures.refused)) assert.include(lines, issue);
       }),
   );
@@ -118,12 +129,14 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog validat
           previous,
           catalogFixtures.clean,
         ]);
+
         assert.notStrictEqual(exitCode, 0);
         const lines = stderr.split("\n").map((line) => line.trim());
         assert.isTrue(
           lines.some((line) => line.startsWith("ids.lock.json: acme.page.txt ")),
           stderr,
         );
+
         assert.strictEqual(lines[0], "WARN");
       }),
   );
@@ -139,6 +152,7 @@ const routes = [
   "/account",
   "/contacts",
 ];
+
 const answers: Record<string, unknown> = {
   "/v1/page": { text: "hello" },
   "/v1/keywords": { rows: [{ phrase: "openrouter", volume: 100 }] },
@@ -153,8 +167,11 @@ const answers: Record<string, unknown> = {
     openapi: "3.1.0",
     info: { title: "Vendor" },
     servers: [{ url: "/v1" }],
-    paths: Object.fromEntries([
-      ...routes.map((route) => [route === "/keywords" ? "/v2/keywords" : route, { get: {} }]),
+    paths: Object.fromEntries<object>([
+      ...routes.map((route): [string, object] => [
+        route === "/keywords" ? "/v2/keywords" : route,
+        { get: {} },
+      ]),
       ["/domains/overview", { post: {} }],
     ]),
   },
@@ -181,6 +198,7 @@ const vendor = listening((request, response) => {
   response.writeHead(Predicate.isUndefined(answer) ? 404 : 200, {
     "content-type": Predicate.isString(answer) ? "text/plain" : "application/json",
   });
+
   response.end(Predicate.isString(answer) ? answer : JSON.stringify(answer ?? {}));
 });
 
@@ -193,6 +211,7 @@ const catalogFor = Effect.fnUntraced(function* (port: number | undefined) {
     file,
     text.replaceAll("http://vendor.test/v1", `http://127.0.0.1:${port ?? 9}/v1`),
   );
+
   return { directory, file };
 });
 
@@ -208,6 +227,7 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog verify"
           "--dry-run",
           directory,
         ]);
+
         assert.strictEqual(exitCode, 0);
         const lines = stdout.trimEnd().split("\n");
         assert.strictEqual(lines[0], "vendor · 8 calls · $0.11 at list price · 2 with no price");
@@ -244,6 +264,7 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog verify"
           ["catalog", "verify", "vendor", "--account-rate", "1000", directory],
           { env: { VENDOR_API_KEY: "sk-secret-123456" } },
         );
+
         assert.strictEqual(exitCode, 0, stdout);
         assert.include(stdout, "8 passed · 0 failed · 1 skipped");
         assert.match(stdout, /✓ vendor\.page\.text +\d+ ms/);
@@ -263,6 +284,7 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog verify"
         const again = yield* telipot(["catalog", "verify", "vendor", directory], {
           env: { VENDOR_API_KEY: "sk-secret-123456" },
         });
+
         assert.strictEqual(again.exitCode, 0, again.stderr);
         assert.include(again.stdout, "vendor · nothing to replay");
         assert.notInclude(again.stdout, "–");
@@ -279,6 +301,7 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog verify"
           ["catalog", "verify", "vendor", "--account-rate", "1000", directory],
           { env: { VENDOR_API_KEY: "sk-secret-123456" } },
         );
+
         assert.notStrictEqual(exitCode, 0);
         assert.include(stderr, "tasks did not pass");
         assert.match(stdout, /^vendor · 8 calls/);
@@ -311,6 +334,7 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog drift",
           stderr,
           `vendor.keywords.volume calls GET http://127.0.0.1:${port}/v1/keywords, which is not in http://127.0.0.1:${port}/openapi.json`,
         );
+
         assert.notInclude(stderr, "vendor.page.text");
       }),
     ),
@@ -326,6 +350,7 @@ const specServer = listening((request, response) => {
     "/keyed.json": keyedSpec,
     "/docs": "<html>Docs</html>",
   };
+
   const page = Object.hasOwn(pages, path) ? pages[path] : undefined;
   response.writeHead(Predicate.isUndefined(page) ? 404 : 200);
   response.end(page);
@@ -370,11 +395,17 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog new", (
           assert.match(made.stdout, /identity +the task that returns the connected account/);
           assert.include(made.stdout, "GET /cookie-only: needs the session scheme");
 
-          const core = parse(yield* fs.readFileString(`${directory}/providers/widgetly.yaml`));
+          const core = parse(
+            yield* fs.readFileString(`${directory}/providers/widgetly.yaml`),
+          ) as ProviderFile;
+
           assert.strictEqual(core.source.openapi, url);
           // The spec's server is a path, so it resolves against where the spec was fetched.
           assert.strictEqual(core.base_url, `${url.replace("/openapi.json", "")}/v1`);
-          const lock = JSON.parse(yield* fs.readFileString(`${directory}/ids.lock.json`));
+          const lock = JSON.parse(
+            yield* fs.readFileString(`${directory}/ids.lock.json`),
+          ) as ReadonlyArray<string>;
+
           assert.include(lock, "widgetly.x.get-widget");
 
           const unfilled = yield* telipot(["catalog", "validate", directory]);
@@ -500,10 +531,12 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog new", (
             ["endpoints", at, "example_response"],
             "examples/widgetly.x.get-widget.json",
           );
+
           yield* fs.writeFileString(
             `${directory}/examples/widgetly.x.get-widget.json`,
             '{"id":"w_1"}',
           );
+
           yield* fs.writeFileString(extendedPath, String(edited));
 
           const inserted = {
@@ -517,14 +550,17 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog new", (
               },
             },
           };
+
           const renamed = {
             op: "replace",
             path: "/paths/~1widgets~1{widgetId}/get/operationId",
             value: "lookupWidget",
           };
+
           yield* fs.makeDirectory(`${directory}/patches`, { recursive: true });
           const patch = (operations: ReadonlyArray<unknown>) =>
             fs.writeFileString(`${directory}/patches/widgetly.json`, JSON.stringify(operations));
+
           const loaded = Effect.fnUntraced(function* () {
             const result = yield* Catalog.validate(directory);
             assert.deepStrictEqual(result.issues.map(formatIssue), []);
@@ -538,12 +574,14 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog new", (
           const status =
             withCollision.find(({ task }) => task.id === "widgetly.x.get-widget")?.task ??
             assert.fail("widget id vanished");
+
           assert.strictEqual(status.path, "/widgets/{widgetId}");
           assert.strictEqual(status.name, "Reviewed widget lookup");
           assert.strictEqual(status.verified, "2026-10-01");
           const fresh =
             withCollision.find(({ task }) => task.id === "widgetly.x.get-widget-2")?.task ??
             assert.fail("no fresh id");
+
           assert.strictEqual(fresh.path, "/aaa");
           assert.isUndefined(fresh.verified);
 
@@ -577,6 +615,7 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog new", (
           assert.isUndefined(
             (yield* loaded()).find(({ task }) => task.id === fresh.id)?.task.status,
           );
+
           const snapshot = yield* fs.readFileString(extendedPath);
           const unchanged = yield* run();
           assert.strictEqual(unchanged.exitCode, 0, unchanged.stderr);
@@ -605,6 +644,7 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog new", (
             yield* fs.readFileString(`${directory}/providers/widgetly.yaml`),
             core,
           );
+
           assert.strictEqual(yield* fs.readFileString(`${directory}/ids.lock.json`), lock);
           assert.isFalse(yield* fs.exists(`${directory}/providers/widgetly.extended.yaml`));
         }),
@@ -637,14 +677,18 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog new", (
             { op: "add", path: "/security", value: [{ key: [] }] },
           ]),
         );
+
         const made = yield* run();
         assert.strictEqual(made.exitCode, 0, made.stderr);
         assert.include(made.stdout, "with patches/keyed.json applied");
         assert.include(made.stdout, "POST /v1/clips/upload: its body is multipart");
 
-        const core = parse(yield* fs.readFileString(`${directory}/providers/keyed.yaml`));
+        const core = parse(
+          yield* fs.readFileString(`${directory}/providers/keyed.yaml`),
+        ) as ProviderFile;
+
         assert.strictEqual(core.display_name, "Keyed");
-        assert.strictEqual(core.auth.schemes.key.name, "x-keyed-api-key");
+        assert.strictEqual(core.auth.schemes.key?.name, "x-keyed-api-key");
         const extended = yield* fs.readFileString(`${directory}/providers/keyed.extended.yaml`);
         assert.include(extended, "auth: key");
 
@@ -680,18 +724,22 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog new", (
           ["widgetly", directory, "--openapi", `${origin}/missing`],
           "it answered 404",
         );
+
         yield* refused(
           ["widgetly", directory, "--openapi", `${origin}/docs`],
           "not an OpenAPI 3 document",
         );
+
         yield* refused(
           ["widgetly", directory, "--openapi", "http://127.0.0.1:9/openapi.json"],
           "cannot read",
         );
+
         yield* refused(
           ["widgetly", directory, "--openapi", "openapi.json"],
           "not an http or https address",
         );
+
         assert.isFalse(yield* fs.exists(`${directory}/providers/widgetly.yaml`));
 
         yield* refused(["acme", directory], "give --openapi to refresh");
@@ -712,21 +760,25 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog build",
         "--out",
         out,
       ]);
+
       assert.strictEqual(exitCode, 0);
       assert.match(stdout, /✓ \d+ files and \d+ publications in /);
       const snapshot = yield* Schema.decodeEffect(Schema.fromJsonString(Snapshot))(
         yield* fs.readFileString(out),
       );
+
       const fromSnapshot = yield* Effect.scoped(
         Effect.map(Layer.build(Catalog.fromSnapshot(snapshot)), (context) =>
           Context.get(context, Catalog).tasks.map(({ task }) => task.id),
         ),
       );
+
       const fromFolder = yield* Effect.scoped(
         Effect.map(Layer.build(Catalog.layer(catalogFixtures.clean)), (context) =>
           Context.get(context, Catalog).tasks.map(({ task }) => task.id),
         ),
       );
+
       assert.deepStrictEqual(fromSnapshot, fromFolder);
     }),
   );
@@ -743,6 +795,7 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog build",
         "--out",
         out,
       ]);
+
       assert.notStrictEqual(exitCode, 0);
       assert.isFalse(yield* fs.exists(out));
     }),

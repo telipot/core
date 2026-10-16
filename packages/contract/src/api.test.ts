@@ -9,7 +9,7 @@ const WithProperties = Schema.Struct({ properties: Schema.Record(Schema.String, 
 describe("Api", () => {
   it("describes the error shape once in the OpenAPI document", () => {
     const spec = OpenApi.fromApi(Api);
-    assert.deepStrictEqual(Object.keys(spec.components.schemas).sort(), [
+    assert.deepStrictEqual(Object.keys(spec.components.schemas).toSorted(), [
       "Call",
       "CallList",
       "CallerEncoded",
@@ -68,7 +68,8 @@ describe("Api", () => {
 
     const problem = { $ref: "#/components/schemas/ProblemDetails" };
     const schemaAt = (status: number) =>
-      spec.paths["/v1/me"]!.get!.responses[status]!.content!["application/problem+json"]!.schema;
+      spec.paths["/v1/me"]?.get?.responses[status]?.content?.["application/problem+json"]?.schema;
+
     assert.deepStrictEqual(schemaAt(401), { anyOf: [problem, problem] });
     assert.deepStrictEqual(schemaAt(403), { anyOf: [problem, problem, problem] });
     assert.deepStrictEqual(schemaAt(400), problem);
@@ -84,6 +85,7 @@ describe("Api", () => {
         if (Predicate.isUndefined(operation)) continue;
         const codes = (status: number) =>
           operation.responses[status]?.description.split(" | ") ?? [];
+
         assert.include(codes(400), "invalid_input", `${method} ${path}`);
         assert.include(codes(413), "payload_too_large", `${method} ${path}`);
         assert.include(codes(500), "internal_error", `${method} ${path}`);
@@ -103,9 +105,11 @@ describe("Api", () => {
       pattern: "^[^\\x00]*$",
       description: "Text without a NUL or a lone surrogate.",
     });
-    const pathId = (path: string) => spec.paths[path]!.get!.parameters[0]!.schema;
+
+    const pathId = (path: string) => spec.paths[path]?.get?.parameters[0]?.schema;
     const property = (schema: string, name: string) =>
       Schema.decodeUnknownSync(WithProperties)(spec.components.schemas[schema]).properties[name];
+
     assert.deepInclude(property("Discover", "task"), bounded(500));
     assert.deepInclude(property("Filters", "provider"), bounded(100));
     assert.deepInclude(pathId("/v1/tasks/{id}"), bounded(100));

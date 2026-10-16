@@ -24,6 +24,7 @@ export const Grant = Schema.Struct({
   account: Schema.NullOr(Schema.String),
   ...allowed,
 }).annotate({ identifier: "Grant" });
+
 export type Grant = typeof Grant.Type;
 
 export const grantsPage = 50;

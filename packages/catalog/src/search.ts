@@ -167,6 +167,7 @@ const checkAliases = (
       warnings.push({ file: "aliases.yaml", path, message: `no task is found by ${missing}` });
     }
   }
+
   return { problems, warnings };
 };
 
@@ -185,12 +186,14 @@ const checkQueries = (
         path: ["queries", index, "finds"],
         message: `${finds} is not a live task`,
       });
+
       return 0;
     }
 
     const found = search(task);
     const rank =
       found._tag === "Found" ? found.hits.findIndex(({ task }) => task.id === finds) + 1 : 0;
+
     if (rank === 0) {
       problems.push({
         file: "queries.yaml",
@@ -198,8 +201,10 @@ const checkQueries = (
         message: `does not find ${finds} within the first ${defaultLimit}`,
       });
     }
+
     return rank;
   });
+
   const reciprocal = ranks.reduce((sum, rank) => sum + (rank === 0 ? 0 : 1 / rank), 0);
   const mean = reciprocal / ranks.length;
   if (mean < floor) {
@@ -209,6 +214,7 @@ const checkQueries = (
       message: `the sentences rank their tasks at a mean reciprocal rank of ${mean.toFixed(3)}, under ${floor}`,
     });
   }
+
   return problems;
 };
 
@@ -231,12 +237,15 @@ export const checkSearch = (
         found.set(word, (found.get(word) ?? 0) + weights[field]);
       }
     }
+
     return { entry, weights: found };
   });
+
   const frequency = new Map<string, number>();
   for (const { weights } of documents) {
     for (const word of weights.keys()) frequency.set(word, (frequency.get(word) ?? 0) + 1);
   }
+
   const inTasks = (word: string) => frequency.get(word) ?? 0;
   const total = documents.length;
 
@@ -295,6 +304,7 @@ export const checkSearch = (
         },
       ];
     });
+
     const qualified = scored.filter(({ qualifies }) => qualifies);
     if (qualified.length > 0) {
       return {
@@ -302,6 +312,7 @@ export const checkSearch = (
         hits: Arr.take(qualified.toSorted(byRank), limit).map(({ entry }) => entry),
       };
     }
+
     return {
       _tag: "Missed",
       nearMisses: Arr.take(scored.toSorted(byNearness), limit).map(

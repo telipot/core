@@ -19,6 +19,7 @@ const directory = Argument.Directory("dir").pipe(
   Argument.withDescription("The catalog folder"),
   Argument.withDefault("catalog"),
 );
+
 const provider = Argument.String("provider").pipe(Argument.withDescription("The provider's slug"));
 
 // The server's rules plus what only CI has: the previous lock and the `queries.yaml` measurement.
@@ -38,6 +39,7 @@ const validate = Command.make(
       directory,
       Option.getOrUndefined(previousLock),
     );
+
     if (warnings.length > 0) {
       yield* Console.error(`${warnHeading}\n  ${indented(warnings)}`);
     }
@@ -94,6 +96,7 @@ const verify = Command.make(
     if (report.failed.length > 0) {
       return yield* refuse(report, `${report.failed.length} tasks did not pass`);
     }
+
     if (Predicate.isNotUndefined(report.rateLimited)) {
       return yield* refuse(report, "the vendor rate-limited the run; run it again to resume");
     }
@@ -112,9 +115,11 @@ const driftCommand = Command.make(
         Effect.fail(refuse(cause, indented(cause.issues))),
       ),
     );
+
     if (found.length > 0) {
       return yield* refuse(found, found.map(({ message }) => message).join("\n  "));
     }
+
     yield* Console.log(ok("every route matches the spec its provider publishes"));
   }),
 ).pipe(Command.withDescription("Compare every route with its provider's public OpenAPI"));
@@ -132,6 +137,7 @@ const scan = Command.make(
     if (found.length > 0) {
       return yield* refuse(found, found.map(formatFinding).join("\n  "));
     }
+
     yield* Console.log(ok(`no credential in what changed since ${base}`));
   }),
 ).pipe(Command.withDescription("Refuse a change that adds a credential"));
@@ -155,6 +161,7 @@ const newProvider = Command.make(
     }).pipe(
       Effect.catchTag("ScaffoldRefused", (cause) => Effect.fail(refuse(cause, cause.message))),
     );
+
     yield* Console.log(scaffolded(provider, report));
   }),
 ).pipe(Command.withDescription("Scaffold a provider file from the vendor's OpenAPI document"));
@@ -176,6 +183,7 @@ const build = Command.make(
     if (issues.length > 0) {
       return yield* refuse(new CatalogInvalid({ issues }), indented(issues));
     }
+
     const at = Option.getOrElse(out, () => `${directory}/snapshot.json`);
     const snapshot = yield* writeSnapshot(directory, at);
     yield* Console.log(

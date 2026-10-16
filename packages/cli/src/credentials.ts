@@ -75,11 +75,13 @@ export const findCredentials = (diff: string): ReadonlyArray<Finding> => {
       file = header[1];
       continue;
     }
+
     const hunk = /^@@ -\S+ \+(\d+)/.exec(text);
     if (Predicate.isNotNull(hunk)) {
       line = Number(hunk[1]);
       continue;
     }
+
     if (!text.startsWith("+") || text.startsWith("+++") || Predicate.isUndefined(file)) continue;
     const added = text.slice(1);
     if (!lockfile.test(file)) {
@@ -90,13 +92,16 @@ export const findCredentials = (diff: string): ReadonlyArray<Finding> => {
         if (loose === true && (placeholder.test(hit[0]) || words(value))) continue;
         found.push({ file, line, kind });
       }
+
       if (exampleFile.test(file)) {
         const strings = [...added.matchAll(jsonString)].map(([, text]) => text ?? "");
         for (const kind of new Set(strings.flatMap(contactIn))) found.push({ file, line, kind });
       }
     }
+
     line++;
   }
+
   return found;
 };
 
@@ -112,9 +117,11 @@ export const addedSince = Effect.fnUntraced(function* (base: string) {
       "HEAD",
     ]),
   );
+
   const [diff, exitCode] = yield* Effect.all(
     [Stream.mkString(Stream.decodeText(child.stdout)), child.exitCode],
     { concurrency: "unbounded" },
   );
+
   return Number(exitCode) === 0 ? diff : yield* Effect.die(`git diff against ${base} failed`);
 }, Effect.scoped);

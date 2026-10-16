@@ -12,6 +12,7 @@ export const Capability = Schema.Struct({
   description: Schema.String,
   tasks: Schema.Array(Task),
 }).annotate({ identifier: "Capability" });
+
 export type Capability = typeof Capability.Type;
 
 export class CapabilityNotFound extends Schema.TaggedError<CapabilityNotFound>()(

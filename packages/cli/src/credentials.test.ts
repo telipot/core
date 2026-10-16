@@ -8,18 +8,20 @@ import { telipot } from "./testing";
 
 // Each planted value is built from fragments, so this file holds no credential
 // the scan could flag when it reads this very change.
+const join = (...fragments: Array<string>) => fragments.join("");
+
 const planted = {
-  "a private key": `-----BEGIN ${"RSA"} PRIVATE KEY-----`,
-  "an AWS access key id": `AKIA${"A1B2C3D4E5F6G7H8"}`,
+  "a private key": join("-----BEGIN ", "RSA", " PRIVATE KEY-----"),
+  "an AWS access key id": join("AKIA", "A1B2C3D4E5F6G7H8"),
   "a GitHub token": `ghp_${"a1B2".repeat(9)}`,
-  "a Slack token": `xoxb-${"1234567890"}-${"abcdefghij"}`,
+  "a Slack token": join("xoxb-", "1234567890", "-", "abcdefghij"),
   "a secret key": `sk-${"proj".repeat(2)}${"Zx9".repeat(8)}`,
   "a telipot token": `tlp_${"Qx7f".repeat(6)}`,
   "a Firecrawl key": `fc-${"0123456789abcdef".repeat(2)}`,
-  "a bearer token": `Authorization: Bearer ${"eyJhbGciOiJIUzI1NiJ9"}.${"abcDEF123456"}`,
-  "a URL with a password": `https://ana:${"hunter2hunter2"}@db.acme.io/app`,
-  "an assigned secret": `api_key: ${"k9X2mQ7vL4pR8sT1wZ3n"}`,
-  "a key in a query string": `https://api.acme.io/v1/data?key=${"k9X2mQ7vL4pR8sT1wZ3n"}`,
+  "a bearer token": join("Authorization: Bearer ", "eyJhbGciOiJIUzI1NiJ9", ".", "abcDEF123456"),
+  "a URL with a password": join("https://ana:", "hunter2hunter2", "@db.acme.io/app"),
+  "an assigned secret": join("api_key: ", "k9X2mQ7vL4pR8sT1wZ3n"),
+  "a key in a query string": join("https://api.acme.io/v1/data?key=", "k9X2mQ7vL4pR8sT1wZ3n"),
 };
 
 const diff = (file: string, ...added: Array<string>) =>
@@ -38,6 +40,7 @@ describe("findCredentials", () => {
       '  "phone": "+44 20 7946 0958",',
       '  "profile": "https://www.linkedin.com/in/ana-lopez-1a2b3c/",',
     ];
+
     assert.deepStrictEqual(
       findCredentials(diff("catalog/examples/acme.people.find.json", ...lines)).map(
         ({ line, kind }) => [line, kind],
@@ -48,6 +51,7 @@ describe("findCredentials", () => {
         [13, "a LinkedIn profile"],
       ],
     );
+
     assert.deepStrictEqual(findCredentials(diff("docs/notes.md", ...lines)), []);
 
     const placeholders = [
@@ -55,6 +59,7 @@ describe("findCredentials", () => {
       '  "phone": "+1 555 0100",',
       '  "profile": "https://www.linkedin.com/in/example",',
     ];
+
     assert.deepStrictEqual(
       findCredentials(diff("catalog/examples/acme.people.find.json", ...placeholders)),
       [],
@@ -68,6 +73,7 @@ describe("findCredentials", () => {
       '  "sample": "ana@example.com",',
       '  "both": ["ana@acme.io", "bob@acme.io"],',
     ];
+
     assert.deepStrictEqual(
       findCredentials(diff("catalog/examples/acme.people.find.json", ...lines)).map(
         ({ line, kind }) => [line, kind],
@@ -88,6 +94,7 @@ describe("findCredentials", () => {
         [["catalog/note.txt", 12, kind]],
         kind,
       );
+
       assert.notInclude(JSON.stringify(found), value);
     }
   });
@@ -103,6 +110,7 @@ describe("findCredentials", () => {
       "curl 'https://api.semrush.com/?key=YOUR_API_KEY_123456789&phrase=x'",
       "const secret = Redacted.make(value)",
     ];
+
     assert.deepStrictEqual(findCredentials(diff("docs/readme.md", ...fine)), []);
   });
 
@@ -112,6 +120,7 @@ describe("findCredentials", () => {
       diff("bun.lock", planted["a GitHub token"]),
       diff("b.txt", planted["a GitHub token"]),
     ].join("\n");
+
     assert.deepStrictEqual(
       findCredentials(both).map(({ file, line }) => [file, line]),
       [
@@ -130,6 +139,7 @@ describe("findCredentials", () => {
       `-${planted["a GitHub token"]}`,
       "+gone",
     ].join("\n");
+
     assert.deepStrictEqual(findCredentials(removed), []);
   });
 });
@@ -149,6 +159,7 @@ const run = Effect.fnUntraced(function* (
     ],
     { concurrency: "unbounded" },
   );
+
   return { stdout, stderr, exitCode: Number(exitCode) };
 }, Effect.scoped);
 
@@ -160,6 +171,7 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog scan", 
         const repository = yield* fs.makeTempDirectoryScoped();
         const git = (...args: Array<string>) =>
           run("git", ["-c", "user.name=t", "-c", "user.email=t@t.test", ...args], repository);
+
         yield* git("init", "-q");
         yield* fs.writeFileString(`${repository}/notes.txt`, "one\n");
         yield* git("add", ".");

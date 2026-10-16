@@ -35,6 +35,7 @@ const named = (status: number) => (status === 0 ? "no response" : `${status}`);
 export const renderer = (colour: Streams) => {
   const painter = (on: boolean) => (code: number) => (text: string) =>
     on ? `\u001b[${code}m${text}\u001b[0m` : text;
+
   const paint = painter(colour.stdout);
   const bold = paint(1);
   const dim = paint(2);
@@ -61,6 +62,7 @@ export const renderer = (colour: Streams) => {
     const known = queue.flatMap(({ listMicroUsd }) =>
       Predicate.isUndefined(listMicroUsd) ? [] : [listMicroUsd],
     );
+
     const total = known.reduce((sum, micro) => sum + micro, 0);
     const parts = [bold(provider), calls(queue.length)];
     if (known.length === 0) parts.push("no USD list price");
@@ -85,18 +87,22 @@ export const renderer = (colour: Streams) => {
       "list price".length,
       longest(report.queue.map((q) => label(q.listMicroUsd))),
     );
+
     const rows = report.queue.map(
       ({ id, listMicroUsd }) => `  ${id.padEnd(ids)}  ${price(listMicroUsd, prices)}`,
     );
+
     const lines = [
       headline(provider, report.queue),
       "",
       dim(`  ${"task".padEnd(ids)}  ${"list price".padStart(prices)}`),
       ...rows,
     ];
+
     if (Predicate.isNotUndefined(report.variable)) {
       lines.push("", dim(`set ${report.variable} to run them`));
     }
+
     return lines.join("\n");
   };
 
@@ -120,13 +126,16 @@ export const renderer = (colour: Streams) => {
           const time = `${Math.round(event.waitedMs)} ms`.padStart(7);
           return `  ${green("✓")} ${event.id.padEnd(ids)}  ${dim(time)}  ${charge(event.micro, event.source, event.calls)}`;
         }
+
         case "failed": {
           const paid =
             event.calls > 0 && event.micro !== 0
               ? `  ${charge(event.micro, undefined, event.calls)}`
               : "";
+
           return `  ${red("✗")} ${event.id.padEnd(ids)}  ${event.message}${paid}`;
         }
+
         case "skipped":
           return `  ${dim("–")} ${event.id.padEnd(ids)}  ${dim(`same request as ${event.sibling}`)}`;
       }
@@ -139,6 +148,7 @@ export const renderer = (colour: Streams) => {
       const families = [...new Set(group.map(({ family }) => family))].toSorted();
       return `${named(status)} × ${group.length} (${families.join(", ")}): ${group.map(({ id }) => id).join(", ")}`;
     });
+
     const [only, ...others] = byStatus.keys();
     if (failed.length > 1 && Predicate.isNotUndefined(only) && others.length === 0) {
       lines.push(
@@ -147,6 +157,7 @@ export const renderer = (colour: Streams) => {
         ),
       );
     }
+
     return section("Failed", lines);
   };
 
@@ -160,6 +171,7 @@ export const renderer = (colour: Streams) => {
         ...(more > 0 ? [dim(`  and ${more} more`)] : []),
       ];
     });
+
     return section("Not named by output, so the example leaves them out", [
       ...lines,
       dim(`full answers: .verify/${provider}/ in the catalog folder`),
@@ -178,16 +190,19 @@ export const renderer = (colour: Streams) => {
         `spent ${usd(report.spentMicroUsd)}`,
       ].join(" · "),
     ];
+
     if (failed.length > 0) sections.push(failures(failed));
     if (report.undeclared.length > 0) sections.push(undeclared(provider, report.undeclared));
     if (report.unknownCost.length > 0) {
       sections.push(section("Cost unknown, not free", report.unknownCost));
     }
+
     if (report.unbounded.length > 0) {
       sections.push(
         section("Not called, since no price bounds them under --budget", report.unbounded),
       );
     }
+
     if (Predicate.isNotUndefined(report.stoppedBefore)) {
       const { id, listMicroUsd, leftMicroUsd } = report.stoppedBefore;
       sections.push(
@@ -196,6 +211,7 @@ export const renderer = (colour: Streams) => {
         ),
       );
     }
+
     if (Predicate.isNotUndefined(report.rateLimited)) {
       sections.push(
         stop(
@@ -203,6 +219,7 @@ export const renderer = (colour: Streams) => {
         ),
       );
     }
+
     return sections.join("\n\n");
   };
 
@@ -222,6 +239,7 @@ export const renderer = (colour: Streams) => {
         report.reviews.map(({ path, note }) => `${yellow(path.padEnd(width))}  ${note}`),
       ],
     ];
+
     return [
       `${ok(`${bold(provider)}${count}`)}\n${report.written.map((file) => `  wrote ${file}`).join("\n")}`,
       ...(report.kept ? [dim(`providers/${provider}.yaml is yours, and was left as it was`)] : []),
@@ -248,6 +266,7 @@ export const renderer = (colour: Streams) => {
         .map((task) => `${bold(task.id.padEnd(width))}  ${plain(task.name)} · ${pays(task)}`)
         .join("\n");
     }
+
     return [
       stop("No task does that."),
       ...near_misses.map(
@@ -308,10 +327,12 @@ const priceText = (price: Task["price"]) => {
     const { floor, ceiling } = price.usd;
     return `${floor === ceiling ? `$${floor}` : `$${floor} to $${ceiling}`} ${per}`;
   }
+
   if (Predicate.isNotNull(price.native)) {
     const { floor, ceiling, currency } = price.native;
     return `${floor === ceiling ? floor : `${floor} to ${ceiling}`} ${plain(currency)} ${per}`;
   }
+
   return "no price";
 };
 
@@ -324,5 +345,5 @@ export const vendorJson = (value: unknown) =>
   );
 
 export const rendering = Effect.suspend(() =>
-  colourFor({ stdout: process.stdout.isTTY === true, stderr: process.stderr.isTTY === true }),
+  colourFor({ stdout: process.stdout.isTTY, stderr: process.stderr.isTTY }),
 ).pipe(Effect.map(renderer));

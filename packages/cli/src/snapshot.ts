@@ -13,10 +13,12 @@ const git = Effect.fnUntraced(function* (directory: string, args: ReadonlyArray<
   const child = yield* spawner.spawn(
     ChildProcess.make("git", ["-C", directory, ...args], { stdin: "ignore", stderr: "ignore" }),
   );
+
   const [output, exitCode] = yield* Effect.all(
     [Stream.mkString(Stream.decodeText(child.stdout)), child.exitCode],
     { concurrency: "unbounded" },
   );
+
   return Number(exitCode) === 0 ? output : yield* new GitRefused({ args, exitCode });
 }, Effect.scoped);
 
@@ -29,6 +31,7 @@ const publications = Effect.fnUntraced(function* (directory: string) {
   const shallow = yield* git(directory, ["rev-parse", "--is-shallow-repository"]).pipe(
     Effect.catchTag("GitRefused", () => Effect.succeed("outside")),
   );
+
   if (shallow.trim() !== "false") return published;
   // Only commits that added, changed or renamed the lock. `--diff-filter=d` alone, which reads
   // as the same thing, selects no commit at all on git 2.50.
@@ -40,6 +43,7 @@ const publications = Effect.fnUntraced(function* (directory: string) {
     "--",
     "ids.lock.json",
   ]);
+
   const seen = new Set<string>();
   for (const line of log.split("\n").filter((line) => line !== "")) {
     const [sha = "", date = ""] = line.split(" ");
@@ -49,10 +53,12 @@ const publications = Effect.fnUntraced(function* (directory: string) {
         Effect.as(Effect.logWarning(`The lock at ${sha} is not a list of ids`, error), []),
       ),
     );
+
     const ids = lock.filter((id) => !seen.has(id));
     for (const id of ids) seen.add(id);
     if (ids.length > 0) published.push({ date, ids });
   }
+
   return published;
 });
 

@@ -12,6 +12,7 @@ const combined = ["anyOf", "oneOf", "allOf", "$ref", "patternProperties"];
 // These keys name a person whatever the string says.
 const personKey =
   /^(?:author|by|username|user_name|screen_name|display_name|first_name|last_name|full_name)$/i;
+
 // Algolia tags an author as `author_<name>`.
 const authorTag = /^author_/;
 // An id names our own account, so it is masked even where counts are kept.
@@ -34,6 +35,8 @@ export const scrub = (text: string, secrets: ReadonlyArray<string>) =>
 const isJsonObject = (value: Schema.Json | undefined): value is Schema.JsonObject =>
   Predicate.isObject(value);
 
+const isJsonArray = (value: Schema.Json): value is Schema.JsonArray => Array.isArray(value);
+
 const read = (schema: Schema.Json | undefined, key: string): Schema.Json | undefined =>
   isJsonObject(schema) && Object.hasOwn(schema, key) ? schema[key] : undefined;
 
@@ -49,7 +52,7 @@ const shapeOf = (schema: Schema.Json | undefined, key: string) => {
 // leaves out never reaches a committed file.
 const named = (value: Schema.Json, schema: Schema.Json | undefined): Schema.Json => {
   if (combines(schema)) return value;
-  if (Array.isArray(value)) return value.map((item) => named(item, read(schema, "items")));
+  if (isJsonArray(value)) return value.map((item) => named(item, read(schema, "items")));
   if (!isJsonObject(value)) return value;
   return Object.fromEntries(
     Object.entries(value).flatMap(([key, field]) => {
@@ -65,9 +68,10 @@ const unnamedPaths = (
   path: string,
 ): Array<string> => {
   if (combines(schema)) return [];
-  if (Array.isArray(value)) {
+  if (isJsonArray(value)) {
     return value.flatMap((item) => unnamedPaths(item, read(schema, "items"), `${path}[]`));
   }
+
   if (!isJsonObject(value)) return [];
   return Object.entries(value).flatMap(([key, field]) => {
     const here = path === "" ? key : `${path}.${key}`;
@@ -102,14 +106,16 @@ const walkField = (key: string, field: Schema.Json, options: Options): Schema.Js
 
 // When masked, numbers other than ids are kept, since a count identifies no one.
 const walk = (value: Schema.Json, options: Options): Schema.Json => {
-  if (Array.isArray(value)) {
+  if (isJsonArray(value)) {
     return value.slice(0, keptItems).map((item) => walk(item, options));
   }
+
   if (Predicate.isString(value)) {
     if (options.masked) return "masked";
     if (authorTag.test(value)) return "author_user";
     return shorten(scrub(value, options.secrets), maxString);
   }
+
   if (isJsonObject(value)) {
     return Object.fromEntries(
       Object.entries(value).map(([key, field]) => [
@@ -118,6 +124,7 @@ const walk = (value: Schema.Json, options: Options): Schema.Json => {
       ]),
     );
   }
+
   return value;
 };
 

@@ -11,6 +11,7 @@ export const Filters = Schema.Struct({
   tier: Schema.optionalKey(Tier),
   kind: Schema.optionalKey(TaskKind),
 }).annotate({ identifier: "Filters" });
+
 export type Filters = typeof Filters.Type;
 
 export const sentenceMaxLength = 500;
@@ -27,6 +28,7 @@ export const Discover = Schema.Struct({
   ),
   filters: Schema.optionalKey(Filters),
 }).annotate({ identifier: "Discover" });
+
 export type Discover = typeof Discover.Type;
 
 // A word in much of the catalog never counts against a task and is left out.
@@ -36,6 +38,7 @@ export const NearMiss = Schema.Struct({
   matched: Schema.Array(Schema.String),
   missed: Schema.Array(Schema.String),
 }).annotate({ identifier: "NearMiss" });
+
 export type NearMiss = typeof NearMiss.Type;
 
 // `near_misses` only when there are no candidates.
@@ -43,6 +46,7 @@ export const Discovery = Schema.Struct({
   candidates: Schema.Array(Task),
   near_misses: Schema.optionalKey(Schema.Array(NearMiss)),
 }).annotate({ identifier: "Discovery" });
+
 export type Discovery = typeof Discovery.Type;
 
 export class DiscoverApi extends HttpApiGroup.make("discover").add(

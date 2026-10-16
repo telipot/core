@@ -22,12 +22,14 @@ interface Bound {
 
 export type CallInput = Readonly<Record<string, Schema.Json>>;
 
+const isJsonArray = (value: Schema.Json): value is Schema.JsonArray => Array.isArray(value);
+
 const text = (value: Schema.Json) => (Predicate.isString(value) ? value : JSON.stringify(value));
 
 // An array repeats its name: `a=1&a=2`.
 const pairs = (fields: CallInput): Pairs =>
   Object.entries(fields).flatMap(([name, value]) =>
-    (Array.isArray(value) ? value : [value]).map((item): readonly [string, string] => [
+    (isJsonArray(value) ? value : [value]).map((item): readonly [string, string] => [
       name,
       text(item),
     ]),
@@ -123,10 +125,12 @@ export const withoutCredential = (
       return body;
     }
   }
+
   const placed =
     !failure || entry.access._tag === "Public"
       ? undefined
       : credentialPlace(entry.access.scheme).name;
+
   const mask = (text: string) => forms.reduce((safe, form) => safe.replaceAll(form, masked), text);
   const scrub = (value: Schema.Json): Schema.Json => {
     if (Predicate.isString(value)) return short !== "" && value === short ? masked : mask(value);
@@ -141,6 +145,7 @@ export const withoutCredential = (
       ]),
     );
   };
+
   return scrub(body);
 };
 
@@ -153,6 +158,7 @@ export const bind = (entry: Entry, input: CallInput, credential: string | undefi
   const path = fillPlaceholders(task.path, (name) =>
     encodeURIComponent(text(pathParams[name] ?? "")),
   );
+
   const params = pairs(queryParams);
   const headers: Record<string, string> = {};
   for (const [name, value] of pairs(headerFields)) headers[name.toLowerCase()] = value;
@@ -178,6 +184,7 @@ export const request = (entry: Entry, input: CallInput, credential: string | und
     HttpClientRequest.appendUrlParams(bound.params),
     HttpClientRequest.setHeaders(bound.headers),
   );
+
   if (Predicate.isUndefined(bound.body)) return sent;
   return "json" in bound.body
     ? HttpClientRequest.bodyJsonUnsafe(sent, bound.body.json)

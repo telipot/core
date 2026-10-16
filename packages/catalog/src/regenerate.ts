@@ -10,7 +10,7 @@ type WrittenTask = typeof Task.Encoded;
 // What `verify` stamps on a task; `untestable` is the generator's own to write.
 const stamps: ReadonlyArray<string> = verificationStates.filter((state) => state !== "untestable");
 // What a person or `verify` records beyond the spec, carried into the regenerated file.
-const recorded = [...stamps, "example_response", "resource_ownership"];
+const recorded = new Set([...stamps, "example_response", "resource_ownership"]);
 
 // A fixed key order, so a regenerated file differs from the last only where a value does.
 const taskKeys = [
@@ -60,11 +60,13 @@ const carry = (generated: WrittenTask, before: WrittenTask | undefined): Written
   if (Predicate.isUndefined(before)) return generated;
   const stamped = Object.keys(before).some((key) => stamps.includes(key));
   const fromBefore = (key: string) =>
-    isReviewed(key) || recorded.includes(key) || (stamped && key === "test_request");
+    isReviewed(key) || recorded.has(key) || (stamped && key === "test_request");
+
   const task = {
     ...only(generated, (key) => !fromBefore(key) && !(stamped && key === "untestable")),
     ...only(before, fromBefore),
   } as WrittenTask;
+
   if (task.scope !== "own_account") return task;
   const { test_request: _, untestable: __, ...rest } = task;
   return rest;
@@ -103,6 +105,7 @@ export const extendedFile = Effect.fnUntraced(function* (input: {
   const offered = input.tasks
     .filter((task) => !isTwin(core, task))
     .map((task) => inOrder(carry(task, before.get(task.id))));
+
   const offeredIds = new Set(offered.map(({ id }) => id));
 
   const gone = (previous?.endpoints ?? []).filter(
@@ -111,6 +114,7 @@ export const extendedFile = Effect.fnUntraced(function* (input: {
       locked.has(task.id) &&
       !core.endpoints.some((one) => one.id === task.id),
   );
+
   const retire = (task: WrittenTask): { readonly kept: boolean; readonly task: WrittenTask } => {
     const curator = curatedBy(core, task);
     if (Predicate.isNotUndefined(curator)) {
@@ -125,6 +129,7 @@ export const extendedFile = Effect.fnUntraced(function* (input: {
         }),
       };
     }
+
     // Repairs an older file that published two ids for one route: the extra id becomes a tombstone.
     const successor = offered.find((one) => one.method === task.method && one.path === task.path);
     if (Predicate.isNotUndefined(successor)) {
@@ -138,14 +143,17 @@ export const extendedFile = Effect.fnUntraced(function* (input: {
         }),
       };
     }
+
     if (Predicate.isNotUndefined(task.status)) return { kept: false, task };
     const route = routeOf(task);
     if (Predicate.isNotUndefined(route) && !route.deprecated) return { kept: true, task };
     const why = Predicate.isUndefined(route)
       ? "the provider's spec no longer offers this route"
       : "the provider's spec marks this route deprecated";
+
     return { kept: false, task: inOrder({ ...task, status: "retired", status_note: why }) };
   };
+
   const retired = gone.map(retire);
 
   const current = new Map<string, Pick<WrittenTask, "id" | "status" | "superseded_by">>([
@@ -153,6 +161,7 @@ export const extendedFile = Effect.fnUntraced(function* (input: {
     ...offered.map((task) => [task.id, task] as const),
     ...retired.map(({ task }) => [task.id, task] as const),
   ]);
+
   // A successor may itself be retired; point at the live end of the chain so the loader never follows one.
   const successorOf = (id: string, seen = new Set<string>()): string | undefined => {
     if (seen.has(id)) return undefined;
@@ -164,6 +173,7 @@ export const extendedFile = Effect.fnUntraced(function* (input: {
       ? undefined
       : successorOf(task.superseded_by, seen);
   };
+
   const reconcile = (task: WrittenTask): WrittenTask => {
     if (Predicate.isUndefined(task.superseded_by)) return task;
     const successor = successorOf(task.superseded_by);
@@ -179,9 +189,11 @@ export const extendedFile = Effect.fnUntraced(function* (input: {
           },
     );
   };
+
   const endpoints = [...offered, ...retired.map(({ task }) => task)]
     .map(reconcile)
     .toSorted(Order.mapInput(Order.String, (task: WrittenTask) => task.id));
+
   const written = Effect.fnUntraced(function* (date: string, curated: string) {
     const file: Written = {
       provider: input.provider,
@@ -190,12 +202,14 @@ export const extendedFile = Effect.fnUntraced(function* (input: {
       digest: "",
       endpoints,
     };
+
     return { ...file, digest: yield* extendedDigest(file) };
   });
 
   const unchanged = Predicate.isUndefined(previous)
     ? undefined
     : yield* written(previous.version, previous.source.curated);
+
   const file =
     Predicate.isNotUndefined(unchanged) && unchanged.digest === previous?.digest
       ? unchanged
@@ -206,6 +220,7 @@ export const extendedFile = Effect.fnUntraced(function* (input: {
     const note = emitted.get(task.id)?.status_note;
     return kept || Predicate.isUndefined(note) ? [] : [{ id: task.id, note }];
   });
+
   const tombstonedIds = new Set(tombstoned.map(({ id }) => id));
   return {
     file,

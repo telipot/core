@@ -33,6 +33,7 @@ export const Call = Schema.Struct({
   idempotency_key: Schema.NullOr(Schema.String),
   request_hash: Schema.String,
 }).annotate({ identifier: "Call" });
+
 export type Call = typeof Call.Type;
 
 export class CallNotFound extends Schema.TaggedError<CallNotFound>()("CallNotFound", {
@@ -51,6 +52,7 @@ export const Capture = Schema.Struct({
   response_status: Schema.NullOr(Schema.Int),
   response: Schema.NullOr(Schema.Json),
 }).annotate({ identifier: "Capture" });
+
 export type Capture = typeof Capture.Type;
 
 // Debug capture was off, 24 hours passed, or the call is another organization's.
@@ -73,6 +75,7 @@ export const CallFilters = Schema.Struct({
   token: Schema.optionalKey(FreeText(100)),
   connection: Schema.optionalKey(FreeText(100)),
 });
+
 export type CallFilters = typeof CallFilters.Type;
 
 // Newest first. A page never splits one millisecond's calls, so it may run a little past fifty,
@@ -95,6 +98,7 @@ const countsOf = <const Members extends ReadonlyArray<string>>(members: Members)
       readonly [K in Members[number]]: typeof Schema.Int;
     },
   );
+
 const perOutcome = countsOf(Outcome.literals);
 
 // From the start of the first UTC day to now. `by_day` (oldest first) and `by_identity` include
@@ -128,12 +132,14 @@ export const Usage = Schema.Struct({
   end_users: Schema.Int,
   charged_usd: Usd,
 }).annotate({ identifier: "Usage" });
+
 export type Usage = typeof Usage.Type;
 
 // A capture without its bodies, which only `GET /v1/calls/{id}/capture` answers.
 export const CaptureSummary = Capture.mapFields((fields) =>
   Struct.omit(fields, ["request", "response"]),
 ).annotate({ identifier: "CaptureSummary" });
+
 export type CaptureSummary = typeof CaptureSummary.Type;
 
 // The captures not yet deleted, newest first, paged as `CallList` is.

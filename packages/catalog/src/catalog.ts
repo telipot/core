@@ -131,7 +131,7 @@ const read = Effect.fnUntraced(function* (
       Effect.mapError((error) => [issue(file, [], `cannot be read: ${error.message}`)]),
       Effect.flatMap((text) =>
         Effect.try({
-          try: () => (format === "json" ? JSON.parse(text) : parseYaml(text, file)),
+          try: (): unknown => (format === "json" ? JSON.parse(text) : parseYaml(text, file)),
           // The first line of a YAML or JSON syntax error names the line and column.
           catch: (error) => [issue(file, [], firstLine(error))],
         }),
@@ -172,7 +172,11 @@ const read = Effect.fnUntraced(function* (
       }),
     ),
   );
-  const slugs = [...new Set(names.map((name) => name.replace(/(\.extended)?\.yaml$/, "")))].sort();
+
+  const slugs = [
+    ...new Set(names.map((name) => name.replace(/(\.extended)?\.yaml$/, ""))),
+  ].toSorted();
+
   const providers: Array<ProviderFiles> = [];
   for (const slug of slugs) {
     const hasCore = names.includes(`${slug}.yaml`);
@@ -181,11 +185,13 @@ const read = Effect.fnUntraced(function* (
     const generated = hasExtended
       ? yield* decode(`providers/${slug}.extended.yaml`, ExtendedProvider, "yaml")
       : undefined;
+
     // A file that decoded is an extended file as written, so the cast holds.
     const extended = generated && {
       ...generated,
       contentDigest: yield* extendedDigest(generated.written as typeof ExtendedProvider.Encoded),
     };
+
     providers.push({
       slug,
       core,
@@ -205,6 +211,7 @@ const read = Effect.fnUntraced(function* (
     .flatMap((task) =>
       Predicate.isUndefined(task.example_response) ? [] : [task.example_response],
     );
+
   const examples = new Map<string, Option.Option<Schema.Json>>();
   for (const example of new Set(named)) {
     if (
@@ -212,6 +219,7 @@ const read = Effect.fnUntraced(function* (
     ) {
       continue;
     }
+
     const json = yield* decode(example, Schema.Json, "json");
     examples.set(example, Predicate.isUndefined(json) ? Option.none() : Option.some(json.record));
   }
@@ -223,6 +231,7 @@ const read = Effect.fnUntraced(function* (
     providers,
     examples,
   };
+
   return { documents, aliases: aliases?.record.aliases ?? {}, queries: queries?.record, issues };
 });
 
@@ -252,6 +261,7 @@ const serve = (
         access._tag === "Credentialed" &&
         access.principal === principal,
     );
+
   const { search, problems, warnings } = checkSearch({ ...served, aliases }, queries);
   const issues = problems.map(({ file, path, message }) => issue(file, path, message));
   return {
@@ -300,16 +310,19 @@ const check = Effect.fnUntraced(function* (
     queries,
     issues: unread,
   } = yield* read(directory, measure, parseYaml);
+
   const { served, issues, warnings } = resolve(documents, {
     today: yield* DateTime.now,
     previousLock,
   });
+
   const refused = [...unread, ...issues];
   // aliases.yaml and queries.yaml are measured on the served tasks, so they wait for the rest.
   const built: ReturnType<typeof serve> =
     refused.length > 0
       ? { catalog: Result.fail(refused), warnings: [] }
       : serve(served, aliases, queries);
+
   return {
     catalog: Result.mapError(built.catalog, (all) => all.toSorted(byFile)),
     warnings: [...warnings, ...built.warnings].toSorted(byFile),

@@ -41,6 +41,7 @@ export const contactIn = (text: string) =>
 
 const credentialWord =
   /api[_-]?key|token|secret|passw(?:or)?d|passphrase|pwd|jwt|bearer|authorization|credential|signature|cookie|session|(?:^|[_-])key(?:[_-]id)?$/i;
+
 // Case matters here: `privateKey` names a key, `monkey` does not.
 const camelCaseKey = /[a-z0-9]Key(?:Id)?$/;
 

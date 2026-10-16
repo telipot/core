@@ -62,6 +62,7 @@ export const drift = Effect.fnUntraced(function* (directory: string) {
     }),
     ({ provider }) => provider.provider,
   );
+
   const found: Array<Drift> = [];
   for (const [slug, group] of published) {
     const [first] = group;
@@ -75,6 +76,7 @@ export const drift = Effect.fnUntraced(function* (directory: string) {
       unreadable(patch.failure.message);
       continue;
     }
+
     const reads = yield* Effect.forEach(urls, (url) => routesAt(url, patch.success.patch));
     const unread = reads.flatMap((read) => (Result.isFailure(read) ? [read.failure] : []));
     for (const why of unread) unreadable(why);
@@ -88,6 +90,7 @@ export const drift = Effect.fnUntraced(function* (directory: string) {
         origin: base.origin,
         path: `${base.pathname.replace(/\/$/, "")}${task.path}`,
       };
+
       if (!hasRoute(routes, route, provider.route_match)) {
         found.push({
           provider: slug,
@@ -98,5 +101,6 @@ export const drift = Effect.fnUntraced(function* (directory: string) {
       }
     }
   }
+
   return found;
 });

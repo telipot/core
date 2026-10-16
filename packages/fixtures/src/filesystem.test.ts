@@ -23,11 +23,13 @@ layer(BunServices.layer)("fixture directory copies", (it) => {
         yield* fs.readFileString(`${first}/nested/example.json`),
         '{"value":"changed"}\n',
       );
+
       for (const untouched of [source, second]) {
         assert.strictEqual(
           yield* fs.readFileString(`${untouched}/nested/example.json`),
           '{"value":"original"}\n',
         );
+
         assert.isFalse(yield* fs.exists(`${untouched}/generated.txt`));
       }
     }),

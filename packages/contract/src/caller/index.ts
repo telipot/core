@@ -26,6 +26,7 @@ export const Actor = Schema.TemplateLiteral([
   ":",
   Schema.NonEmptyString,
 ]);
+
 export type Actor = typeof Actor.Type;
 
 // The actions a member's role is checked for, by resource; grows as resources arrive.

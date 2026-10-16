@@ -26,6 +26,7 @@ const publisher = (spec: unknown, status = 200, elsewhere: Record<string, unknow
       );
     }),
   );
+
   return { seen, layer: Layer.succeed(HttpClient.HttpClient, client) };
 };
 
@@ -52,6 +53,7 @@ const relatedAt = (path: string, match = "normalized") =>
       document.setIn([...task, "input", "pathParams", "phrase"], field);
       document.setIn([...task, "test_request", "pathParams", "phrase"], value);
     }
+
     return String(document);
   });
 
@@ -118,6 +120,7 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
         const vendor = publisher(
           spec({ paths: { ...rest, "/v2/keywords": moved, "/search": { get: changed.post } } }),
         );
+
         const found = yield* drift(directory).pipe(Effect.provide(vendor.layer));
         assert.deepStrictEqual(
           found.map(({ task, route }) => [task, route]),
@@ -127,6 +130,7 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
             ["vendor.keywords.search", "POST /v1/search"],
           ],
         );
+
         assert.include(found[0]?.message ?? "", specUrl);
       }),
     ),
@@ -140,6 +144,7 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
         const vendor = publisher(
           spec({ paths: { ...rest, "/related/{term}": { get: operation } } }),
         );
+
         assert.deepStrictEqual(yield* drift(directory).pipe(Effect.provide(vendor.layer)), []);
       }),
     ),
@@ -153,6 +158,7 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
         const renamed = publisher(
           spec({ paths: { ...rest, "/related/{term}": { get: operation } } }),
         );
+
         const found = yield* drift(directory).pipe(Effect.provide(renamed.layer));
         assert.deepStrictEqual(
           found.map(({ route }) => route),
@@ -162,6 +168,7 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
         const same = publisher(
           spec({ paths: { ...rest, "/related/{phrase}": { get: operation } } }),
         );
+
         assert.deepStrictEqual(yield* drift(directory).pipe(Effect.provide(same.layer)), []);
       }),
     ),
@@ -179,6 +186,7 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
         const moving = publisher(
           discovery({ ...rest, "get/v2/keywords": { ...moved, path: "v2/keywords" } }),
         );
+
         const found = yield* drift(directory).pipe(Effect.provide(moving.layer));
         assert.deepStrictEqual(
           found.map(({ task, route }) => [task, route]),
@@ -203,6 +211,7 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
             related: { httpMethod: "GET", path: "{+name}", flatPath: "related/{termId}" },
           }),
         );
+
         assert.deepStrictEqual(yield* drift(directory).pipe(Effect.provide(vendor.layer)), []);
       }),
     ),
@@ -220,6 +229,7 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
               { ...method, path: `v1/${method.path}` },
             ]),
           );
+
           const vendor = publisher(discovery(whole, { servicePath: "" }));
           assert.deepStrictEqual(yield* drift(directory).pipe(Effect.provide(vendor.layer)), []);
         }),
@@ -234,11 +244,13 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
         const vendor = publisher(
           spec({ paths: { ...rest, "/related/{calendarId}": { get: operation } } }),
         );
+
         assert.deepStrictEqual(yield* drift(directory).pipe(Effect.provide(vendor.layer)), []);
 
         const other = publisher(
           spec({ paths: { ...rest, "/related/{id}/more": { get: operation } } }),
         );
+
         const found = yield* drift(directory).pipe(Effect.provide(other.layer));
         assert.deepStrictEqual(
           found.map(({ route }) => route),
@@ -286,6 +298,7 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
               "    path: /related\n    base_url: http://other.test/v2\n",
             ),
         );
+
         // /related is under /v2 on the other host and nowhere on the first.
         const { "/related": _, ...rest } = paths;
         const other = {
@@ -294,6 +307,7 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
           servers: [{ url: "http://other.test/v2" }],
           paths: { "/related": { get: operation } },
         };
+
         const both = publisher(spec({ paths: rest }), 200, { [otherUrl]: other });
         assert.deepStrictEqual(yield* drift(directory).pipe(Effect.provide(both.layer)), []);
         assert.deepStrictEqual(
@@ -326,17 +340,20 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
             { rootUrl: "http://other.test/" },
           ),
         ];
+
         const fs = yield* FileSystem.FileSystem;
         for (const other of otherDocuments) {
           const directory = yield* editing((text) =>
             text.replace(`openapi: ${specUrl}`, `openapi: [${specUrl}, ${otherUrl}]`),
           );
+
           const vendor = publisher(spec({ paths: rest }), 200, { [otherUrl]: other });
           const found = yield* drift(directory).pipe(Effect.provide(vendor.layer));
           assert.deepStrictEqual(
             found.map(({ task, route }) => [task, route]),
             [["vendor.keywords.related", "GET /v1/related"]],
           );
+
           assert.include(found[0]?.message ?? "", "GET http://vendor.test/v1/related");
 
           const file = `${directory}/providers/vendor.yaml`;
@@ -348,6 +365,7 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
               "    path: /related\n    base_url: http://other.test/v1\n",
             ),
           );
+
           assert.deepStrictEqual(yield* drift(directory).pipe(Effect.provide(vendor.layer)), []);
         }
       }),
@@ -360,6 +378,7 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
         const directory = yield* editing((text) =>
           text.replace(`openapi: ${specUrl}`, `openapi: ${otherUrl}`),
         );
+
         for (const document of [
           spec(),
           { swagger: "2.0", host: "vendor.test", schemes: ["http"], basePath: "/v1", paths },
@@ -400,6 +419,7 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
             },
           }),
         );
+
         const found = yield* drift(directory).pipe(Effect.provide(moved.layer));
         assert.deepStrictEqual(
           found.map(({ task }) => task),
@@ -417,6 +437,7 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
         const templated = spec({
           servers: [{ url: "http://{host}/v1", variables: { host: { default: "vendor.test" } } }],
         });
+
         const filled = publisher(templated);
         assert.deepStrictEqual(yield* drift(directory).pipe(Effect.provide(filled.layer)), []);
 
@@ -428,11 +449,13 @@ layer(BunServices.layer)("telipot catalog drift", (it) => {
           found.map(({ task }) => task),
           ["vendor.keywords.related"],
         );
+
         yield* fs.makeDirectory(`${directory}/patches`, { recursive: true });
         yield* fs.writeFileString(
           `${directory}/patches/vendor.json`,
           JSON.stringify([{ op: "add", path: "/paths/~1related", value: { get: operation } }]),
         );
+
         assert.deepStrictEqual(yield* drift(directory).pipe(Effect.provide(missing.layer)), []);
 
         yield* fs.writeFileString(`${directory}/patches/vendor.json`, '[{ "op": "move" }]');

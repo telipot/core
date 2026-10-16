@@ -15,11 +15,14 @@ const said = (error: unknown) => {
       Predicate.hasProperty(error, "connect_url") && Predicate.isString(error.connect_url)
         ? `\nOpen ${plain(error.connect_url)} to fix it, then run this again.`
         : "";
+
     return `${plain(error.detail)}${link}`;
   }
+
   if (Predicate.hasProperty(error, "_tag") && error._tag === "HttpClientError") {
     return "telipot could not be reached. Check TELIPOT_API_URL and your connection.";
   }
+
   return "telipot answered in a way this version of telipot does not read. Update it.";
 };
 
@@ -40,6 +43,7 @@ const as = Flag.String("as").pipe(
   Flag.withDescription("Act as organization, or an end user as user:<id>"),
   Flag.optional,
 );
+
 const asOption = (principal: Option.Option<string>) =>
   Option.match(principal, { onNone: () => ({}), onSome: (named) => ({ as: named }) });
 
@@ -94,12 +98,14 @@ const run = Command.make(
     if (quote) {
       return yield* Console.log(quoted(yield* ms.inspect(task, asOption(principal))));
     }
+
     const given = yield* Schema.decodeEffect(Input)(input).pipe(
       Effect.mapError(
         (cause) =>
           new CliError.UserError({ cause, userMessage: "--input-json takes a JSON object." }),
       ),
     );
+
     const { output, receipt } = yield* ms.run(task, given, {
       ...asOption(principal),
       ...Option.match(catalogVersion, {
@@ -107,6 +113,7 @@ const run = Command.make(
         onSome: (version) => ({ version }),
       }),
     });
+
     yield* Console.log(vendorJson(output));
     yield* Console.error(ran(receipt));
   }, toUserError),
@@ -129,6 +136,7 @@ const connect = Command.make(
       ...asOption(principal),
       redirect_uri: redirectUri,
     });
+
     yield* Console.log(connectLink(provider, session));
   }, toUserError),
 ).pipe(Command.withDescription("A link to connect an account on a provider"));
@@ -139,6 +147,7 @@ const DeviceCode = Schema.Struct({
   verification_uri_complete: Schema.String,
   interval: Schema.Int,
 });
+
 const Issued = Schema.Struct({ access_token: Schema.String });
 const Refused = Schema.Struct({
   error: Schema.String,
@@ -155,6 +164,7 @@ const login = Command.make(
     const http = (yield* HttpClient.HttpClient).pipe(
       HttpClient.mapRequest(HttpClientRequest.prependUrl(yield* apiUrl)),
     );
+
     const send = (path: string, body: Readonly<Record<string, string>>) =>
       http.execute(HttpClientRequest.post(path).pipe(HttpClientRequest.bodyJsonUnsafe(body)));
 
@@ -162,6 +172,7 @@ const login = Command.make(
       Effect.flatMap(HttpClientResponse.filterStatusOk),
       Effect.flatMap(HttpClientResponse.schemaBodyJson(DeviceCode)),
     );
+
     yield* Console.log(deviceCode(plain(code.verification_uri_complete), plain(code.user_code)));
 
     let interval = Duration.seconds(code.interval);
@@ -172,18 +183,22 @@ const login = Command.make(
         device_code: code.device_code,
         client_id: cliClientId,
       });
+
       if (answer.status === 200) {
         const { access_token } = yield* HttpClientResponse.schemaBodyJson(Issued)(answer);
         return yield* Console.log(signedIn(yield* saveToken(Redacted.make(access_token))));
       }
+
       if (answer.status >= 500) {
         return yield* new CliError.UserError({
           cause: undefined,
           userMessage: "telipot failed to issue the token. Run telipot login again.",
         });
       }
+
       const { error, error_description } =
         yield* HttpClientResponse.schemaBodyJson(Refused)(answer);
+
       if (error === "slow_down") interval = Duration.sum(interval, Duration.seconds(5));
       else if (error !== "authorization_pending") {
         return yield* new CliError.UserError({

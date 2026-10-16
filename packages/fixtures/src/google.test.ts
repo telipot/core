@@ -23,7 +23,8 @@ const route = (task: string, url: string, scopes: ReadonlyArray<string>, example
     example,
     scopes,
   }) satisfies VendorRoute;
-const calendarFields = ["calendarId", "maxResults"];
+
+const calendarFields = new Set(["calendarId", "maxResults"]);
 const routes = [
   {
     ...route(
@@ -38,7 +39,7 @@ const routes = [
     },
     check: (input: Readonly<Record<string, unknown>>) =>
       Object.keys(input)
-        .filter((name) => !calendarFields.includes(name))
+        .filter((name) => !calendarFields.has(name))
         .map((name) => `${name} is not an input field`),
   },
   route(
@@ -69,6 +70,7 @@ const loose = {
     "https://connect.example.com/callback#done",
   ],
 };
+
 const GoogleLive = Google.layer({
   routes,
   authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth",
@@ -95,6 +97,7 @@ const authorizationUrl = (challenge: string, asked: Record<string, string> = {})
     code_challenge_method: "S256",
     ...asked,
   }).toString();
+
   return url.href;
 };
 
@@ -111,6 +114,7 @@ const codeFor = Effect.fnUntraced(function* (
   const back = new URL(
     yield* google.consent(authorizationUrl(yield* challengeOf(verifier), asked), account),
   );
+
   assert.strictEqual(`${back.origin}${back.pathname}`, callback);
   assert.strictEqual(back.searchParams.get("state"), "signed-state");
   return back.searchParams.get("code") ?? "";
@@ -136,6 +140,7 @@ const exchange = Effect.fnUntraced(function* (code: string, options: Exchange = 
       ...inBody,
     }),
   );
+
   return yield* client.execute(
     options.basic && id && secret
       ? HttpClientRequest.setHeader(
@@ -288,6 +293,7 @@ layer(Layer.provideMerge(GoogleLive, BunServices.layer))("the Google fixture", (
         assert.strictEqual(refused.status, 401, `basic: ${basic}`);
         assert.deepStrictEqual(yield* refused.json, { error: "invalid_client" });
       }
+
       const own = yield* exchange(yield* codeFor("ana", asked), { client: another });
       assert.strictEqual(own.status, 200);
     }),
@@ -316,19 +322,23 @@ layer(Layer.provideMerge(GoogleLive, BunServices.layer))("the Google fixture", (
         const challenge = yield* challengeOf(verifier);
         const asLoose = (redirect_uri: string) =>
           authorizationUrl(challenge, { client_id: loose.id, redirect_uri });
+
         const refusals = [
           authorizationUrl(challenge, { client_id: "a-stranger" }),
           authorizationUrl(challenge, { redirect_uri: `${callback}-elsewhere` }),
           asLoose("http://connect.example.com/callback"),
           asLoose("https://connect.example.com/callback#done"),
         ];
+
         for (const url of refusals) {
           const error = yield* Effect.flip(google.consent(url, "ana"));
           assert.instanceOf(error, ConsentRefused, url);
         }
+
         const loopback = new URL(
           yield* google.consent(asLoose("http://localhost:3000/callback"), "ana"),
         );
+
         assert.strictEqual(
           `${loopback.origin}${loopback.pathname}`,
           "http://localhost:3000/callback",
@@ -343,6 +353,7 @@ layer(Layer.provideMerge(GoogleLive, BunServices.layer))("the Google fixture", (
       const asked = authorizationUrl(yield* challengeOf(verifier), {
         scope: `openid email ${calendarScope}`,
       });
+
       const back = new URL(yield* google.consent(asked, "ana"));
       assert.strictEqual(back.searchParams.get("scope"), `openid ${userinfo} ${calendarScope}`);
       const tokens = yield* exchange(back.searchParams.get("code") ?? "");
@@ -385,12 +396,14 @@ layer(Layer.provideMerge(GoogleLive, BunServices.layer))("the Google fixture", (
             ...body,
           }),
         );
+
         return client.execute(
           Predicate.isUndefined(authorization)
             ? request
             : HttpClientRequest.setHeader(request, "authorization", authorization),
         );
       };
+
       const inBody = { client_id: telipot.id, client_secret: telipot.secret };
 
       const noSecret = yield* token({ code: yield* codeFor("ana"), client_id: telipot.id });
@@ -402,6 +415,7 @@ layer(Layer.provideMerge(GoogleLive, BunServices.layer))("the Google fixture", (
         { code: yield* codeFor("ana"), ...inBody },
         "Basic not-base64!",
       );
+
       assert.strictEqual(unreadable.status, 401);
 
       const code = yield* codeFor("ana");
@@ -455,6 +469,7 @@ layer(Layer.provideMerge(GoogleLive, BunServices.layer))("the Google fixture", (
         authorizationUrl(challenge).replace("accounts.google.com", "accounts.example.com"),
         "not a url",
       ];
+
       for (const url of refusals) {
         const error = yield* Effect.flip(google.consent(url, "ana"));
         assert.instanceOf(error, ConsentRefused, url);
@@ -521,6 +536,7 @@ layer(Layer.provideMerge(GoogleLive, BunServices.layer))("the Google fixture", (
         assert.strictEqual((yield* refreshOn(tokens.refresh_token)).status, 400);
         assert.strictEqual((yield* revoked(tokens[which])).status, 400);
       }
+
       assert.deepStrictEqual((yield* google.revocations).slice(before), ["ana", "ana"]);
 
       const ben = yield* offlineFor("ben");
@@ -537,6 +553,7 @@ layer(Layer.provideMerge(GoogleLive, BunServices.layer))("the Google fixture", (
       const { access_token, refresh_token } = yield* HttpClientResponse.schemaBodyJson(Offline)(
         yield* exchange(code),
       );
+
       assert.strictEqual((yield* exchange(code)).status, 400);
       assert.strictEqual((yield* events(access_token)).status, 401);
       assert.strictEqual((yield* refreshOn(refresh_token)).status, 400);
@@ -551,6 +568,7 @@ layer(Layer.provideMerge(GoogleLive, BunServices.layer))("the Google fixture", (
         HttpClientRequest.get("https://www.googleapis.com/calendar/v3/nope"),
         HttpClientRequest.delete("https://www.googleapis.com/calendar/v3/calendars/primary/events"),
       ];
+
       for (const request of unfaked) {
         const error = yield* Effect.flip(client.execute(request));
         assert.instanceOf(error.reason, HttpClientError.TransportError, request.url);

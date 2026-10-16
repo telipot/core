@@ -17,16 +17,15 @@ const reviewed: ReadonlySet<string> = new Set(reviewedFields);
 export const isReviewed = (key: string) => reviewed.has(key);
 
 // Object keys sorted at every depth, so the digest ignores key order.
-const canonical = (value: unknown): unknown =>
-  Array.isArray(value)
-    ? value.map(canonical)
-    : Predicate.isObject(value)
-      ? Object.fromEntries(
-          Object.keys(value)
-            .sort()
-            .map((key) => [key, canonical(value[key])]),
-        )
-      : value;
+const canonical = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (!Predicate.isObject(value)) return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .toSorted()
+      .map((key) => [key, canonical(value[key])]),
+  );
+};
 
 // Hashes the written form, so a new decoding default changes no digest. WebCrypto runs on every
 // runtime, so reading the catalog needs no platform service.
@@ -38,12 +37,14 @@ export const extendedDigest = Effect.fnUntraced(function* (file: typeof Extended
       Object.fromEntries(Object.entries(task).filter(([key]) => !reviewed.has(key))),
     ),
   };
+
   const bytes = yield* Effect.promise(() =>
     globalThis.crypto.subtle.digest(
       "SHA-256",
       new TextEncoder().encode(JSON.stringify(canonical(content))),
     ),
   );
+
   return `sha256:${Hex.encode(new Uint8Array(bytes))}`;
 });
 
@@ -60,6 +61,7 @@ export const curatedBy = (core: Curated, task: Pick<Task, "method" | "path">) =>
   const matches = core.endpoints.filter(
     (curated) => routeKey(curated, core.route_match) === routeKey(task, core.route_match),
   );
+
   return matches.find((curated) => Predicate.isUndefined(curated.status)) ?? matches[0];
 };
 

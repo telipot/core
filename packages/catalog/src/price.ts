@@ -149,6 +149,7 @@ const amountAt = (rows: ReadonlyArray<Row>, ceiling: BigDecimal.BigDecimal, valu
   const row = rows.find(({ when }) =>
     when.every((field) => valueOf(values, field) === field.wanted),
   );
+
   if (Predicate.isUndefined(row)) return ceiling;
   if (Predicate.isUndefined(row.times)) return row.value;
 
@@ -190,6 +191,7 @@ const usdPerUnit = (
       if (Predicate.isUndefined(unit)) {
         return Result.fail({ field: "unit", message: "names the meter when currency is meter" });
       }
+
       return found(
         Record.get(fx.meter_rates_usd, slug).pipe(
           Option.flatMap((meters) => Record.get(meters, unit)),
@@ -220,6 +222,7 @@ const paidPrice = (
   // A reported USD charge converts without a list price; other unknown prices stay unknown.
   const conversion =
     Predicate.isUndefined(ceiling) && cost.currency !== "USD" ? undefined : (usd ?? undefined);
+
   const native = Predicate.isUndefined(ceiling)
     ? undefined
     : {
@@ -227,6 +230,7 @@ const paidPrice = (
         ceiling,
         rows,
       };
+
   const counted = cost.type === "per_result" ? "result" : "call";
 
   return {
@@ -326,6 +330,7 @@ export const checkRates = ({ fx, staleBefore }: Pricing): ReadonlyArray<Problem>
       ),
     ),
   ];
+
   return rates.flatMap(([path, { checked }]) =>
     checked < staleBefore
       ? [
@@ -395,6 +400,7 @@ export const checkPrice = (
           report(at("when", reference), "an optional input field needs a default to match on");
         }
       }
+
       if (Predicate.isNotUndefined(row.times)) {
         const field = Option.getOrUndefined(fieldAt(task.input, row.times));
         if (
@@ -405,6 +411,7 @@ export const checkPrice = (
           report(at("times"), "names no integer or number input field with a positive max");
         }
       }
+
       const earlier = table
         .slice(0, index)
         .findIndex(({ when }) =>
@@ -412,6 +419,7 @@ export const checkPrice = (
             ([key, value]) => Object.hasOwn(row.when, key) && row.when[key] === value,
           ),
         );
+
       const before = table[earlier];
       if (Predicate.isNotUndefined(before)) {
         report(
@@ -422,11 +430,13 @@ export const checkPrice = (
         );
       }
     }
+
     // A reserve at the fallback must cover any call.
     if (Predicate.isNotUndefined(paid.fallback) && rows.length > 0) {
       const [dearest, most] = rows
         .map((row, index) => [index, span(row).most] as const)
         .reduce((a, b) => (BigDecimal.isLessThan(a[1], b[1]) ? b : a));
+
       if (BigDecimal.isLessThan(paid.fallback.value, most)) {
         report(
           ["cost", "fallback", "value"],

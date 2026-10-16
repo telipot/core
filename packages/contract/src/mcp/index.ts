@@ -75,10 +75,12 @@ const readsOurs = Context.make(Tool.Readonly, true).pipe(
   Context.add(Tool.Destructive, false),
   Context.add(Tool.OpenWorld, false),
 );
+
 const writesOurs = Context.make(Tool.Readonly, false).pipe(
   Context.add(Tool.Destructive, false),
   Context.add(Tool.OpenWorld, false),
 );
+
 const readsVendor = Context.make(Tool.Readonly, true).pipe(Context.add(Tool.Destructive, false));
 const changesVendor = Context.make(Tool.Readonly, false);
 

@@ -58,6 +58,7 @@ export const problem = <
   E extends Schema.Top & {
     readonly fields: Schema.Struct.Fields;
     readonly Type: { readonly detail: string };
+    // oxlint-disable-next-line typescript/no-explicit-any -- each error's constructor takes its own fields, and only `any` admits every one
     new (props: any): E["Type"];
   },
 >(

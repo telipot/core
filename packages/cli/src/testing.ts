@@ -37,8 +37,10 @@ export const telipot = Effect.fnUntraced(
       ),
       Effect.exit,
     );
+
     const printed = (lines: ReadonlyArray<unknown>) =>
       lines.map((line) => `${String(line)}\n`).join("");
+
     return {
       exitCode: Exit.isSuccess(exit) ? 0 : 1,
       stdout: printed(yield* TestConsole.logLines),

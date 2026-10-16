@@ -71,6 +71,7 @@ const bodyAndHeader = <Body extends Schema.Top, Header extends Schema.Top>(
   body: Body,
   header: Header,
 ) => ({ body, header });
+
 const sameInBoth = <S extends Schema.Top>(schema: S) => bodyAndHeader(schema, schema);
 
 const options = {
@@ -87,6 +88,7 @@ const options = {
   zero_retention: bodyAndHeader(Schema.Boolean, booleanText),
   version: sameInBoth(CatalogVersion),
 };
+
 type Options = typeof options;
 
 type Kebab<K extends string> = K extends `${infer Head}_${infer Tail}`
@@ -104,6 +106,7 @@ export const ReceiptOptions = Schema.Struct(
     readonly [K in keyof Options]: Schema.optionalKey<Options[K]["body"]>;
   },
 ).annotate({ identifier: "ReceiptOptions" });
+
 export type ReceiptOptions = typeof ReceiptOptions.Type;
 
 // The options that name the connection a run uses; a run takes one or the other.
@@ -122,6 +125,7 @@ export const RunHeaders = Schema.Struct({
   }),
   "idempotency-key": Schema.optionalKey(FreeText(255)),
 });
+
 export type RunHeaders = typeof RunHeaders.Type;
 
 // What the task list, inspect, discover and capabilities take: the end user whose connections,
@@ -140,6 +144,7 @@ export const optionsOf = (
     const value = headers[telipotHeader(name)];
     if (Predicate.isNotUndefined(value)) sent[name] = value;
   }
+
   return { ...(sent as ReceiptOptions), ...body };
 };
 
@@ -156,6 +161,7 @@ export const Receipt = Schema.Struct({
   charged_usd: Usd,
   latency_ms: Schema.Int,
 }).annotate({ identifier: "Receipt" });
+
 export type Receipt = typeof Receipt.Type;
 
 export const receiptHeaders = (receipt: Receipt): Record<string, string> =>

@@ -18,6 +18,7 @@ describe("problem", () => {
         status_note: "Replaced by the authenticated route",
         superseded_by: "acme.page.text",
       });
+
       const body = yield* Schema.encodeEffect(Gone.problem)(gone);
       assert.deepStrictEqual(body, {
         type: "about:blank",
@@ -40,6 +41,7 @@ describe("problem", () => {
       const body = yield* Schema.encodeEffect(Gone.problem)(
         new Gone({ detail: "acme.page.old is retired.", status_note: "No successor" }),
       );
+
       assert.isFalse(Object.hasOwn(body, "superseded_by"));
     }),
   );
@@ -56,6 +58,7 @@ describe("problem", () => {
           status_note: "x",
         }),
       );
+
       assert.include(String(refused), "expected code task_retired");
     }),
   );

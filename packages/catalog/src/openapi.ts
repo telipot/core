@@ -91,6 +91,7 @@ export const SpecPatch = Schema.Array(
     }),
   ]),
 );
+
 export type SpecPatch = typeof SpecPatch.Type;
 
 const Requirement = Schema.Record(Schema.String, Schema.Array(Schema.String));
@@ -260,6 +261,7 @@ const deref = (root: unknown, node: unknown): unknown => {
     if (!isReference(current)) return current;
     current = pointAt(root, current.$ref);
   }
+
   return undefined;
 };
 
@@ -290,12 +292,16 @@ const nodeOf = (root: unknown, schema: unknown, depth = 0): Node | undefined => 
     const inner = nodeOf(root, member, depth + 1);
     if (Predicate.isNotUndefined(inner) && !isNullType(inner)) return { ...inner, ...node };
   }
+
   return node;
 };
 
 const typeOf = (node: Node | undefined): InputField["type"] => {
   if (Predicate.isUndefined(node)) return "string";
-  const declared = Array.isArray(node.type) ? node.type.find((type) => type !== "null") : node.type;
+  const declared = Predicate.isString(node.type)
+    ? node.type
+    : node.type?.find((type) => type !== "null");
+
   const known = fieldTypes.find((type) => type === declared);
   if (Predicate.isNotUndefined(known)) return known;
   if (Predicate.isNotUndefined(node.properties)) return "object";
@@ -344,6 +350,7 @@ const exampleOf = (root: unknown, parameter: typeof Parameter.Type) => {
       if (Predicate.isNotUndefined(value)) return value;
     }
   }
+
   return undefined;
 };
 
@@ -399,10 +406,12 @@ export const operationsOf = ({ spec, root }: OpenApi): ReadonlyArray<Candidate> 
         const parameter = asParameter(deref(root, value));
         return `${parameter?.in}:${parameter?.name}`;
       };
+
       const operations = [
         ...fixedMethods.map((method) => [method.toUpperCase(), raw[method]] as const),
         ...Object.entries(item.additionalOperations ?? {}),
       ];
+
       return operations.flatMap(([method, value]) => {
         const operation = asOperation(deref(root, value));
         if (Predicate.isUndefined(value) || Predicate.isUndefined(operation)) return [];
@@ -441,11 +450,13 @@ const declare = (scheme: NonNullable<ReturnType<typeof asScheme>>): Declared | u
       principals: ["organization"],
     };
   }
+
   // An HTTP authentication scheme's name is not case-sensitive.
   const flavour = scheme.scheme?.toLowerCase();
   if (scheme.type === "http" && (flavour === "basic" || flavour === "bearer")) {
     return { type: flavour, principals: ["organization"] };
   }
+
   const flow = scheme.flows?.authorizationCode;
   if (scheme.type === "oauth2" && Predicate.isNotUndefined(flow)) {
     return {
@@ -458,6 +469,7 @@ const declare = (scheme: NonNullable<ReturnType<typeof asScheme>>): Declared | u
       scopes: Object.fromEntries(Object.keys(flow.scopes).map((scope) => [scope, scope])),
     };
   }
+
   return undefined;
 };
 
@@ -471,6 +483,7 @@ const declaredSchemes = ({ spec, root }: OpenApi): Readonly<Record<string, Decla
       return Predicate.isUndefined(one) ? [] : [[name, one] as const];
     }),
   );
+
   if (!Object.values(declared).some(({ type }) => type !== "oauth2")) return declared;
   return Record.map(declared, (one) =>
     one.type === "oauth2" ? { ...one, principals: ["user"] } : one,
@@ -492,9 +505,11 @@ const authOf = (
   if (Predicate.isUndefined(alternatives)) {
     return Result.fail("the spec declares no security for it; a patch can declare it");
   }
+
   if (alternatives.length === 0 || alternatives.some((one) => Object.keys(one).length === 0)) {
     return Result.succeed({ scheme: undefined, scopes: [] });
   }
+
   for (const alternative of alternatives) {
     const names = Object.keys(alternative);
     const [name] = names;
@@ -502,6 +517,7 @@ const authOf = (
       return Result.succeed({ scheme: name, scopes: alternative[name] ?? [] });
     }
   }
+
   const wanted = Object.keys(alternatives[0] ?? {}).join(" and ");
   return Result.fail(`needs the ${wanted} scheme, which a provider file does not declare`);
 };
@@ -512,19 +528,23 @@ const requestOf = (input: NonNullable<EncodedTask["input"]>) => {
       .filter(([, field]) => field.required === true)
       .map(([name, field]) => ({ location, name, field })),
   );
+
   const missing = required.filter(({ field }) => Predicate.isUndefined(field.example));
   if (missing.length > 0) {
     return Result.fail(
       `no example value in the spec for ${missing.map(({ name }) => name).join(", ")}`,
     );
   }
+
   if (required.length === 0) {
     return Result.fail("nothing to send: an empty request may be answered, and billed, in full");
   }
+
   const request: { [location in Location]?: { [name: string]: Schema.Json } } = {};
   for (const { location, name, field } of required) {
     request[location] = { ...request[location], [name]: field.example as Schema.Json };
   }
+
   return Result.succeed(request);
 };
 
@@ -550,6 +570,7 @@ const bodyOf = (root: unknown, requestBody: unknown) => {
   const content = deref(root, requestBody);
   const media =
     Predicate.isObject(content) && Predicate.isObject(content.content) ? content.content : {};
+
   const names = Object.keys(media);
   const json = names.find(isJson);
   const form = names.find((name) => name === "application/x-www-form-urlencoded");
@@ -561,11 +582,13 @@ const bodyOf = (root: unknown, requestBody: unknown) => {
         : "its body is neither JSON nor a URL-encoded form",
     );
   }
+
   const entry = media[chosen];
   const node = Predicate.isObject(entry) ? nodeOf(root, entry.schema) : undefined;
   if (Predicate.isUndefined(node?.properties)) {
     return Result.fail("its body is not an object with named fields");
   }
+
   const required = new Set(node.required ?? []);
   return Result.succeed({
     bodyType: Predicate.isUndefined(json) ? ("form" as const) : ("json" as const),
@@ -588,6 +611,7 @@ export const resolveServer = (
     /\{([^}]+)\}/g,
     (variable, name: string) => server?.variables?.[name]?.default ?? variable,
   );
+
   if (/\{[^}]*\}/.test(template)) return Result.succeed(undefined);
   return Result.try({ try: () => new URL(template, url), catch: () => notAUrl }).pipe(
     Result.map((resolved) => (isHttp(resolved.href) ? resolved : undefined)),
@@ -612,6 +636,7 @@ const taskOf = (
   if (Predicate.isUndefined(method)) {
     return Result.fail(`a task has no ${candidate.method} method`);
   }
+
   const access = authOf(operation, spec, schemes);
   if (Result.isFailure(access)) return Result.fail(access.failure);
   const { scheme, scopes } = access.success;
@@ -632,6 +657,7 @@ const taskOf = (
     if (Predicate.isNotUndefined(first)) {
       return `has ${name} in ${first} and in ${location}, and a call's input is one flat object`;
     }
+
     seen.set(name, location);
     input[location] = { ...input[location], [name]: field };
     return undefined;
@@ -645,10 +671,12 @@ const taskOf = (
     if (parameter.in === "querystring") {
       return Result.fail("it takes its whole query string as one parameter, which an input cannot");
     }
+
     const required = parameter.in === "path" || parameter.required === true;
     if (parameter.in === "cookie" && required) {
       return Result.fail(`it needs the cookie ${parameter.name}, which a call cannot send`);
     }
+
     if (!Object.hasOwn(locationOf, parameter.in)) continue;
     const location = locationOf[parameter.in];
     if (Predicate.isUndefined(location)) continue;
@@ -663,6 +691,7 @@ const taskOf = (
         note: parameter.description,
       }),
     );
+
     if (Predicate.isNotUndefined(problem)) return Result.fail(problem);
   }
 
@@ -681,17 +710,20 @@ const taskOf = (
   const host = Predicate.isUndefined(candidate.servers)
     ? undefined
     : serverUrlOf(candidate.servers, url);
+
   const ownAccount = Predicate.isNotUndefined(scheme) && schemes[scheme]?.type === "oauth2";
   const actsAs =
     Predicate.isNotUndefined(scheme) &&
     schemes[scheme]?.principals?.includes("organization") === false
       ? "user"
       : "organization";
+
   const action = method !== "GET";
   const summary = trimmed(operation.summary) ?? trimmed(item.summary);
   const fallback = Predicate.isUndefined(operation.operationId)
     ? `${method} ${path}`
     : slugOf(operation.operationId).replaceAll("-", " ");
+
   const name = shorten(summary ?? fallback, 60);
   const described = trimmed(operation.description) ?? trimmed(item.description);
   const docs = operation.externalDocs?.url;
@@ -736,6 +768,7 @@ const outcomesOf = (root: unknown, node: Node | undefined) => {
   const progress = statuses.filter(
     (status) => !failure.includes(status) && !success.includes(status),
   );
+
   return success.length > 0 && failure.length > 0 ? { success, failure, progress } : undefined;
 };
 
@@ -744,6 +777,7 @@ const idFrom = (expression: unknown) => {
   if (!Predicate.isString(expression) || !expression.startsWith("$response.body#")) {
     return undefined;
   }
+
   const tokens = JsonPointer.parseUriFragment(expression.slice("$response.body".length));
   return Predicate.isUndefined(tokens) || tokens.length === 0 ? undefined : tokens.join(".");
 };
@@ -770,6 +804,7 @@ const asyncOf = (
         : [[candidate.operation.operationId, candidate] as const],
     ),
   );
+
   // An `operationRef` within this document: `#/paths/<template>/<method>`.
   const referenced = (ref: string) => {
     const tokens = JsonPointer.parseUriFragment(ref);
@@ -779,10 +814,12 @@ const asyncOf = (
       (candidate) => candidate.path === path && candidate.method === method?.toUpperCase(),
     );
   };
+
   const targetOf = (link: typeof Link.Type) => {
     if (Predicate.isNotUndefined(link.operationId)) return byOperationId.get(link.operationId);
     return Predicate.isUndefined(link.operationRef) ? undefined : referenced(link.operationRef);
   };
+
   const pollOf = (value: unknown): Poll | undefined => {
     const link = asLink(deref(root, value));
     const target = Predicate.isUndefined(link) ? undefined : targetOf(link);
@@ -791,17 +828,20 @@ const asyncOf = (
     if (Predicate.isUndefined(target) || passed.length !== 1 || Predicate.isUndefined(only)) {
       return undefined;
     }
+
     if (target.method !== "GET" || target.operation.deprecated === true) return undefined;
     const param = only[0].replace(/^path\./, "");
     const takes = target.parameters.some((one) => {
       const parameter = asParameter(deref(root, one));
       return parameter?.in === "path" && parameter.name === param;
     });
+
     const id = idFrom(only[1]);
     const outcomes = outcomesOf(root, answerOf(root, target.operation, "200"));
     const curator = Predicate.isUndefined(core)
       ? undefined
       : curatedBy(core, { method: "GET", path: target.path });
+
     if (Predicate.isNotUndefined(curator?.status)) return undefined;
     const made = generated.get(route(target));
     const task = curator?.id ?? made?.id;
@@ -811,11 +851,13 @@ const asyncOf = (
     const servedParam = Predicate.isUndefined(curator)
       ? param
       : placeholdersOf(curator.path)[placeholdersOf(target.path).indexOf(param)];
+
     if (Predicate.isUndefined(servedParam)) return undefined;
     const input = Predicate.isUndefined(curator) ? made?.input : curator.input;
     const servedPath = curator?.path ?? target.path;
     if (Predicate.isUndefined(input) || !Object.hasOwn(input.pathParams ?? {}, servedParam))
       return undefined;
+
     // The descriptor binds only the Link's id; nothing fills another required value at call time.
     if (placeholdersOf(servedPath).some((name) => name !== servedParam)) return undefined;
     for (const location of inputLocations) {
@@ -827,6 +869,7 @@ const asyncOf = (
       )
         return undefined;
     }
+
     return { id, task, param: servedParam, outcomes };
   };
 
@@ -839,6 +882,7 @@ const asyncOf = (
         Predicate.isObject(response) && Predicate.isObject(response.links)
           ? Object.values(response.links)
           : [];
+
       const polls = links.map(pollOf).filter(Predicate.isNotUndefined);
       const [poll] = polls;
       if (polls.length !== 1 || Predicate.isUndefined(poll)) continue;
@@ -847,9 +891,11 @@ const asyncOf = (
         poll: { task: poll.task, param: { in: "pathParams", name: poll.param } },
         status: { path: "status", ...poll.outcomes },
       });
+
       break;
     }
   }
+
   return described;
 };
 
@@ -862,12 +908,14 @@ const baseUrlOf = ({
   if (Predicate.isUndefined(resolved)) {
     return { value: null, note: "the spec's server is not an address; write the API's root URL" };
   }
+
   if (servers.length === 0) {
     return {
       value: resolved,
       note: "the spec names no server, so this is where it was fetched from",
     };
   }
+
   return servers.length > 1
     ? {
         value: resolved,
@@ -905,6 +953,7 @@ export const tasksOf = (
     reserved.add(task.id);
     if (!prior.has(route(task))) prior.set(route(task), task);
   }
+
   const operations = operationsOf(openapi);
   const base = baseUrlOf(openapi).value;
   const made: Array<{ readonly route: string; readonly task: EncodedTask }> = [];
@@ -913,8 +962,10 @@ export const tasksOf = (
       leftOut.push(`${route(candidate)}: the spec marks it deprecated`);
       continue;
     }
+
     const slug =
       slugOf(candidate.operation.operationId ?? `${candidate.method} ${candidate.path}`) || "root";
+
     const before = prior.get(route(candidate));
     const fresh = () => {
       let count = (used.get(slug) ?? 0) + 1;
@@ -923,9 +974,11 @@ export const tasksOf = (
         count += 1;
         id = `${provider}.x.${slug}-${count}`;
       }
+
       used.set(slug, count);
       return id;
     };
+
     const id = Predicate.isNotUndefined(before) && !allocated.has(before.id) ? before.id : fresh();
     allocated.add(id);
     const task = taskOf(openapi, candidate, id, schemes, base);
@@ -939,9 +992,11 @@ export const tasksOf = (
     new Map(made.map(({ route, task }) => [route, task])),
     history?.core,
   );
+
   const tasks = made.map(({ route, task }) =>
     jobs.has(route) ? { ...task, async: jobs.get(route) } : task,
   );
+
   return {
     tasks: tasks.toSorted(Order.mapInput(Order.String, (task: EncodedTask) => task.id)),
     leftOut: leftOut.toSorted(Order.String),
@@ -999,6 +1054,7 @@ export const scaffold = (provider: string, today: string, openapi?: OpenApi): Sc
   const facts = Predicate.isUndefined(openapi)
     ? withoutSpec(provider)
     : withSpec(provider, openapi);
+
   const reviews: Array<Review> = [];
   const review = (path: string, note: string) => reviews.push({ path, note });
 
@@ -1006,10 +1062,12 @@ export const scaffold = (provider: string, today: string, openapi?: OpenApi): Sc
   if (Predicate.isNotUndefined(facts.base.note) || Predicate.isNull(facts.base.value)) {
     review("base_url", facts.base.note ?? "the API's root URL");
   }
+
   if (Predicate.isNull(facts.docs)) {
     review("docs_url", "the provider's documentation page");
     review("source.docs", "the same page");
   }
+
   for (const [name, { type }] of Object.entries(facts.declared)) {
     if (type === "oauth2") {
       review(
@@ -1018,6 +1076,7 @@ export const scaffold = (provider: string, today: string, openapi?: OpenApi): Sc
       );
     }
   }
+
   if (facts.ownAccount) {
     review(
       "identity",
@@ -1043,6 +1102,7 @@ export const scaffold = (provider: string, today: string, openapi?: OpenApi): Sc
     " Review before `telipot catalog validate` passes, then delete this block:",
     ...reviews.map(({ path, note }) => `   ${path}: ${note}`),
   ].join("\n");
+
   return {
     text: document.toString({ lineWidth: 0 }),
     reviews,

@@ -22,20 +22,24 @@ const reach = Effect.gen(function* () {
         if (specifier !== "effect" && !specifier.startsWith("effect/")) {
           packages.push(`${relative} imports ${specifier}`);
         }
+
         continue;
       }
+
       const target = path.resolve(path.dirname(file), specifier);
       queue.push(
         (yield* fs.exists(`${target}.ts`)) ? `${target}.ts` : path.join(target, "index.ts"),
       );
     }
   }
+
   // Every folder under src/ is a feature.
   const features: Array<string> = [];
   for (const name of yield* fs.readDirectory(import.meta.dirname)) {
     const stat = yield* fs.stat(path.join(import.meta.dirname, name));
     if (stat.type === "Directory") features.push(name);
   }
+
   return { reached: [...reached], packages, features };
 });
 
@@ -66,6 +70,7 @@ layer(BunServices.layer)("@telipot/contract", (it) => {
       const manifest = JSON.parse(
         yield* fs.readFileString(`${import.meta.dirname}/../package.json`),
       ) as { readonly dependencies: Record<string, string> };
+
       assert.deepStrictEqual(Object.keys(manifest.dependencies), ["effect"]);
     }),
   );

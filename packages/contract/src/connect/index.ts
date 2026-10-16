@@ -18,6 +18,7 @@ export const RedirectUri = FreeText(2000).check(
     if (url.protocol !== "https:" && !(url.protocol === "http:" && onThisMachine)) {
       return `https, or http on ${loopback.join(" or ")}`;
     }
+
     if (text.includes("#")) return "an address with no fragment";
     if (url.username !== "" || url.password !== "") return "an address with no user or password";
     return true;
@@ -32,6 +33,7 @@ export const RedirectAllowlist = Schema.Struct({
     ),
   ).check(Schema.isMaxLength(50)),
 }).annotate({ identifier: "RedirectAllowlist" });
+
 export type RedirectAllowlist = typeof RedirectAllowlist.Type;
 
 export const NewConnectSession = Schema.Struct({

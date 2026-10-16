@@ -6,6 +6,7 @@ export const Publication = Schema.Struct({
   date: Schema.String,
   ids: Schema.Array(Schema.String),
 });
+
 export type Publication = typeof Publication.Type;
 
 // The catalog folder as data, for a runtime with no filesystem, plus the lock's history, which
@@ -17,6 +18,7 @@ export const Snapshot = Schema.Struct({
   json: Schema.Array(Schema.String),
   publications: Schema.Array(Publication),
 });
+
 export type Snapshot = typeof Snapshot.Type;
 
 // What `Catalog.layer` reads: the root files, and the provider and example folders copied whole,
@@ -38,15 +40,18 @@ export const buildSnapshot = Effect.fnUntraced(function* (
       files[file] = text;
       return;
     }
-    const parsed = Result.try(() => parse(text));
+
+    const parsed = Result.try((): unknown => parse(text));
     files[file] = Result.isSuccess(parsed) ? JSON.stringify(parsed.success) : text;
     if (Result.isSuccess(parsed)) json.push(file);
   };
+
   for (const file of rootFiles) {
     const at = path.join(directory, file);
     // A missing file stays missing, for the loader to refuse as it would the folder.
     if (yield* fs.exists(at)) keep(file, yield* fs.readFileString(at));
   }
+
   for (const name of folders) {
     const at = path.join(directory, name);
     if (!(yield* fs.exists(at))) continue;
@@ -54,6 +59,7 @@ export const buildSnapshot = Effect.fnUntraced(function* (
     for (const file of names)
       keep(`${name}/${file}`, yield* fs.readFileString(path.join(at, file)));
   }
+
   return Snapshot.make({ format: 1, files, json, publications });
 });
 
@@ -73,6 +79,7 @@ export const snapshotFileSystem = ({ files }: Snapshot): FileSystem.FileSystem =
       ),
     ];
   };
+
   return FileSystem.makeNoop({
     readFileString: (at, encoding) => {
       const text = files[inFolder(at)];

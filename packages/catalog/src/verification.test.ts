@@ -50,6 +50,7 @@ describe("stamp", () => {
       state: "unverified",
       reason: "401: Invalid API key",
     });
+
     assert.include(failed, '    unverified: "401: Invalid API key"\n');
     assert.notInclude(failed, "verified: 2026");
   });
@@ -59,6 +60,7 @@ describe("stamp", () => {
       state: "skipped",
       reason: "same request as acme.page.links, which passed",
     });
+
     assert.include(stamped, "    skipped: same request as acme.page.links, which passed\n");
     assert.include(stamped, '    unverified: "429: slow down"\n');
   });
@@ -68,6 +70,7 @@ describe("stamp", () => {
       state: "untestable",
       reason: "a contact lookup needs a person",
     });
+
     assert.include(stamped, "    untestable: a contact lookup needs a person\n");
     assert.notInclude(stamped, "unverified");
   });
@@ -79,6 +82,7 @@ describe("stamp", () => {
       { state: "verified", date: "2026-10-05" },
       "examples/acme.nothing.json",
     );
+
     assert.isTrue(Result.isFailure(refused));
     if (Result.isFailure(refused)) assert.include(refused.failure, "acme.nothing");
   });
@@ -106,10 +110,12 @@ layer(BunServices.layer)("recordVerification", (it) => {
         date: "2026-10-08",
         example: { status: "ok", text: "A new page" },
       });
+
       assert.strictEqual(
         yield* fs.readFileString(named),
         `${JSON.stringify({ status: "ok", text: "A new page" }, null, 2)}\n`,
       );
+
       const after = yield* entryIn(directory, "acme.page.text");
       assert.deepStrictEqual(after.verification, { state: "verified", date: "2026-10-08" });
       assert.deepStrictEqual(after.example, { status: "ok", text: "A new page" });
@@ -126,6 +132,7 @@ layer(BunServices.layer)("recordVerification", (it) => {
         path.join(directory, "examples/acme.page.text.json"),
         path.join(directory, "examples/page.json"),
       );
+
       yield* fs.writeFileString(
         providerFile,
         (yield* fs.readFileString(providerFile)).replace(
@@ -133,12 +140,14 @@ layer(BunServices.layer)("recordVerification", (it) => {
           "example_response: examples/page.json",
         ),
       );
+
       const entry = yield* entryIn(directory, "acme.page.text");
       yield* recordVerification(directory, entry, {
         state: "verified",
         date: "2026-10-08",
         example: { status: "ok", text: "A new page" },
       });
+
       assert.isFalse(yield* fs.exists(path.join(directory, "examples/acme.page.text.json")));
       const after = yield* entryIn(directory, "acme.page.text");
       assert.strictEqual(after.task.example_response, "examples/page.json");
@@ -158,6 +167,7 @@ layer(BunServices.layer)("recordVerification", (it) => {
         state: "unverified",
         reason: "401: Invalid API key",
       });
+
       assert.strictEqual(yield* fs.readFileString(named), example);
       const after = yield* entryIn(directory, "acme.page.text");
       assert.deepStrictEqual(after.verification, {
@@ -177,6 +187,7 @@ layer(BunServices.layer)("recordVerification", (it) => {
         path.join(directory, "notes.json"),
         yield* fs.readFileString(path.join(directory, "examples/acme.page.text.json")),
       );
+
       yield* fs.writeFileString(
         providerFile,
         (yield* fs.readFileString(providerFile)).replace(
@@ -184,6 +195,7 @@ layer(BunServices.layer)("recordVerification", (it) => {
           "example_response: notes.json",
         ),
       );
+
       const { issues } = yield* Catalog.validate(directory);
       assert.isTrue(
         issues.map(formatIssue).some((issue) => issue.includes("example_response")),
@@ -204,11 +216,13 @@ layer(BunServices.layer)("recordVerification", (it) => {
         { state: "unverified", reason: "401: nope" },
         { state: "verified", date: "2026-10-08", example: { gadgets: [] } },
       ];
+
       for (const found of founds) {
         assert.isTrue(
           Exit.isFailure(yield* Effect.exit(recordVerification(directory, entry, found))),
         );
       }
+
       assert.strictEqual(yield* fs.readFileString(extendedFile), before);
       assert.isFalse(yield* fs.exists(path.join(directory, "examples/acme.x.gadgets.json")));
       assert.deepStrictEqual((yield* Catalog.validate(directory)).issues, []);
@@ -223,9 +237,10 @@ layer(BunServices.layer)("recordVerification", (it) => {
       const entry = yield* entryIn(directory, "acme.page.text");
       // The loader refuses such a path; a caller that builds its own entry is
       // held by recordVerification itself.
-      const task: Task = Object.assign(Object.create(Task.prototype), entry.task, {
+      const task: Task = Object.assign(Object.create(Task.prototype) as Task, entry.task, {
         example_response: "../astray.json",
       });
+
       const astray: Entry = { ...entry, task };
 
       yield* recordVerification(directory, astray, { state: "unverified", reason: "401: nope" });
@@ -241,6 +256,7 @@ layer(BunServices.layer)("recordVerification", (it) => {
           example: { status: "ok", text: "A new page" },
         }),
       );
+
       assert.isTrue(Exit.isFailure(passed));
       assert.isFalse(yield* fs.exists(path.join(directory, "../astray.json")));
     }),

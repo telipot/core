@@ -62,10 +62,11 @@ const confirmedAs: Readonly<Record<string, string>> = {
   email: "https://www.googleapis.com/auth/userinfo.email",
   profile: "https://www.googleapis.com/auth/userinfo.profile",
 };
+
 const confirmed = (scope: string) =>
   Object.hasOwn(confirmedAs, scope) ? (confirmedAs[scope] ?? scope) : scope;
 
-const loopback = ["localhost", "127.0.0.1", "[::1]"];
+const loopback = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 const UnknownFromJson = Schema.fromJsonString(Schema.Unknown);
 
@@ -99,6 +100,7 @@ const credentialsOf = (request: HttpClientRequest.HttpClientRequest, form: URLSe
   if (!/^basic /i.test(header)) {
     return { id: form.get("client_id"), secret: form.get("client_secret") };
   }
+
   // A Basic header Google cannot read is refused, never passed over for the body.
   const basic = /^basic (\S+)$/i.exec(header)?.[1];
   const decoded = Predicate.isUndefined(basic) ? undefined : Base64.decodeString(basic);
@@ -189,6 +191,7 @@ export class Google extends Context.Service<
         const issuer = new URL(google.authorizationUrl).origin;
         const segment = (value: object) =>
           Base64Url.encode(new TextEncoder().encode(JSON.stringify(value)));
+
         const idToken = (clientId: string, { account, scopes }: Authorization) => {
           const issuedAt = Math.floor(Date.now() / 1000);
           const { sub, email } = googleAccounts[account];
@@ -216,41 +219,50 @@ export class Google extends Context.Service<
           if (!URL.canParse(authorizationUrl)) {
             return yield* refused(`${authorizationUrl} is not a URL`);
           }
+
           const url = new URL(authorizationUrl);
           const asked = url.searchParams;
           if (`${url.origin}${url.pathname}` !== authorizationEndpoint) {
             return yield* refused(`${url.origin}${url.pathname} is not Google's consent screen`);
           }
+
           const missing = ["client_id", "redirect_uri", "scope", "state", "code_challenge"].filter(
             (name) => !asked.get(name),
           );
+
           if (missing.length > 0) {
             return yield* refused(`The authorization request has no ${missing.join(", ")}`);
           }
+
           if (
             asked.get("response_type") !== "code" ||
             asked.get("code_challenge_method") !== "S256"
           ) {
             return yield* refused("Google answers only response_type=code with S256 PKCE");
           }
+
           const clientId = asked.get("client_id") ?? "";
           const client = clients.get(clientId);
           if (Predicate.isUndefined(client)) {
             return yield* refused(`invalid_client: no OAuth client has the id ${clientId}`);
           }
+
           const redirectUri = asked.get("redirect_uri") ?? "";
           if (!URL.canParse(redirectUri)) {
             return yield* refused(`The redirect_uri ${redirectUri} is not a URL`);
           }
+
           const back = new URL(redirectUri);
           if (!client.redirectUris.includes(redirectUri)) {
             return yield* refused(
               `redirect_uri_mismatch: ${clientId} did not register ${redirectUri}`,
             );
           }
-          if (back.protocol !== "https:" && !loopback.includes(back.hostname)) {
+
+          if (back.protocol !== "https:" && !loopback.has(back.hostname)) {
             return yield* refused(`${redirectUri} is neither https nor on a loopback address`);
           }
+
           if (back.hash !== "") return yield* refused(`${redirectUri} has a fragment`);
 
           back.searchParams.set("state", asked.get("state") ?? "");
@@ -258,6 +270,7 @@ export class Google extends Context.Service<
             back.searchParams.set("error", "access_denied");
             return back.href;
           }
+
           const unticked = new Set((choice.untick ?? []).map(confirmed));
           const scopes = [
             ...new Set(
@@ -266,6 +279,7 @@ export class Google extends Context.Service<
               ),
             ),
           ].filter((scope) => scope !== "" && !unticked.has(scope));
+
           const code = next("4/fixture-code-");
           codes.set(code, {
             clientId,
@@ -275,6 +289,7 @@ export class Google extends Context.Service<
             challenge: asked.get("code_challenge") ?? "",
             offline: asked.get("access_type") === "offline",
           });
+
           back.searchParams.set("code", code);
           back.searchParams.set("scope", scopes.join(" "));
           return back.href;
@@ -287,22 +302,27 @@ export class Google extends Context.Service<
             expiresAt:
               (yield* Clock.currentTimeMillis) + Duration.toMillis(Duration.seconds(tokenSeconds)),
           });
+
           return accessToken;
         });
+
         const refreshTokenFor = (grant: Grant, replaces?: string) => {
           const refreshToken = next("1//fixture-refresh-");
           refreshTokens.set(
             refreshToken,
             Predicate.isUndefined(replaces) ? { grant } : { grant, replaces },
           );
+
           return refreshToken;
         };
+
         const issue = (request: HttpClientRequest.HttpClientRequest, body: object) =>
           json(
             request,
             200,
             JSON.stringify({ ...body, expires_in: tokenSeconds, token_type: "Bearer" }),
           );
+
         // Ends every token of the grant.
         const end = (grant: Grant) => {
           for (const [token, held] of tokens) if (held.grant === grant) tokens.delete(token);
@@ -321,6 +341,7 @@ export class Google extends Context.Service<
           if (Predicate.isUndefined(held) || held.grant.clientId !== clientId) {
             return json(request, 400, JSON.stringify({ error: "invalid_grant" }));
           }
+
           // Its first use retires the token it replaced.
           if (Predicate.isNotUndefined(held.replaces)) refreshTokens.delete(held.replaces);
           delete held.replaces;
@@ -331,6 +352,7 @@ export class Google extends Context.Service<
             on: () => refreshTokenFor(grant, presented),
             forgotten: () => next("1//fixture-refresh-"),
           }[rotation]();
+
           return issue(request, {
             access_token: yield* accessTokenFor(grant),
             scope: grant.scopes.join(" "),
@@ -350,10 +372,12 @@ export class Google extends Context.Service<
           ) {
             return json(request, 401, JSON.stringify({ error: "invalid_client" }));
           }
+
           const clientId = client.id;
           if (form.get("grant_type") === "refresh_token") {
             return yield* refresh(request, clientId, form);
           }
+
           // As at Google, a client's first exchange spends the code, right or wrong.
           const code = form.get("code") ?? "";
           if (spent.has(code)) {
@@ -361,6 +385,7 @@ export class Google extends Context.Service<
             if (Predicate.isNotUndefined(issued)) end(issued);
             return invalidGrant;
           }
+
           const authorization = codes.get(code);
           codes.delete(code);
           if (code !== "") spent.set(code, undefined);
@@ -370,11 +395,13 @@ export class Google extends Context.Service<
           ) {
             return invalidGrant;
           }
+
           const challenge = Base64Url.encode(
             yield* crypto
               .digest("SHA-256", new TextEncoder().encode(form.get("code_verifier") ?? ""))
               .pipe(Effect.orDie),
           );
+
           if (
             clientId !== authorization.clientId ||
             form.get("redirect_uri") !== authorization.redirectUri ||
@@ -383,11 +410,13 @@ export class Google extends Context.Service<
           ) {
             return invalidGrant;
           }
+
           const grant: Grant = {
             clientId,
             account: authorization.account,
             scopes: authorization.scopes,
           };
+
           spent.set(code, grant);
           return issue(request, {
             access_token: yield* accessTokenFor(grant),
@@ -406,6 +435,7 @@ export class Google extends Context.Service<
           if (Predicate.isUndefined(grant)) {
             return json(request, 400, JSON.stringify({ error: "invalid_token" }));
           }
+
           end(grant);
           revocations.push(grant.account);
           return json(request, 200, "{}");
@@ -417,9 +447,11 @@ export class Google extends Context.Service<
             if (request.method === "POST" && address === tokenEndpoint) {
               return yield* token(request);
             }
+
             if (request.method === "POST" && address === revocationEndpoint) {
               return revoke(request);
             }
+
             const found = find(request, url);
             if (Predicate.isUndefined(found)) return yield* notFaked(request, "Google");
             const { route, path } = found;
@@ -431,10 +463,12 @@ export class Google extends Context.Service<
             ) {
               return googleError(request, 401, "Request had invalid authentication credentials.");
             }
+
             const { grant } = holder;
             if (!route.scopes.every((scope) => grant.scopes.includes(confirmed(scope)))) {
               return googleError(request, 403, "Request had insufficient authentication scopes.");
             }
+
             const { problems } = readInput(route, request, url, path);
             if (problems.length > 0) {
               return json(
@@ -445,6 +479,7 @@ export class Google extends Context.Service<
                 }),
               );
             }
+
             return json(request, 200, personalise(JSON.stringify(route.example), grant.account));
           }),
         );

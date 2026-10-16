@@ -52,12 +52,14 @@ export const ProviderSummary = Schema.Struct({
   tasks: Schema.Int,
   identity_task: Schema.NullOr(Schema.String),
 }).annotate({ identifier: "ProviderSummary" });
+
 export type ProviderSummary = typeof ProviderSummary.Type;
 
 // Every provider with a task served, in catalog order.
 export const ProviderList = Schema.Struct({
   providers: Schema.Array(ProviderSummary),
 }).annotate({ identifier: "ProviderList" });
+
 export type ProviderList = typeof ProviderList.Type;
 
 export class ProviderNotFound extends Schema.TaggedError<ProviderNotFound>()("ProviderNotFound", {

@@ -41,6 +41,7 @@ export const scaffoldProvider = Effect.fnUntraced(function* (options: {
   const inDirectory = (file: string) => path.join(directory, file);
   const exists = (file: string) =>
     fs.exists(inDirectory(file)).pipe(Effect.orElseSucceed(() => false));
+
   const readFile = (file: string) =>
     fs
       .readFileString(inDirectory(file))
@@ -51,6 +52,7 @@ export const scaffoldProvider = Effect.fnUntraced(function* (options: {
       `${provider} is not a slug: lowercase letters and digits, joined by dashes`,
     );
   }
+
   const coreFile = `providers/${provider}.yaml`;
   const extendedPath = `providers/${provider}.extended.yaml`;
   const hasCore = yield* exists(coreFile);
@@ -63,6 +65,7 @@ export const scaffoldProvider = Effect.fnUntraced(function* (options: {
   const { file: patchFile, patch } = yield* readPatch(directory, provider).pipe(
     Effect.mapError((cause) => refuse(cause.message, cause)),
   );
+
   const spec = Predicate.isUndefined(openapi)
     ? undefined
     : yield* fetchDocument(openapi).pipe(
@@ -74,6 +77,7 @@ export const scaffoldProvider = Effect.fnUntraced(function* (options: {
             : Effect.fail(refuse(`cannot use ${openapi}: ${read.failure}`));
         }),
       );
+
   const today = DateTime.formatIsoDateUtc(yield* DateTime.now);
 
   const lock = yield* fs.readFileString(inDirectory("ids.lock.json")).pipe(
@@ -88,6 +92,7 @@ export const scaffoldProvider = Effect.fnUntraced(function* (options: {
     Predicate.isNotUndefined(spec) && (yield* exists(extendedPath))
       ? yield* readFile(extendedPath)
       : undefined;
+
   const generated = yield* generateProvider({
     provider,
     today,
@@ -96,6 +101,7 @@ export const scaffoldProvider = Effect.fnUntraced(function* (options: {
     previous,
     lock,
   }).pipe(Effect.mapError((cause) => refuse(cause.message, cause)));
+
   const { created, extended } = generated;
 
   const written: Array<string> = [];
@@ -103,6 +109,7 @@ export const scaffoldProvider = Effect.fnUntraced(function* (options: {
     yield* fs.writeFileString(inDirectory(coreFile), created.text);
     written.push(coreFile);
   }
+
   if (Predicate.isNotUndefined(extended)) {
     yield* fs.writeFileString(inDirectory(extendedPath), extended.text);
     written.push(extendedPath);

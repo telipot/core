@@ -77,6 +77,7 @@ export const executeKeepingCredentialOut = <E>(
       ]);
     });
   }
+
   const url = new URL(sent.url);
   return client.execute(sent).pipe(
     Effect.provideService(HttpClient.TracerDisabledWhen, () => true),
@@ -110,10 +111,11 @@ export const sendOnce = <E>(client: HttpClient.HttpClient.With<E>, maxBytes: num
     const response = yield* Predicate.isUndefined(credential)
       ? sender.execute(sent)
       : executeKeepingCredentialOut(sender, sent, schemeOf(entry));
+
     const body = yield* bodyOf(response, yield* textWithin(response, maxBytes));
     return {
       status: response.status,
-      headers: response.headers as Readonly<Record<string, string>>,
+      headers: response.headers,
       body,
     };
   });

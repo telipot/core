@@ -32,6 +32,7 @@ export const Price = Schema.Union([
     confidence: Schema.Literals(["verified", "documented", "inferred", "unknown"]),
   }),
 ]).annotate({ identifier: "Price" });
+
 export type Price = typeof Price.Type;
 
 // `source` marks this as the catalog's claim, not a measurement.
@@ -47,6 +48,7 @@ export const Verification = Schema.Union([
     reason: Schema.String,
   }),
 ]);
+
 export type Verification = typeof Verification.Type;
 
 // core is curated by hand; extended is generated from the vendor's spec.
@@ -84,12 +86,14 @@ export const Task = Schema.Struct({
   identity: Schema.NullOr(IdentityMode),
   credential_in_place: Schema.Boolean,
 }).annotate({ identifier: "Task" });
+
 export type Task = typeof Task.Type;
 
 // A task as `GET /v1/tasks` lists it: inspect's answer without its schemas and example.
 export const TaskSummary = Task.mapFields(Struct.omit(["input", "output", "example"])).annotate({
   identifier: "TaskSummary",
 });
+
 export type TaskSummary = typeof TaskSummary.Type;
 
 export const tasksPage = 50;
@@ -101,6 +105,7 @@ export const TaskPage = Schema.Struct({
   next_cursor: Schema.NullOr(Schema.String),
   total: Schema.Int,
 }).annotate({ identifier: "TaskPage" });
+
 export type TaskPage = typeof TaskPage.Type;
 
 export class TaskNotFound extends Schema.TaggedError<TaskNotFound>()("TaskNotFound", {
@@ -135,6 +140,7 @@ export const RunBody = Schema.StructWithRest(
 export const Run = Schema.Struct({ output: Schema.Json, receipt: Receipt }).annotate({
   identifier: "Run",
 });
+
 export type Run = typeof Run.Type;
 
 const ranCall = { detail: Schema.String, call_id: Schema.String };

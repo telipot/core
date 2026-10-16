@@ -1,4 +1,4 @@
-import { type DateTime, Option, Predicate, Result, Schema, SchemaIssue } from "effect";
+import { type DateTime, Option, Predicate, Result, Schema, type SchemaIssue } from "effect";
 
 import { isTwin } from "./extended";
 import {
@@ -42,13 +42,11 @@ export class CatalogIssue extends Schema.Class<CatalogIssue>("@telipot/catalog/C
 // `endpoints[0].input.queryParams["news.search"]`
 export const formatPath = (path: ReadonlyArray<PropertyKey>) =>
   path
-    .map((key, index) =>
-      Predicate.isNumber(key)
-        ? `[${key}]`
-        : /^[A-Za-z_$][\w$]*$/.test(String(key))
-          ? `${index === 0 ? "" : "."}${String(key)}`
-          : `[${JSON.stringify(String(key))}]`,
-    )
+    .map((key, index) => {
+      if (Predicate.isNumber(key)) return `[${key}]`;
+      if (!/^[A-Za-z_$][\w$]*$/.test(String(key))) return `[${JSON.stringify(String(key))}]`;
+      return `${index === 0 ? "" : "."}${String(key)}`;
+    })
     .join("");
 
 export const issue = (file: string, path: ReadonlyArray<PropertyKey>, message: string) =>
@@ -146,6 +144,7 @@ export const keyScheme = (
     const scheme = Object.hasOwn(schemes, named) ? schemes[named] : undefined;
     return Predicate.isNotUndefined(scheme) && takesKey(scheme, principal) ? scheme : undefined;
   }
+
   const fitting = Object.values(schemes).filter((scheme) => takesKey(scheme, principal));
   return fitting.length === 1 ? fitting[0] : undefined;
 };
@@ -165,6 +164,7 @@ export const oauthScheme = (
     (scheme): scheme is OAuth2Scheme =>
       scheme.type === "oauth2" && scheme.principals.includes(principal),
   );
+
   return fitting.length === 1 ? fitting[0] : undefined;
 };
 
@@ -236,16 +236,19 @@ const checkAccess = (
   if (task.scope === "own_account") {
     if (Predicate.isUndefined(task.principal))
       report(["principal"], "required when scope is own_account");
+
     if (Predicate.isNotUndefined(task.test_request)) {
       report(["test_request"], "an own_account task carries no test request");
     }
   }
+
   if (task.auth === "public") return proof(problems, { _tag: "Public" });
 
   const scheme =
     Predicate.isNotUndefined(schemes) && Object.hasOwn(schemes, task.auth)
       ? schemes[task.auth]
       : undefined;
+
   if (Predicate.isUndefined(scheme)) {
     report(["auth"], `${task.auth} is not a scheme in auth.schemes, nor public`);
     return Result.fail(problems);
@@ -271,6 +274,7 @@ const checkAccess = (
   if (scheme.type === "oauth2" && Predicate.isUndefined(task.required_scopes)) {
     report(["required_scopes"], "required for an OAuth task");
   }
+
   task.required_scopes?.forEach((scope, position) => {
     if (!(scheme.type === "oauth2" && Object.hasOwn(scheme.scopes, scope))) {
       report(
@@ -279,6 +283,7 @@ const checkAccess = (
       );
     }
   });
+
   return Predicate.isUndefined(principal)
     ? Result.fail(problems)
     : proof(problems, { _tag: "Credentialed", scheme, principal });
@@ -299,6 +304,7 @@ const checkPlatform = (
       { path: ["platform"], message: `${task.platform} is not in capabilities.yaml platforms` },
     ];
   }
+
   return [];
 };
 
@@ -328,11 +334,14 @@ const checkTombstone = (
         ? []
         : [{ path: [field], message: "needs a status, retired or broken" }],
     );
+
     return proof(floating, undefined);
   }
+
   if (Predicate.isUndefined(task.status_note)) {
     return Result.fail([{ path: ["status_note"], message: "required when a task has a status" }]);
   }
+
   return Result.succeed({
     status: task.status,
     note: task.status_note,
@@ -348,6 +357,7 @@ const checkVerification = (
     path: [state],
     message: `a task carries one verification state, and has ${verification?.state}`,
   }));
+
   if (
     Predicate.isNotUndefined(task.verified) &&
     (Predicate.isUndefined(task.example_response) ||
@@ -358,12 +368,14 @@ const checkVerification = (
       message: "needs the test_request it replays and the example_response it captured",
     });
   }
+
   if (Predicate.isNotUndefined(task.untestable) && Predicate.isNotUndefined(task.test_request)) {
     problems.push({
       path: ["test_request"],
       message: "an untestable task carries no test request",
     });
   }
+
   return proof(problems, verification);
 };
 
@@ -410,6 +422,7 @@ const checkExample = (
   if (Predicate.isNotUndefined(named) && Predicate.isUndefined(example)) {
     problems.push({ path: ["example_response"], message: `${named} does not exist` });
   }
+
   if (Predicate.isNotUndefined(task.output)) {
     problems.push(...nullKeys(task.output, ["output"]));
     const check = outputCheck(task.output);
@@ -423,6 +436,7 @@ const checkExample = (
       problems.push(...check.success(example.value).map((found) => ({ ...found, file: named })));
     }
   }
+
   return proof(
     problems,
     Predicate.isUndefined(example) ? undefined : Option.getOrUndefined(example),
@@ -443,7 +457,7 @@ type Proved = Pick<
   | "tombstone"
 >;
 
-const idempotentKinds: ReadonlyArray<Task["kind"]> = ["data", "utility"];
+const idempotentKinds: ReadonlySet<Task["kind"]> = new Set(["data", "utility"]);
 
 const vendorScopeOf = (access: Access, scope: string): string | undefined => {
   const scheme = access._tag === "Credentialed" ? access.scheme : undefined;
@@ -490,6 +504,7 @@ const checkTask = (
       { path: ["input"], message },
     ]),
   );
+
   const { price, warnings } = checkPrice(task, provider, pricing);
 
   const problems = [
@@ -508,6 +523,7 @@ const checkTask = (
     ...(Result.isSuccess(inputSchema) ? problemsOf(decodeInput) : []),
     ...problemsOf(price),
   ];
+
   const proved = Result.all({
     access,
     verification,
@@ -517,6 +533,7 @@ const checkTask = (
     decodeInput,
     tombstone,
   });
+
   return {
     problems,
     warnings,
@@ -528,7 +545,7 @@ const checkTask = (
               ...found,
               baseUrl: (task.base_url ?? provider.base_url).replace(/\/$/, ""),
               vendorScopes: vendorScopesOf(task, found.access),
-              idempotent: idempotentKinds.includes(task.kind),
+              idempotent: idempotentKinds.has(task.kind),
             })),
           ),
   };
@@ -547,10 +564,12 @@ export const resolve = (
   const report = (file: string, path: ReadonlyArray<PropertyKey>, message: string) => {
     issues.push(issue(file, path, message));
   };
+
   const warnings: Array<CatalogIssue> = [];
   const warn = (file: string, path: ReadonlyArray<PropertyKey>, message: string) => {
     warnings.push(issue(file, path, message));
   };
+
   const pricing = pricingOn(today, documents.fx);
   for (const { path, message } of checkRates(pricing)) warn("fx.yaml", path, message);
   const platforms = documents.capabilities?.platforms;
@@ -571,6 +590,7 @@ export const resolve = (
     string,
     { readonly file: string; readonly index: number; readonly task: Task; readonly serves: boolean }
   >();
+
   const entries: Array<Entry> = [];
   const proposals: Record<string, string> = {};
 
@@ -594,8 +614,10 @@ export const resolve = (
       if (Predicate.isNotUndefined(extended) && !unread) {
         report(extended.file, ["provider"], `has no core file, providers/${slug}.yaml`);
       }
+
       continue;
     }
+
     const header = core.record;
     const { endpoints: _, ...provider } = header;
     // The first provider to propose a capability describes it.
@@ -609,6 +631,7 @@ export const resolve = (
         ? []
         : [{ file: extended.file, tier: "extended" as const, tasks: extended.record.endpoints }]),
     ];
+
     const serving: Array<Task> = [];
     for (const { file, tier, tasks } of files) {
       for (const [index, task] of tasks.entries()) {
@@ -622,6 +645,7 @@ export const resolve = (
         } else if (!dottedWords.test(task.id)) {
           report(file, at("id"), "must be lowercase words joined by dots");
         }
+
         const first = defined.get(task.id);
         if (Predicate.isUndefined(first)) defined.set(task.id, { file, index, task, serves });
         else report(file, at("id"), `${task.id} is already a task in ${first.file}`);
@@ -631,6 +655,7 @@ export const resolve = (
           if (Predicate.isUndefined(elsewhere)) report(file, at(...path), message);
           else report(elsewhere, path, message);
         }
+
         for (const { path, message } of found.warnings) warn(file, at(...path), message);
         if (!serves) continue;
         serving.push(task);
@@ -639,6 +664,7 @@ export const resolve = (
           const platform =
             task.platform ??
             (Predicate.isUndefined(task.capability) ? undefined : platformOf(task.capability));
+
           entries.push({ task, provider, tier, platform, ...found.proved });
         }
       }
@@ -673,6 +699,7 @@ export const resolve = (
         ) &&
         schemes.some((scheme) => scheme.type !== "oauth2" && scheme.principals.includes(principal)),
     );
+
     if (mixed.length > 0) {
       report(
         core.file,
@@ -731,9 +758,11 @@ export const resolve = (
       if (!locked.has(id))
         report(file, ["endpoints", index, "id"], `${id} is not in ids.lock.json`);
     }
+
     const unread = new Set(
       documents.providers.flatMap(({ slug, unread }) => (unread ? [slug] : [])),
     );
+
     lock.forEach((id, index) => {
       if (!defined.has(id) && !unread.has(id.split(".")[0] ?? id)) {
         report("ids.lock.json", [index], `${id} has no task; tombstone it with status instead`);

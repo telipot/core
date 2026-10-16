@@ -49,11 +49,13 @@ const fieldSchema = (field: InputField): InputSchema => {
     default: field.default,
     examples: Predicate.isUndefined(field.example) ? undefined : [field.example],
   };
+
   const [min, max] = bounds[field.type] ?? [];
   if (Predicate.isNotUndefined(min) && Predicate.isNotUndefined(max)) {
     keywords[min] = field.min;
     keywords[max] = field.max;
   }
+
   return Record.filter(keywords, Predicate.isNotUndefined);
 };
 
@@ -121,6 +123,7 @@ export const inputDecoder = (
               ? [{ path: [name], message: "a path value cannot be only dots" }]
               : [];
           });
+
           return routing.length > 0 ? Result.fail(routing) : Result.succeed(value);
         },
         onFailure: (issue) => Result.fail(problemsIn(issue, [])),
@@ -144,6 +147,7 @@ export const checkInput = ({
   const report = (at: ReadonlyArray<PropertyKey>, message: string) => {
     problems.push({ path: at, message });
   };
+
   const checkValue = (
     decode: ReturnType<typeof SchemaParser.decodeUnknownResult<Schema.Codec<unknown>>>,
     value: unknown,
@@ -172,14 +176,17 @@ export const checkInput = ({
         report(at, `${name} is already a field in ${first}; a call's input is one flat object`);
         continue;
       }
+
       seen.set(name, location);
       if (name === reservedInput) {
         report(at, `${reservedInput} is the key a run's options travel under`);
         continue;
       }
+
       if (location === "pathParams" && !placeholders.has(name)) {
         report(at, "names no placeholder in the task's path");
       }
+
       const needed = isRequired(path, location, name, field);
       if (needed) required.push(name);
       if (Predicate.isNotUndefined(request) && needed && !requested.has(name)) {
@@ -198,6 +205,7 @@ export const checkInput = ({
           }
         }
       }
+
       if (
         Object.hasOwn(bounds, field.type) &&
         Predicate.isNotUndefined(field.min) &&
@@ -225,12 +233,15 @@ export const checkInput = ({
         report(at, basic.failure);
         continue;
       }
+
       for (const [index, value] of (field.enum ?? []).entries()) {
         checkValue(basic.success, value, [...at, "enum", index]);
       }
+
       if (Predicate.isNotUndefined(field.const)) {
         checkValue(basic.success, field.const, [...at, "const"]);
       }
+
       if (problems.length > before) continue;
 
       const constrained = jsonSchemaDecoder(schema);
@@ -238,14 +249,17 @@ export const checkInput = ({
         report(at, constrained.failure);
         continue;
       }
+
       if (Predicate.isNotUndefined(field.const)) {
         checkValue(constrained.success, field.const, [...at, "const"]);
       }
+
       for (const declared of ["default", "example"] as const) {
         if (Predicate.isNotUndefined(field[declared])) {
           checkValue(constrained.success, field[declared], [...at, declared]);
         }
       }
+
       if (Predicate.isNotUndefined(request) && Object.hasOwn(request[location] ?? {}, name)) {
         checkValue(constrained.success, request[location]?.[name], [
           "test_request",

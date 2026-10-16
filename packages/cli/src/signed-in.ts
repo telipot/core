@@ -13,9 +13,11 @@ export const credentialsFile = Effect.gen(function* () {
     yield* Config.option(Config.String("XDG_CONFIG_HOME")),
     (home) => home !== "",
   );
+
   const root = Option.isSome(configHome)
     ? configHome.value
     : path.join(yield* Config.String("HOME"), ".config");
+
   return path.join(root, "telipot", "credentials");
 });
 
@@ -24,7 +26,7 @@ export const Credentials = Schema.fromJsonString(Schema.Struct({ token: Schema.S
 
 // Readable by its owner alone. The file is removed and created anew, since a write keeps an
 // existing file's mode, and `wx` refuses to follow a link someone put in its place meanwhile.
-export const saveToken = Effect.fnUntraced(function* (token: Redacted.Redacted<string>) {
+export const saveToken = Effect.fnUntraced(function* (token: Redacted.Redacted) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const file = yield* credentialsFile;
@@ -37,6 +39,7 @@ export const saveToken = Effect.fnUntraced(function* (token: Redacted.Redacted<s
     `${yield* Schema.encodeEffect(Credentials)({ token: Redacted.value(token) })}\n`,
     { flag: "wx", mode: 0o600 },
   );
+
   return file;
 });
 
@@ -52,6 +55,7 @@ export const savedToken = Effect.gen(function* () {
       userMessage: "Not signed in. Run telipot login, or set TELIPOT_TOKEN.",
     });
   }
+
   const { token } = yield* Schema.decodeEffect(Credentials)(yield* fs.readFileString(file)).pipe(
     Effect.mapError(
       (cause) =>
@@ -61,5 +65,6 @@ export const savedToken = Effect.gen(function* () {
         }),
     ),
   );
+
   return Redacted.make(token);
 });

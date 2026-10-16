@@ -13,10 +13,12 @@ export const fetchDocument = Effect.fnUntraced(function* (url: string) {
   if (!/^https?:\/\//.test(url)) {
     return yield* new Unread({ message: `${url} is not an http or https address` });
   }
+
   const client = yield* HttpClient.HttpClient;
   const response = yield* client
     .execute(HttpClientRequest.get(url))
     .pipe(Effect.mapError((error) => unread(error.message)));
+
   if (response.status !== 200) return yield* unread(`it answered ${response.status}`);
   return yield* response.text.pipe(Effect.mapError((error) => unread(error.message)));
 });
@@ -30,6 +32,7 @@ export const readPatch = Effect.fnUntraced(function* (directory: string, provide
   if (!(yield* fs.exists(at).pipe(Effect.orElseSucceed(() => false)))) {
     return { file, patch: undefined };
   }
+
   const patch = yield* fs.readFileString(at).pipe(
     Effect.flatMap(Schema.decodeEffect(Schema.fromJsonString(SpecPatch))),
     Effect.mapError(
@@ -37,5 +40,6 @@ export const readPatch = Effect.fnUntraced(function* (directory: string, provide
         new Unread({ message: `${file} is not a JSON Patch: a list of add, remove and replace` }),
     ),
   );
+
   return { file, patch };
 });

@@ -24,6 +24,7 @@ export const Connection = Schema.Struct({
   default: Schema.Boolean,
   scopes: Schema.Array(Schema.String),
 }).annotate({ identifier: "Connection" });
+
 export type Connection = typeof Connection.Type;
 
 export const ConnectionList = Schema.Struct({ connections: Schema.Array(Connection) }).annotate({
