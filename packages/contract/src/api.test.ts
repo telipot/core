@@ -18,6 +18,7 @@ describe("Api", () => {
       "CaptureList",
       "CaptureSummary",
       "CatalogVersion",
+      "ConnectConfirmation",
       "ConnectSession",
       "ConnectSessionCreated",
       "ConnectSessionList",

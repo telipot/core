@@ -1,5 +1,6 @@
 import {
   Api,
+  type ConnectConfirmation,
   type Discover,
   type NewConnectSession,
   type RunBody,
@@ -53,8 +54,9 @@ export interface RunOptions extends CallOptions, Omit<ReceiptOptions, "principal
 export type ConnectOptions = CallOptions &
   Omit<typeof NewConnectSession.Type, "provider" | "principal">;
 
-// The four verbs over the API's own contract, every request through the gateway's routes. A
-// user-bound token is sent as it is: the gateway refuses it a principal other than its own.
+// The four verbs, and the backend's confirm of a connect session, over the API's own contract,
+// every request through the gateway's routes. A user-bound token is sent as it is: the gateway
+// refuses it a principal other than its own.
 export const make = Effect.fnUntraced(function* (options: ClientOptions) {
   const token = Predicate.isString(options.token) ? Redacted.make(options.token) : options.token;
   const client = yield* HttpApiClient.make(Api, {
@@ -135,12 +137,17 @@ export const make = Effect.fnUntraced(function* (options: ClientOptions) {
 
       return yield* client.connect.start({ payload: { ...session, provider, principal } });
     }),
+
+    // An end user's session connects nothing until the backend says whom it signed in, with the
+    // `code` the browser came back with.
+    confirm: (sessionId: string, confirmation: typeof ConnectConfirmation.Type) =>
+      client.connect.confirm({ params: { id: sessionId }, payload: confirmation }),
   };
 });
 
 export type Client = Effect.Success<ReturnType<typeof make>>;
 
-// The same four verbs as promises, for code that does not run Effect. A refused call rejects
+// The same as promises, for code that does not run Effect. A refused call rejects
 // with the API's own tagged error, such as `PrincipalForbidden`, its `detail` saying why.
 export class Telipot {
   readonly #client: Client;
@@ -169,5 +176,9 @@ export class Telipot {
 
   connect(...args: Parameters<Client["connect"]>) {
     return Effect.runPromise(this.#client.connect(...args));
+  }
+
+  confirm(...args: Parameters<Client["confirm"]>) {
+    return Effect.runPromise(this.#client.confirm(...args));
   }
 }

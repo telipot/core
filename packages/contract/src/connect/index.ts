@@ -42,8 +42,10 @@ export const NewConnectSession = Schema.Struct({
   // Catalog scope names; left out, those the principal's tasks on the provider require, except
   // those only actions need. A provider that takes the organization's key asks for none.
   scopes: Schema.optionalKey(Schema.Array(CatalogId).check(Schema.isMaxLength(100))),
-  // On the redirect allowlist, or the dashboard for the organization or a member's session; gets
-  // `session_id` and `status` appended on completion.
+  // On the redirect allowlist, or the dashboard for the organization or a member's session. Gets
+  // `session_id` and `status` appended: `completed`, or, for an end user, unless a member's session
+  // started it and sends them back to the dashboard, `consented` and the `code` the organization's
+  // backend confirms them with.
   redirect_uri: RedirectUri,
   label: Schema.optionalKey(FreeText(200)),
 }).annotate({ identifier: "NewConnectSession" });
@@ -56,7 +58,16 @@ export const ConnectSessionCreated = Schema.Struct({
 }).annotate({ identifier: "ConnectSessionCreated", httpApiStatus: 201 });
 
 // The statuses `@telipot/credentials` reads a session in; `connect.test.ts` holds the two equal.
-export const ConnectSessionStatus = Schema.Literals(["pending", "completed", "expired"]);
+// `consented`: an end user finished consent, and nothing is connected until the organization's
+// backend confirms them. `declined`: the backend named another end user, so nothing was kept.
+export const ConnectSessionStatus = Schema.Literals([
+  "pending",
+  "consented",
+  "completed",
+  "declined",
+  "expired",
+]);
+
 export type ConnectSessionStatus = typeof ConnectSessionStatus.Type;
 
 export const ConnectSession = Schema.Struct({
@@ -66,7 +77,13 @@ export const ConnectSession = Schema.Struct({
   status: ConnectSessionStatus,
   // The connection the session made, once it completes.
   connection_id: Schema.NullOr(Schema.String),
+  // The link's expiry; once `consented`, the deadline for the backend's confirm.
   expires_at: Schema.String,
+  // While `consented`, the provider-side account the consent was given on and its name, so the
+  // backend can show the person it signed in which account they connect before confirming;
+  // null otherwise, and never the credential.
+  account: Schema.NullOr(Schema.String),
+  account_label: Schema.NullOr(Schema.String),
 }).annotate({ identifier: "ConnectSession" });
 
 // What the organization's list shows of a session; never its PKCE verifier.
@@ -89,6 +106,13 @@ export const ConnectSessionList = Schema.Struct({
   sessions: Schema.Array(ConnectSessionRecord),
   next_cursor: Schema.NullOr(Schema.String),
 }).annotate({ identifier: "ConnectSessionList" });
+
+// What the organization's backend says of the browser that came back with `code`: the end user it
+// has signed in.
+export const ConnectConfirmation = Schema.Struct({
+  code: FreeText(200),
+  principal: EndUserPrincipal,
+}).annotate({ identifier: "ConnectConfirmation" });
 
 // A page listing one end user's own connections for them to revoke; never the organization's.
 export const NewConnectionsPage = Schema.Struct({ principal: EndUserPrincipal }).annotate({
@@ -115,6 +139,23 @@ export class OAuthAppRequired extends Schema.TaggedError<OAuthAppRequired>()("OA
   detail: Schema.String,
 }) {
   static readonly problem = problem(this, { status: 409, code: "oauth_app_required" });
+}
+
+// Not consented and waiting for a confirm, not the code the session was sent back with, or the
+// connection the session adds to changed since the consent, so nothing was kept.
+export class ConnectSessionNotConfirmable extends Schema.TaggedError<ConnectSessionNotConfirmable>()(
+  "ConnectSessionNotConfirmable",
+  { detail: Schema.String },
+) {
+  static readonly problem = problem(this, { status: 409, code: "connect_session_not_confirmable" });
+}
+
+// The backend signed in another end user than the session's, so the session is declined.
+export class ConnectPrincipalMismatch extends Schema.TaggedError<ConnectPrincipalMismatch>()(
+  "ConnectPrincipalMismatch",
+  { detail: Schema.String },
+) {
+  static readonly problem = problem(this, { status: 409, code: "connect_principal_mismatch" });
 }
 
 export class ConnectApi extends HttpApiGroup.make("connect")
@@ -146,6 +187,19 @@ export class ConnectApi extends HttpApiGroup.make("connect")
       params: { id: FreeText(100) },
       success: ConnectSession,
       error: [ConnectSessionNotFound.problem],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("confirm", "/connect/sessions/:id/confirm", {
+      params: { id: FreeText(100) },
+      payload: ConnectConfirmation,
+      success: ConnectSession,
+      error: [
+        RoleForbidden.problem,
+        ConnectSessionNotFound.problem,
+        ConnectSessionNotConfirmable.problem,
+        ConnectPrincipalMismatch.problem,
+      ],
     }),
   )
   .add(
