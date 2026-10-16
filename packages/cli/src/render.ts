@@ -1,4 +1,4 @@
-import type { ConnectSessionCreated, Discovery, Receipt, Task } from "@telipot/contract";
+import type { Caller, ConnectSessionCreated, Discovery, Receipt, Task } from "@telipot/contract";
 import { Config, Effect, Predicate } from "effect";
 import { plain } from "./capture";
 import type { ScaffoldReport } from "./scaffold";
@@ -303,6 +303,23 @@ export const renderer = (colour: Streams) => {
 
   const signedIn = (file: string) => ok(`Signed in. The organization's token is in ${file}`);
 
+  const signedInAs = ({ organizationId, credential }: Caller) => {
+    const as = credential._tag === "Token" ? (credential.principal ?? "the organization") : "you";
+    const token = credential._tag === "Token" ? `, on token ${plain(credential.tokenId)}` : "";
+    return `Organization ${plain(organizationId)}, acting as ${plain(as)}${token}`;
+  };
+
+  const signedOut = (file: string) =>
+    ok(`Signed out. The token is revoked and ${file} is removed.`);
+
+  const notLoggedIn = stop(
+    "No token from telipot login is saved, so there is nothing to sign out.",
+  );
+
+  const environmentKept = stop(
+    "TELIPOT_TOKEN is still set, and every command keeps using it. Unset it to stop.",
+  );
+
   return {
     ok,
     warnHeading,
@@ -316,6 +333,10 @@ export const renderer = (colour: Streams) => {
     connectLink,
     deviceCode,
     signedIn,
+    signedInAs,
+    signedOut,
+    notLoggedIn,
+    environmentKept,
   };
 };
 

@@ -1,8 +1,8 @@
 import { BunServices } from "@effect/platform-bun";
 import { assert, layer } from "@effect/vitest";
-import { ConfigProvider, Effect, FileSystem, Redacted } from "effect";
+import { ConfigProvider, Effect, Exit, FileSystem, Option, Redacted } from "effect";
 
-import { credentialsFile, savedToken, saveToken } from "./signed-in";
+import { credentialsFile, forgetToken, loginToken, savedToken, saveToken } from "./signed-in";
 
 const inHome = (env: Record<string, string>) =>
   Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnv({ env })));
@@ -43,6 +43,20 @@ layer(BunServices.layer, { excludeTestServices: true })("the credentials file", 
       assert.strictEqual(yield* modeOf(file), 0o600);
       assert.strictEqual(yield* modeOf(`${home}/telipot`), 0o700);
       assert.strictEqual(Redacted.value(yield* savedToken.pipe(inHome(env))), "tlp_new");
+    }),
+  );
+
+  it.effect("is removed on sign-out, after which no token is saved", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const home = yield* fs.makeTempDirectoryScoped();
+      const file = yield* saveToken(Redacted.make("tlp_leaving")).pipe(inHome({ HOME: home }));
+      yield* forgetToken(file);
+      yield* forgetToken(file);
+
+      assert.isFalse(yield* fs.exists(file));
+      assert.isTrue(Option.isNone(yield* loginToken.pipe(inHome({ HOME: home }))));
+      assert.isTrue(Exit.isFailure(yield* Effect.exit(savedToken.pipe(inHome({ HOME: home })))));
     }),
   );
 

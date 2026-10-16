@@ -43,19 +43,13 @@ export const saveToken = Effect.fnUntraced(function* (token: Redacted.Redacted) 
   return file;
 });
 
-// `TELIPOT_TOKEN` wins over the file, so a script or CI runs on a token of its own.
-export const savedToken = Effect.gen(function* () {
-  const fromEnvironment = yield* Config.option(Config.Redacted("TELIPOT_TOKEN"));
-  if (Option.isSome(fromEnvironment)) return fromEnvironment.value;
+export const environmentToken = Config.option(Config.Redacted("TELIPOT_TOKEN"));
+
+// The token `telipot login` saved and the file it is in, none when there is no file.
+export const loginToken = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const file = yield* credentialsFile;
-  if (!(yield* fs.exists(file))) {
-    return yield* new CliError.UserError({
-      cause: undefined,
-      userMessage: "Not signed in. Run telipot login, or set TELIPOT_TOKEN.",
-    });
-  }
-
+  if (!(yield* fs.exists(file))) return Option.none();
   const { token } = yield* Schema.decodeEffect(Credentials)(yield* fs.readFileString(file)).pipe(
     Effect.mapError(
       (cause) =>
@@ -66,5 +60,26 @@ export const savedToken = Effect.gen(function* () {
     ),
   );
 
-  return Redacted.make(token);
+  return Option.some({ file, token: Redacted.make(token) });
+});
+
+// `TELIPOT_TOKEN` wins over the file, so a script or CI runs on a token of its own.
+export const savedToken = Effect.gen(function* () {
+  const fromEnvironment = yield* environmentToken;
+  if (Option.isSome(fromEnvironment)) return fromEnvironment.value;
+
+  const saved = yield* loginToken;
+  if (Option.isNone(saved)) {
+    return yield* new CliError.UserError({
+      cause: undefined,
+      userMessage: "Not signed in. Run telipot login, or set TELIPOT_TOKEN.",
+    });
+  }
+
+  return saved.value.token;
+});
+
+// Removes the file `telipot login` wrote; a file already gone is no failure.
+export const forgetToken = Effect.fnUntraced(function* (file: string) {
+  yield* (yield* FileSystem.FileSystem).remove(file, { force: true });
 });

@@ -47,13 +47,15 @@ telipot run hackernews.news.search --input-json '{"query":"agent tools"}' --quot
 telipot run hackernews.news.search --input-json '{"query":"agent tools"}'
 ```
 
-`login` shows a device code. Approve it on the dashboard, and the CLI keeps the organization token it is traded for. `--quote` prints the price and runs nothing.
+`login` shows a device code. Approve it on the dashboard, and the CLI keeps the organization token it is traded for, which lasts 90 days. `logout` revokes that token and removes it. `--quote` prints the price and runs nothing.
 
 ## Commands
 
 | Command                                  | Does                                                                                   |
 | ---------------------------------------- | -------------------------------------------------------------------------------------- |
 | `telipot login`                          | Shows a device code to approve on the dashboard, then keeps the organization's token   |
+| `telipot logout`                         | Revokes the token `login` kept, then removes it; a token in `TELIPOT_TOKEN` stays      |
+| `telipot whoami`                         | Prints the organization and principal the token acts as                                |
 | `telipot discover <sentence>`            | Lists the tasks for a job, each with its price and whose credential would pay          |
 | `telipot inspect <task>`                 | Prints a task's full schema, price and identity as JSON, without calling the provider  |
 | `telipot run <task> --input-json <json>` | Runs a task: the vendor's answer on stdout; the call id, identity and charge on stderr |
