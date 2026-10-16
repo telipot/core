@@ -6,8 +6,7 @@ import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import { findCredentials } from "./credentials";
 import { telipot } from "./testing";
 
-// Each planted value is built from fragments, so this file holds no credential
-// the scan could flag when it reads this very change.
+// Planted values are built from fragments, so the scan never flags this file.
 const join = (...fragments: Array<string>) => fragments.join("");
 
 const planted = {

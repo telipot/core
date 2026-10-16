@@ -9,5 +9,5 @@ export const telipot = Command.make("telipot").pipe(
   Command.withSubcommands([catalog, ...gatewayCommands]),
 );
 
-// Lets tests run `telipot` in their own process.
+// Lets a test run `telipot` in-process.
 export const runTelipot = Command.runWith(telipot, { version });

@@ -137,7 +137,6 @@ const read = Effect.fnUntraced(function* (file: string) {
   return yield* fs.readFileString(file);
 });
 
-// A line of a provider's verify log.
 interface LogLine {
   readonly task: string;
   readonly cost_usd_micro: number | null;
@@ -519,8 +518,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
     Effect.scoped(
       Effect.gen(function* () {
         const directory = yield* copyDirectory(catalogFixtures.verify);
-        // The free tasks, then 0.01 and 0.02: 0.03 spent, and the 0.03 search
-        // would reach 0.06.
+        // The free tasks, then 0.01 and 0.02: 0.03 spent, and the 0.03 search would reach 0.06.
         const { report, seen } = yield* run(directory, { budget: 45_000 });
         assert.deepStrictEqual(report.passed, [
           "vendor.page.text",
@@ -550,8 +548,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
     Effect.scoped(
       Effect.gen(function* () {
         const directory = yield* copyDirectory(catalogFixtures.verify);
-        // Related lists 0.05 and reports 0.04; lookup and similar have no price, so
-        // no budget can cover them.
+        // Related lists 0.05, reports 0.04; no budget covers unpriced lookup and similar.
         const { report, seen } = yield* run(directory, { budget: 200_000 });
         assert.strictEqual(report.spentMicroUsd, 10_000 + 20_000 + 30_000 + 40_000);
         assert.deepStrictEqual(report.unbounded, [
@@ -561,8 +558,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
 
         assert.notInclude(paths(seen), "/v1/lookup");
 
-        // Without a budget they run. Lookup reports nothing, so its cost is unknown,
-        // not zero; similar reports its charge, which counts.
+        // Lookup reports nothing, so its cost is unknown, not zero; similar's charge counts.
         const free = yield* run(directory);
         assert.deepStrictEqual(paths(free.seen), ["/v1/lookup", "/v1/similar"]);
         assert.deepStrictEqual(free.report.unknownCost, ["vendor.keywords.lookup"]);
@@ -619,8 +615,8 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
     Effect.scoped(
       Effect.gen(function* () {
         const directory = yield* copyDirectory(catalogFixtures.verify);
-        // A stable failure is called twice on one route; one call a minute makes
-        // the second wait a minute, twice the 30 seconds a vendor is given to answer.
+        // A stable failure is called twice at one call a minute: the second waits twice the
+        // 30-second timeout.
         yield* TestClock.setTime(DateTime.toEpochMillis(DateTime.makeUnsafe(`${today}T12:00:00Z`)));
         const clock = yield* Clock.clockWith(Effect.succeed);
         const calledAt: Array<number> = [];
@@ -640,8 +636,7 @@ layer(BunServices.layer)("telipot catalog verify", (it) => {
           Effect.forkChild,
         );
 
-        // The clock moves in steps while the run is really waiting on its files and
-        // on the limiter, so each sleep it sets is reached, until the run ends.
+        // The clock steps while the run waits on files and the limiter, so every sleep is reached.
         yield* Fiber.join(fiber).pipe(
           Effect.raceFirst(
             Effect.forever(

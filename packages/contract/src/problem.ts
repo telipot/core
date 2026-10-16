@@ -52,8 +52,8 @@ const pick = (from: object, keys: ReadonlyArray<string>) =>
     ),
   );
 
-// Described by its code, so /openapi.json names every code a response carries.
-// The error's other fields become extension members, so they must be plain JSON.
+// Described by its code, so /openapi.json names every code. Other fields become extension members,
+// so they must be plain JSON.
 export const problem = <
   E extends Schema.Top & {
     readonly fields: Schema.Struct.Fields;
@@ -70,8 +70,7 @@ export const problem = <
     Schema.decodeTo(
       Schema.toType(error),
       SchemaTransformation.transformEffect<E["Type"], typeof ProblemDetails.Type>({
-        // `code` is checked here rather than typed as a literal, so every error
-        // shares the one `ProblemDetails` schema in the OpenAPI document.
+        // Checked, not typed as a literal, so every error shares one `ProblemDetails` schema.
         decode: (body) =>
           body.code === options.code
             ? Effect.succeed(new error(pick(body, ["detail", ...extensions])))
@@ -122,7 +121,6 @@ export class RouteNotFound extends Schema.TaggedError<RouteNotFound>()("RouteNot
   static readonly problem = problem(this, { status: 404, code: "route_not_found" });
 }
 
-// `Api` adds this after every group, so it reaches all of them.
 export class Problems extends HttpApiMiddleware.Service<Problems>()("@telipot/contract/Problems", {
   error: [InvalidInput.problem, PayloadTooLarge.problem, InternalError.problem],
 }) {}

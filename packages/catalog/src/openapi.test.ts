@@ -6,7 +6,6 @@ import { parse } from "yaml";
 import { schemaModeline } from "./json-schema";
 import { type OpenApi, type SpecPatch, readOpenApi, scaffold, schemesOf, tasksOf } from "./openapi";
 
-// The parts of a written provider file these tests read into.
 interface Header {
   readonly auth: { readonly schemes: Readonly<Record<string, unknown>> };
   readonly source: { readonly openapi: string | null; readonly [field: string]: unknown };
@@ -244,7 +243,7 @@ describe("tasksOf", () => {
     assert.deepStrictEqual(me.required_scopes, ["profile"]);
     assert.notProperty(me, "test_request");
     assert.notProperty(me, "untestable");
-    // A scheme that serves the organization makes the same task the organization's.
+    // With no principals named, the scheme serves the organization too.
     const { tasks } = tasksOf(widgetly(), "widgetly", { ...schemes, oauth: { type: "oauth2" } });
     assert.strictEqual(
       tasks.find(({ id }) => id === "widgetly.x.get-current-user")?.principal,
@@ -257,8 +256,8 @@ describe("tasksOf", () => {
   });
 });
 
-// As a framework writes one: no security or server, the key a header parameter on most
-// operations, and 3.1's `anyOf` with null for an optional value.
+// As a framework writes one: no security or server, the key sent as a header parameter, and
+// 3.1's `anyOf` with null for an optional value.
 describe("a spec that declares no security", () => {
   const keyedUrl = "https://api.keyed.example/openapi.json";
   const keyedText = readFileSync(openApiFixtures.keyed, "utf8");

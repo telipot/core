@@ -7,7 +7,6 @@ class GitRefused extends Schema.TaggedError<GitRefused>()("GitRefused", {
   exitCode: Schema.Int,
 }) {}
 
-// git, run in the catalog folder, so its paths are the folder's own.
 const git = Effect.fnUntraced(function* (directory: string, args: ReadonlyArray<string>) {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   const child = yield* spawner.spawn(
@@ -33,8 +32,7 @@ const publications = Effect.fnUntraced(function* (directory: string) {
   );
 
   if (shallow.trim() !== "false") return published;
-  // Only commits that added, changed or renamed the lock. `--diff-filter=d` alone, which reads
-  // as the same thing, selects no commit at all on git 2.50.
+  // `--diff-filter=d`, which reads the same as `AMR`, selects no commit at all on git 2.50.
   const log = yield* git(directory, [
     "log",
     "--reverse",

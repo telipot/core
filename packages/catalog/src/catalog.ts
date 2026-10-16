@@ -46,7 +46,6 @@ export const formatIssue = ({ file, path, message }: CatalogIssue) =>
 export const formatIssues = (issues: ReadonlyArray<CatalogIssue>) =>
   issues.map(formatIssue).join("\n");
 
-// aliases.yaml's issues wait until nothing else refuses the catalog.
 export class CatalogInvalid extends Schema.TaggedError<CatalogInvalid>()("CatalogInvalid", {
   issues: Schema.Array(CatalogIssue),
 }) {
@@ -62,15 +61,14 @@ export class Catalog extends Context.Service<
     readonly get: (id: string) => Option.Option<Entry>;
     // Live tasks, cheapest first, in slug order between equal prices.
     readonly serving: (capability: string) => ReadonlyArray<Entry>;
-    // Live tasks in catalog order, those the filters keep.
+    // Live tasks in catalog order.
     readonly live: (filters?: LiveFilters) => ReadonlyArray<Entry>;
     readonly search: (query: string, options?: SearchOptions) => Search;
     // A provider with at least one task served.
     readonly provider: (slug: string) => Option.Option<ProviderHeader>;
     // Every provider with a task served, in catalog order.
     readonly providers: ReadonlyArray<ProviderHeader>;
-    // The scopes a principal's live tasks on the provider require, in catalog order, but those
-    // only actions require: what a connect session asks for when the caller names none.
+    // A connect session's default scopes: every live task's, less those only actions need.
     readonly connectScopes: (slug: string, principal: Principal) => ReadonlyArray<string>;
     // The principal's live tasks on the provider that these catalog scopes can run.
     readonly connectTasks: (
@@ -82,8 +80,7 @@ export class Catalog extends Context.Service<
 >()("@telipot/catalog/Catalog") {
   static readonly layer = (directory: string) => loadLayer(directory, parseFolderYaml);
 
-  // The same loader over a snapshot's files instead of a folder, for a runtime with no
-  // filesystem, such as a Worker. It needs no service.
+  // For a runtime with no filesystem, such as a Worker; it needs no service.
   static readonly fromSnapshot = (snapshot: Snapshot) =>
     loadLayer(".", snapshotYaml(snapshot)).pipe(
       Layer.provide([
@@ -92,8 +89,8 @@ export class Catalog extends Context.Service<
       ]),
     );
 
-  // The same rules as `layer`, but never fails on what it finds. `previousLock` also refuses an
-  // id the lock dropped.
+  // The same rules as `layer`, but returns the issues instead of failing. `previousLock` also
+  // refuses an id the lock dropped.
   static readonly validate = Effect.fnUntraced(function* (
     directory: string,
     previousLock?: IdsLock,

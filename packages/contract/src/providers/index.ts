@@ -12,7 +12,7 @@ const ClientText = (maxLength: number) =>
     Schema.isPattern(/^[\x21-\x7E]+$/, { expected: "visible ASCII, with no spaces" }),
   );
 
-// Registered with the provider on telipot's callback. The secret is Redacted once decoded.
+// Registered with the provider on telipot's callback.
 export const NewOAuthApp = Schema.Struct({
   client_id: ClientText(512),
   client_secret: Schema.RedactedFromValue(ClientText(1024)),
@@ -24,9 +24,8 @@ export const OAuthApp = Schema.Struct({
   client_id: Schema.String,
 }).annotate({ identifier: "OAuthApp" });
 
-// `auth` is empty when every task is public. `oauth_app.own_required`: only the organization's
-// own app connects the provider. `callback_url` is what an own app registers, null without OAuth.
-// `tasks` counts live ones; `identity_task` reads the account a credential acts as.
+// `auth` is empty when every task is public. `callback_url` is what an own app registers, null
+// without OAuth; `tasks` counts live ones; `identity_task` reads the account a credential acts as.
 export const ProviderSummary = Schema.Struct({
   slug: Schema.String,
   name: Schema.String,

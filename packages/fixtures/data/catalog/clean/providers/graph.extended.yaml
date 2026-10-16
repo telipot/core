@@ -8,8 +8,8 @@ source:
 version: 2026-10-04
 digest: sha256:370ea5bbec3276818100ba05e0f5d0208765e2ae802820e408cd8274ea45605a
 endpoints:
-  # A reviewer set the capability in place; the task names no platform, so it
-  # sits on the capability's first segment.
+  # A reviewer set the capability in place. The task names no platform, so it sits on the
+  # capability's first segment.
   - id: graph.x.post-insights
     capability: social.page.insights
     auth: public

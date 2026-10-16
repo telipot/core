@@ -23,7 +23,7 @@ const bytes = (json: Schema.Json) => new TextEncoder().encode(JSON.stringify(jso
 export const shorten = (text: string, length: number) =>
   text.length > length ? `${text.slice(0, length)}…` : text;
 
-// Vendor text is printed to a terminal, where an escape or carriage return could rewrite the screen.
+// Vendor text reaches a terminal, where an escape or carriage return could rewrite the screen.
 export const plain = (text: string) => text.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu, " ");
 
 export const withoutSecrets = (text: string, secrets: ReadonlyArray<string>) =>
@@ -48,8 +48,7 @@ const shapeOf = (schema: Schema.Json | undefined, key: string) => {
   return read(read(schema, "properties"), key) ?? (Predicate.isObject(others) ? others : undefined);
 };
 
-// The `output` schema is the contributor's choice of what an agent sees, so a key it
-// leaves out never reaches a committed file.
+// `output` is the contributor's choice of what an agent sees, so a key it omits is never committed.
 const named = (value: Schema.Json, schema: Schema.Json | undefined): Schema.Json => {
   if (combines(schema)) return value;
   if (isJsonArray(value)) return value.map((item) => named(item, read(schema, "items")));

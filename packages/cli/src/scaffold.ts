@@ -11,15 +11,15 @@ class ScaffoldRefused extends Schema.TaggedError<ScaffoldRefused>()("ScaffoldRef
 export interface ScaffoldReport {
   // Relative to the catalog folder.
   readonly written: ReadonlyArray<string>;
-  // The core file was already there; a person owns it, so it is never rewritten.
+  // The core file was already there, so it was left as it was.
   readonly kept: boolean;
   // Tombstones included.
   readonly taskCount: number;
   readonly reviews: ReadonlyArray<Review>;
   readonly leftOut: ReadonlyArray<string>;
-  // `stale`: ids whose route the spec still offers but no task could be made of this run.
   readonly twins: ReadonlyArray<string>;
   readonly tombstoned: ReadonlyArray<{ readonly id: string; readonly note: string }>;
+  // Ids whose route the spec still offers but no task could be made of this run.
   readonly stale: ReadonlyArray<string>;
   readonly patch: string | undefined;
 }
@@ -27,8 +27,8 @@ export interface ScaffoldReport {
 const refuse = (message: string, cause?: unknown) =>
   new ScaffoldRefused({ message, ...(Predicate.isUndefined(cause) ? {} : { cause }) });
 
-// The core file is written once, since a person curates it; a rerun with `openapi`
-// refreshes only the extended file.
+// A person curates the core file, so it is written once; a rerun with `openapi` refreshes only
+// the extended file.
 export const scaffoldProvider = Effect.fnUntraced(function* (options: {
   readonly provider: string;
   readonly directory: string;

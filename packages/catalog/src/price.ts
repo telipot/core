@@ -32,10 +32,10 @@ export type Price =
   | { readonly type: "free" }
   | {
       readonly type: "per_call" | "per_success" | "per_result";
-      // An unknown list price may still settle a reported USD charge; other unknown prices have no rate.
+      // With an unknown list price, `usd` is kept only for USD, so a reported USD charge settles.
       readonly currency: string;
       readonly usd: BigDecimal.BigDecimal | undefined;
-      // `rows` is empty for a plain value, which charges its ceiling. None when the price is unknown.
+      // None when the list price is unknown; a plain value, with empty `rows`, charges its ceiling.
       readonly native:
         | {
             readonly floor: BigDecimal.BigDecimal;
@@ -61,8 +61,8 @@ export interface Problem {
   readonly message: string;
 }
 
-// `fx` is undefined when fx.yaml did not decode; its issues are already
-// recorded. ISO dates compare as strings.
+// `fx` is undefined when fx.yaml did not decode, its issues already recorded. ISO dates compare
+// as strings.
 export interface Pricing {
   readonly fx: FxFile | undefined;
   readonly staleBefore: string;
@@ -144,7 +144,7 @@ const rowsOf = (table: ReadonlyArray<TableRow>, input: Input): ReadonlyArray<Row
     times: timesOf(row, input),
   }));
 
-// The ceiling when no row matches or `times` is out of range, so an amount stays in range.
+// The ceiling when no row matches or `times` is out of range.
 const amountAt = (rows: ReadonlyArray<Row>, ceiling: BigDecimal.BigDecimal, values: CallInput) => {
   const row = rows.find(({ when }) =>
     when.every((field) => valueOf(values, field) === field.wanted),
@@ -219,7 +219,6 @@ const paidPrice = (
 ): Price => {
   // A value is its own ceiling; a table's is its fallback, which caps every row.
   const ceiling = cost.value ?? cost.fallback?.value;
-  // A reported USD charge converts without a list price; other unknown prices stay unknown.
   const conversion =
     Predicate.isUndefined(ceiling) && cost.currency !== "USD" ? undefined : (usd ?? undefined);
 
@@ -256,7 +255,6 @@ const paidPrice = (
   };
 };
 
-// Only a list price with a USD rate gives a USD figure.
 const rated = (price: Price | undefined) =>
   price?.type !== "free" &&
   Predicate.isNotUndefined(price?.native) &&
@@ -294,7 +292,6 @@ export const settle = (
   return Option.some(toMicroUsd(reported, price.usd));
 };
 
-// Free first, then a USD price, then a price with no USD figure, then none.
 const standing = (price: Price | undefined) => {
   if (Predicate.isUndefined(price)) return 3;
   if (price.type === "free") return 0;
@@ -308,8 +305,8 @@ const ceilingPerUnit = (price: Price | undefined) => {
     : slice(BigDecimal.multiply(known.native.ceiling, known.usd), 1, known.per);
 };
 
-// By one unit at the ceiling, not the ceiling alone: $3 per 1,000 rows ranks before $0.006 a call.
-// An unknown price never ranks as free.
+// By one unit at the ceiling: $3 per 1,000 rows beats $0.006 a call. An unknown price never ranks
+// as free.
 export const cheapestFirst: Order.Order<Price | undefined> = Order.combine(
   Order.mapInput(Order.Number, standing),
   Order.mapInput(BigDecimal.Order, ceilingPerUnit),

@@ -1,15 +1,12 @@
 # yaml-language-server: $schema=../provider.schema.json
-# Semrush, Analytics API version 3 (api.semrush.com). Curated from the vendor's documentation; Semrush
-# publishes no OpenAPI. Every report is one GET: the Analytics API reports share the path / on
-# api.semrush.com and are chosen by the fixed query parameter `type`; the Backlinks reports live under
-# /analytics/v1/ and are chosen by `type` too. Responses are semicolon-separated text, not JSON.
+# Analytics API v3, curated from the docs: Semrush publishes no OpenAPI. Each report is a GET
+# chosen by the fixed query parameter `type`, and answers semicolon-separated text, not JSON.
 #
-# Semrush marks the version 3 Keyword reports and Backlinks reports deprecated ("no longer recommended for
-# new integrations"); its version 4 replacements are in Early Access, need a separate version 4 key and
-# answer JSON. The Domain and Overview reports used here carry no deprecation notice.
+# Semrush marks the v3 Keyword and Backlinks reports deprecated; their v4 replacements are in Early
+# Access and need a separate key. The Domain and Overview reports carry no deprecation notice.
 #
-# Deliberately left out of every input: display_date and display_daily (historical data bills about five
-# times the live price per line, and a price cannot switch on an optional field), export_escape and
+# Left out of every input: display_date and display_daily (historical data bills about five times
+# the live price, and a price cannot switch on an optional field), and export_escape and
 # export_decode (they change the response format).
 provider: semrush
 display_name: Semrush

@@ -61,17 +61,16 @@ interface Decoded<A> {
   readonly record: A;
 }
 
-// A file that did not decode is undefined and makes the provider unread, so its
-// locked ids are not held against it.
+// A file that did not decode is undefined and leaves its provider unread, so its locked ids are
+// not held against it.
 export interface ProviderFiles {
   readonly slug: string;
   readonly core: Decoded<Provider> | undefined;
-  // `contentDigest` is the file as it reads now, to compare with the digest it records.
   readonly extended: (Decoded<ExtendedProvider> & { readonly contentDigest: string }) | undefined;
   readonly unread: boolean;
 }
 
-// An example that did not parse is none, its issue already recorded; a missing key is no file.
+// None for an example that did not parse, its issue already recorded; no key for a missing file.
 export interface Documents {
   readonly capabilities: CapabilitiesFile | undefined;
   readonly fx: FxFile | undefined;
@@ -97,8 +96,7 @@ export interface Tombstone {
   readonly supersededBy: string | undefined;
 }
 
-// `platform` is the one written or its capability's first segment; `tombstone`
-// is none while the task is live.
+// `platform` is the one written, else its capability's first segment.
 export interface Entry {
   readonly task: Task;
   readonly provider: ProviderHeader;
@@ -112,28 +110,26 @@ export interface Entry {
   readonly decodeInput: DecodeInput;
   // No trailing slash; a call's address is this plus the task's `path`.
   readonly baseUrl: string;
-  // The provider's own names for the scopes the task requires, in order.
+  // The scopes the task requires, in the provider's own words, as a grant keeps them.
   readonly vendorScopes: ReadonlyArray<string>;
   // Only `data` and `utility` tasks; only an idempotent call is retried.
   readonly idempotent: boolean;
   readonly tombstone: Tombstone | undefined;
 }
 
-// `capabilities` includes every provider's proposals. catalog.ts serves this
-// only once no rule is broken.
+// `capabilities` includes every provider's proposals.
 export interface Served {
   readonly platforms: Readonly<Record<string, string>>;
   readonly capabilities: Readonly<Record<string, string>>;
-  // Only tasks whose own rules passed, tombstones included, in provider order
-  // with each provider's core tasks before its extended ones.
+  // Tasks whose own rules passed, tombstones included; per provider, core before extended.
   readonly tasks: ReadonlyArray<Entry>;
 }
 
 const takesKey = (scheme: AuthScheme, principal: Principal) =>
   scheme.type !== "oauth2" && scheme.principals.includes(principal);
 
-// The scheme a principal's pasted key is sent in: the probe's, or else the provider's only
-// scheme that takes one from that principal.
+// The scheme a principal's pasted key is sent in: the one the probe names, if it takes that key,
+// else the provider's only scheme that does.
 export const keyScheme = (
   provider: ProviderHeader,
   principal: Principal,
@@ -149,13 +145,10 @@ export const keyScheme = (
   return fitting.length === 1 ? fitting[0] : undefined;
 };
 
-// A scheme the provider's probe can send a pasted key in: the organization's, else an end
-// user's. A key is probed in the scheme its own principal's key is sent in.
 export const probeScheme = (provider: ProviderHeader): AuthScheme | undefined =>
   keyScheme(provider, "organization") ?? keyScheme(provider, "user");
 
-// The provider's only OAuth scheme a principal connects through, or none when it has none or
-// several.
+// None when the principal has no OAuth scheme or several.
 export const oauthScheme = (
   provider: ProviderHeader,
   principal: Principal,
@@ -179,7 +172,6 @@ export const probeUrl = (provider: ProviderHeader, probe: Probe) =>
 
 const platformOf = (capability: string) => capability.split(".")[0] ?? capability;
 
-// `any_account` acts as the organization unless the task names a principal.
 const principalOf = (task: Pick<Task, "scope" | "principal">): Principal | undefined =>
   task.principal ?? (task.scope === "any_account" ? "organization" : undefined);
 
@@ -379,7 +371,7 @@ const checkVerification = (
   return proof(problems, verification);
 };
 
-// Shared by the committed-example rule and `telipot catalog verify`'s captured response.
+// `telipot catalog verify` checks a captured response with this too, so the two agree.
 export const outputCheck = (
   output: NonNullable<Task["output"]>,
 ): Result.Result<(body: Schema.Json) => ReadonlyArray<Problem>, string> =>
@@ -389,8 +381,7 @@ export const outputCheck = (
     return Result.isFailure(decoded) ? problemsIn(decoded.failure) : [];
   });
 
-// An unquoted comma in a YAML flow mapping, `description: A, B`, leaves a key `B` set to null,
-// and the schema still imports.
+// `description: A, B` in a YAML flow mapping leaves a null key `B`, which the importer accepts.
 const dataKeywords = new Set(["const", "default", "example", "examples", "enum"]);
 
 const nullKeys = (node: unknown, path: ReadonlyArray<PropertyKey>): ReadonlyArray<Problem> => {
@@ -481,7 +472,6 @@ export const scopesMissing = (
     return Predicate.isUndefined(named) || !granted.includes(named);
   });
 
-// `proved` is undefined when any rule found a problem.
 const checkTask = (
   task: Task,
   tier: Tier,
@@ -549,7 +539,6 @@ const checkTask = (
   };
 };
 
-// `previousLock` is the lock before the change; the files alone cannot show what it held.
 export const resolve = (
   documents: Documents,
   { today, previousLock }: { readonly today: DateTime.DateTime; readonly previousLock?: IdsLock },
@@ -618,7 +607,6 @@ export const resolve = (
 
     const header = core.record;
     const { endpoints: _, ...provider } = header;
-    // The first provider to propose a capability describes it.
     for (const [capability, description] of Object.entries(header.proposed_capabilities ?? {})) {
       if (!Object.hasOwn(proposals, capability)) proposals[capability] = description;
     }
@@ -668,7 +656,6 @@ export const resolve = (
       }
     }
 
-    // The identity task names the account a connection belongs to.
     const identity = header.identity;
     if (Predicate.isUndefined(identity)) {
       if (serving.some((task) => task.scope === "own_account")) {
@@ -687,8 +674,7 @@ export const resolve = (
       }
     }
 
-    // A connection keeps one secret, which a principal's key tasks would send as a key and its
-    // OAuth tasks would read as tokens, so a principal connects one way or the other.
+    // A connection keeps one secret, so a principal connects by key or by OAuth, never both.
     const schemes = Object.values(header.auth?.schemes ?? {});
     const mixed = Principal.literals.filter(
       (principal) =>
@@ -706,8 +692,7 @@ export const resolve = (
       );
     }
 
-    // A principal's pasted key is checked in the scheme it is sent in, so a probe that names a
-    // scheme must take the key of every principal that pastes one.
+    // A probe that names a scheme must take the key of every principal that pastes one.
     const named = header.probe?.auth;
     if (Predicate.isNotUndefined(named) && Predicate.isNotUndefined(probeScheme(header))) {
       for (const principal of Principal.literals) {
@@ -779,7 +764,6 @@ export const resolve = (
     }
   }
 
-  // The taxonomy's description wins over a proposal of the same capability.
   const capabilities = { ...proposals, ...taxonomy };
 
   return { served: { platforms: platforms ?? {}, capabilities, tasks: entries }, issues, warnings };

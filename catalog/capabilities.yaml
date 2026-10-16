@@ -1,6 +1,5 @@
-# The provider-neutral job taxonomy. A task's `capability` joins it to every
-# other provider's task for the same job; the first segment is its platform,
-# listed under `platforms`.
+# A task's `capability` joins it to other providers' tasks for the same job;
+# its first segment is a platform listed under `platforms`.
 platforms:
   news: News sites and discussion boards
   web: Web pages to search, read, crawl and map

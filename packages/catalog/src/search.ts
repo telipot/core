@@ -5,8 +5,7 @@ import { cheapestFirst, type Problem } from "./price";
 import type { Entry, Served } from "./rules";
 import { type AliasesFile, type QueriesFile, type Task, type Tier, tiers } from "./schema";
 
-// aliases.yaml and queries.yaml are checked on the index the search runs over, so they never
-// disagree about a word. Fix a missed query in a capability description or aliases.yaml, not here.
+// Fix a missed query in a capability description or aliases.yaml, not here.
 
 export interface Filters {
   readonly provider?: string;
@@ -20,8 +19,7 @@ export interface SearchOptions {
   readonly filters?: Filters;
 }
 
-// `missed` tells an agent which words to drop; soft words, and words no live task holds,
-// cost nothing and are left out.
+// `missed` tells an agent which words to drop; soft and unknown words are left out.
 export interface NearMiss {
   readonly entry: Entry;
   readonly matched: ReadonlyArray<string>;
@@ -55,13 +53,12 @@ const tokenize = (text: string): ReadonlyArray<string> =>
     .split(/[^a-z0-9]+/)
     .filter((word) => word.length > 1 && !functionWords.has(word));
 
-// A word is indexed by its Porter stem, so "meetings" finds "meeting", and as written, so a
-// task that holds the very word a sentence says outranks one that holds only its stem.
+// Keys are a word's Porter stem and the word as written, so an exact match outranks a stem.
 const exactly = (word: string) => `=${word}`;
 const keysOf = (text: string) => tokenize(text).flatMap((word) => [stemmer(word), exactly(word)]);
 
-// The name is our search title, so it outweighs the provider's summary. A platform word
-// narrows the whole area, so it scores double the name.
+// The name, our search title, outweighs the summary. A platform word narrows a whole area, so it
+// scores double the name.
 const weights = { platform: 6, name: 3, capability: 2, provider: 2, summary: 1 } as const;
 type Field = keyof typeof weights;
 
@@ -81,8 +78,7 @@ const passes = ({ provider, tier, task }: Entry, filters: Filters) =>
   (Predicate.isUndefined(filters.tier) || tier === filters.tier) &&
   (Predicate.isUndefined(filters.kind) || task.kind === filters.kind);
 
-// What `Catalog.live` keeps: the search's filters, a capability, and text that a task's id, name
-// or summary holds, in any case.
+// `Catalog.live`'s filters; `text` matches a task's id, name or summary in any case.
 export interface LiveFilters extends Filters {
   readonly capability?: string;
   readonly text?: string;
@@ -110,8 +106,7 @@ interface Scored extends NearMiss {
   readonly qualifies: boolean;
 }
 
-// Rank by bucket, never a blended score: relevance, then core before extended,
-// then price. Equal prices keep the catalog's slug order.
+// Rank by bucket, never a blended score; equal prices keep the catalog's slug order.
 const byRank: Order.Order<Scored> = Order.combine(
   Order.mapInput(Order.flip(Order.Number), ({ score }: Scored) => score),
   Order.combine(
@@ -125,8 +120,8 @@ const byNearness: Order.Order<Scored> = Order.combine(
   byRank,
 );
 
-// An alias replaces the query word, so a key a live task is found by would hide that task.
-// A one-word target keeps a sentence's word count, which decides how many words may miss.
+// An alias replaces the query word, so a key a live task is found by would hide that task. A
+// one-word target keeps the sentence's word count, which decides how many words may miss.
 const checkAliases = (
   aliases: AliasesFile["aliases"],
   inTasks: (word: string) => number,
@@ -228,7 +223,6 @@ export const checkSearch = (
 } => {
   const live = tasks.filter(({ tombstone }) => Predicate.isUndefined(tombstone));
 
-  // A word's weight is the sum over the fields that hold it.
   const documents = live.map((entry) => {
     const texts = textsOf(entry, capabilities);
     const found = new Map<string, number>();
@@ -249,14 +243,13 @@ export const checkSearch = (
   const inTasks = (word: string) => frequency.get(word) ?? 0;
   const total = documents.length;
 
-  // BM25's idf: a word in few tasks weighs more.
+  // BM25's idf.
   const idf = (word: string) => Math.log(1 + (total - inTasks(word) + 0.5) / (inTasks(word) + 0.5));
   // A word in over a quarter of live tasks is soft: it adds score but never counts against a task.
   const isSoft = (word: string) => inTasks(word) > total / 4;
   // An alias is found by its stem, so `meeting` reads "meetings" too.
   const aliasOf = new Map(Object.entries(aliases).map(([key, target]) => [stemmer(key), target]));
-  // Each word as read, after its alias, with the stem it matches by and the word as written,
-  // which only the sentence's own word has; one per stem.
+  // Each word after its alias, one per stem; only the sentence's own word keeps its exact form.
   const read = (sentence: string): ReadonlyArray<Word> =>
     Arr.dedupeWith(
       tokenize(sentence.replace(values, " ")).flatMap((said): ReadonlyArray<Word> =>

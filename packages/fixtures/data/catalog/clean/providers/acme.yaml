@@ -213,8 +213,7 @@ endpoints:
       checked: 2026-10-04
       confidence: documented
       settle: { type: quote }
-  # Free, though asynchronous: a free task is charged nothing whether its job
-  # succeeds or not.
+  # Free, though asynchronous: charged nothing whether its job succeeds or not.
   - id: acme.widgets.export
     capability: acme.widgets.list
     platform: acme

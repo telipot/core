@@ -16,7 +16,6 @@ import {
   saveToken,
 } from "./signed-in";
 
-// A refusal's `detail` says why, and its `connect_url`, when it has one, where to fix it.
 const said = (error: unknown) => {
   if (Predicate.hasProperty(error, "detail") && Predicate.isString(error.detail)) {
     const link =
@@ -162,8 +161,7 @@ const Refused = Schema.Struct({
   error_description: Schema.optionalKey(Schema.String),
 });
 
-// RFC 8628 from the device's side: show the code, then ask for the token every `interval` seconds,
-// five more after each `slow_down`, until the person approves or refuses it or it expires.
+// RFC 8628 from the device's side: poll every `interval` seconds, five more after each `slow_down`.
 const login = Command.make(
   "login",
   {},
@@ -218,7 +216,7 @@ const login = Command.make(
   }, toUserError),
 ).pipe(Command.withDescription("Sign in with a code you approve in the browser"));
 
-// The API's own routes on one token, for what the four verbs do not cover.
+// The API's own routes, for what the SDK's four verbs do not cover.
 const accountOn = (token: Redacted.Redacted) =>
   Effect.flatMap(apiUrl, (baseUrl) =>
     HttpApiClient.make(Api, {

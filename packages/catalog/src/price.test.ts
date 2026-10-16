@@ -15,8 +15,7 @@ import {
 import { formatPath, schemaIssues } from "./rules";
 import { FxFile, Task } from "./schema";
 
-// Cost blocks written inline; catalog.test.ts loads real folders to show this
-// is wired in.
+// Cost blocks written inline; catalog.test.ts shows the loader runs these rules.
 
 const today = DateTime.makeUnsafe("2026-10-04");
 
@@ -56,8 +55,7 @@ const unpublished = {
   note: "not published",
 };
 
-// A video priced by model and length, narrow rows before broad ones; the
-// fallback is above the large model at its longest clip.
+// Narrow rows before broad ones; the fallback is above the large model at its longest clip.
 const table = {
   ...Struct.omit(documented, ["value"]),
   table: [
@@ -383,8 +381,7 @@ describe("a quote", () => {
 
     assert.deepStrictEqual(quote(rows, {}), Option.some(3000));
     assert.deepStrictEqual(quote(rows, {}, 1500), Option.some(4_500_000));
-    // €0.001 at $1.1712 is 1,171.2 micro-USD: a call rounds up, a thousand do not
-    // round a thousand times.
+    // €0.001 at $1.1712 is 1,171.2 micro-USD: a call rounds up, a thousand calls round once.
     const euro = served({ cost: { ...documented, currency: "EUR", value: 0.001 } });
     assert.deepStrictEqual(quote(euro, {}), Option.some(1172));
     assert.deepStrictEqual(quote(euro, {}, 1000), Option.some(1_171_200));

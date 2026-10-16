@@ -10,7 +10,7 @@ import { Snapshot, buildSnapshot } from "./snapshot";
 
 const rootCatalog = fileURLToPath(new URL("../../../catalog/", import.meta.url));
 
-// Sentences that reach search's both answers: hits, and near misses with their words.
+// Sentences that reach both of search's answers: hits, and near misses.
 const queries = [
   "Hacker News stories about agent tools",
   "find a person's work email",
@@ -20,7 +20,6 @@ const queries = [
   "zzz nothing matches this",
 ];
 
-// What a caller can see of a loaded catalog, or the issues that refused it.
 const observe = <R>(layer: Layer.Layer<Catalog, unknown, R>) =>
   Effect.scoped(Layer.build(layer)).pipe(
     Effect.exit,

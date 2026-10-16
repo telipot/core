@@ -23,7 +23,6 @@ export const fetchDocument = Effect.fnUntraced(function* (url: string) {
   return yield* response.text.pipe(Effect.mapError((error) => unread(error.message)));
 });
 
-// The patch says what the vendor's document should have said, in OpenAPI's own terms.
 export const readPatch = Effect.fnUntraced(function* (directory: string, provider: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

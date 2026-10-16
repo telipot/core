@@ -27,8 +27,7 @@ export interface GoogleClient {
 }
 
 // What the person does on the consent screen. `untick` leaves out scopes, written as asked or as
-// Google confirms them; `refuse` sends them back with `access_denied`. `alsoConfirm` has Google
-// confirm scopes that were not asked.
+// Google confirms them; `refuse` answers `access_denied`; `alsoConfirm` adds scopes not asked.
 export interface Consent {
   readonly untick?: ReadonlyArray<string>;
   readonly refuse?: boolean;
@@ -45,16 +44,15 @@ interface Authorization {
   readonly offline: boolean;
 }
 
-// One consent's tokens, every one of which a revocation ends.
+// A revocation ends every token of one consent.
 interface Grant {
   readonly clientId: string;
   readonly account: GoogleAccount;
   readonly scopes: ReadonlyArray<string>;
 }
 
-// How a refresh is answered. `off`: Google keeps the refresh token. `on`: a new one each refresh,
-// the old one honoured until the new is first used. `forgotten`: a new one is issued but never
-// recorded, as by a provider that crashed, so it is refused and the old one stays current.
+// `off` keeps the refresh token; `on` issues a new one each refresh, honouring the old until the
+// new is first used; `forgotten` issues one it never records, so it is refused and the old stays.
 export type Rotation = "off" | "on" | "forgotten";
 
 // Google confirms these short names by the scope they stand for.
@@ -134,8 +132,7 @@ export class Google extends Context.Service<
   Google,
   {
     readonly client: HttpClient.HttpClient;
-    // Returns the `redirect_uri` with a code, the `state` and the scopes Google confirms: every
-    // scope asked or also confirmed, but those unticked.
+    // Returns the `redirect_uri` with a code, the `state` and the scopes Google confirms.
     readonly consent: (
       authorizationUrl: string,
       account: GoogleAccount,
@@ -174,8 +171,7 @@ export class Google extends Context.Service<
         let issued = 0;
         const next = (prefix: string) => `${prefix}${++issued}`;
         const codes = new Map<string, Authorization>();
-        // A spent code names the grant it issued, if any, which a replay of it ends (RFC 6749
-        // 4.1.2).
+        // A spent code names the grant it issued, which a replay of it ends (RFC 6749 4.1.2).
         const spent = new Map<string, Grant | undefined>();
         // An access token lasts an hour, as at Google, read on the caller's clock.
         const tokenSeconds = 3599;
@@ -186,8 +182,8 @@ export class Google extends Context.Service<
         let refreshes = 0;
         const revocations: Array<GoogleAccount> = [];
         const clients = new Map(google.clients.map((client) => [client.id, client]));
-        // Google answers `openid` with an ID token, which a client checks against its issuer,
-        // audience and the wall clock. Its signature is the fixture's own, never checked.
+        // Answers `openid` with an ID token a client checks by issuer, audience and expiry. Its
+        // signature is the fixture's own, never checked.
         const issuer = new URL(google.authorizationUrl).origin;
         const segment = (value: object) =>
           Base64Url.encode(new TextEncoder().encode(JSON.stringify(value)));
@@ -323,7 +319,6 @@ export class Google extends Context.Service<
             JSON.stringify({ ...body, expires_in: tokenSeconds, token_type: "Bearer" }),
           );
 
-        // Ends every token of the grant.
         const end = (grant: Grant) => {
           for (const [token, held] of tokens) if (held.grant === grant) tokens.delete(token);
           for (const [token, held] of refreshTokens) {
@@ -428,7 +423,6 @@ export class Google extends Context.Service<
           });
         });
 
-        // Google's revocation endpoint takes an access or a refresh token and ends its grant.
         const revoke = (request: HttpClientRequest.HttpClientRequest) => {
           const presented = formOf(request.body).get("token") ?? "";
           const grant = (tokens.get(presented) ?? refreshTokens.get(presented))?.grant;

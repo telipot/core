@@ -632,8 +632,7 @@ endpoints:
         - { when: { body.effort: medium }, value: 0.10 }
         - { when: { body.effort: high }, value: 0.50 }
         - { when: { body.effort: xhigh }, value: 1.00 }
-        # Metered efforts bill what the run uses up to a per-run cap; these rows
-        # are the caps, not expected charges.
+        # Metered efforts bill up to a per-run cap; these rows are the caps.
         - { when: { body.effort: auto }, value: 5 }
         - { when: { body.effort: ultra }, value: 20 }
       fallback: { value: 20 }

@@ -20,8 +20,7 @@ const header = (provider: string, display_name: string): ProviderHeader => ({
 
 const acme = header("acme", "Acme");
 
-// A live, public, unpriced core task of acme's; `written` overrides its file,
-// `over` the entry served.
+// A live, public, unpriced core task of acme's; `written` overrides its file, `over` its entry.
 const entry = (
   id: string,
   name: string,
@@ -104,8 +103,7 @@ describe("a search", () => {
     }
   });
 
-  // Both tasks hold all three words, at weights 1, 3, 1 and 1, 1, 3: equal in
-  // exact arithmetic, but summed in query order the floats differ by one ulp.
+  // Weights 1, 3, 1 and 1, 1, 3 tie exactly, but summed in query order the floats differ by an ulp.
   it("ranks scores equal in exact arithmetic as a tie, whatever the floats sum to", () => {
     const search = searchOver([
       entry("x", "Beta", { summary: "Alpha gamma" }, { tier: "extended" }),
@@ -331,8 +329,7 @@ describe("a search", () => {
 
     assert.deepStrictEqual(ids(search("page text")), ["a"]);
     assert.deepStrictEqual(search("version"), { _tag: "Missed", nearMisses: [] });
-    // Report is in one of four live tasks, exactly a quarter, so it is hard: a
-    // misses it as b misses page.
+    // Report is in exactly a quarter of the live tasks, so it is hard: a misses it, b misses page.
     const counted = searchOver([
       entry("a", "Page text"),
       entry("b", "Report run"),

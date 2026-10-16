@@ -173,8 +173,7 @@ const newProvider = Command.make(
   }),
 ).pipe(Command.withDescription("Scaffold a provider file from the vendor's OpenAPI document"));
 
-// The catalog as one JSON file, for a runtime with no filesystem: the Workers and the site import
-// it. It is built only from a folder that validates.
+// For the Workers and the site, which have no filesystem. Built only from a folder that validates.
 const build = Command.make(
   "build",
   {

@@ -1,5 +1,4 @@
-# Each rate leaves out one of what every rate carries: its basis, where it was
-# read, and when.
+# Each rate leaves out one field every rate needs: its basis, its source or its date.
 rates_to_usd:
   EUR:
     usd: 1.1712

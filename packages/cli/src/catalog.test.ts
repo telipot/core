@@ -12,7 +12,6 @@ import { parse, parseDocument } from "yaml";
 
 import { telipot } from "./testing";
 
-// The parts of a written provider file these tests read.
 interface ProviderFile {
   readonly display_name: string;
   readonly base_url: string | null;
@@ -52,7 +51,7 @@ const lockFile = Effect.fnUntraced(function* (lock: ReadonlyArray<string>) {
   return file;
 });
 
-// Live services: real files, a temp folder and port per test, and verify's limiter on the real clock.
+// Live services, so verify's limiter runs on the real clock.
 layer(BunServices.layer, { excludeTestServices: true })("telipot catalog validate", (it) => {
   it.effect("ends a clean run with the count of core providers and their tasks", () =>
     Effect.gen(function* () {

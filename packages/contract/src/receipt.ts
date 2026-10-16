@@ -17,7 +17,7 @@ export const EndUserPrincipal = Principal.check(
 export const IdentityMode = Schema.Literals(["user", "organization", "platform", "anonymous"]);
 export type IdentityMode = typeof IdentityMode.Type;
 
-// byoc is the customer's own credential; managed is ours.
+// `byoc` is the customer's own credential; `managed` is the platform credential.
 export const CredentialSource = Schema.Literals(["none", "byoc", "managed"]);
 
 // A decimal string, not a JSON number, so it stays exact.
@@ -25,9 +25,8 @@ export const Usd = Schema.String.check(
   Schema.isPattern(/^\d{1,12}(\.\d{1,12})?$/, { expected: "US dollars, such as 0.006" }),
 );
 
-// Redacted once decoded. At least 8 characters: every echo is masked, and a shorter key would mask
-// ordinary text. Visible ASCII only: fetch quotes a header value it refuses into the span, and
-// trims a space the mask would look for.
+// At least 8 characters: every echo is masked, and a shorter key would mask ordinary text. Visible
+// ASCII: fetch quotes a header value it refuses into the span, and trims a space the mask seeks.
 export const VendorCredential = Schema.RedactedFromValue(
   FreeText(8192).check(
     Schema.isMinLength(8),
@@ -35,7 +34,7 @@ export const VendorCredential = Schema.RedactedFromValue(
   ),
 );
 
-// A provider file's `version`, the date its reviewed fields last changed.
+// A provider file's `version`: the date its reviewed fields last changed.
 export const CatalogVersion = Schema.String.check(
   Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/, { expected: "a catalog version, such as 2026-10-04" }),
 ).annotate({ identifier: "CatalogVersion" });
@@ -109,7 +108,7 @@ export const ReceiptOptions = Schema.Struct(
 
 export type ReceiptOptions = typeof ReceiptOptions.Type;
 
-// The options that name the connection a run uses; a run takes one or the other.
+// A run names its connection by one of these, never both.
 export const connectionOptions = ["connection", "account"] as const satisfies ReadonlyArray<
   keyof ReceiptOptions
 >;
@@ -128,8 +127,7 @@ export const RunHeaders = Schema.Struct({
 
 export type RunHeaders = typeof RunHeaders.Type;
 
-// What the task list, inspect, discover and capabilities take: the end user whose connections,
-// beside the organization's, say which identity would serve each task.
+// The end user whose connections, beside the organization's, decide each task's `identity`.
 export const PrincipalHeaders = Schema.Struct({
   [telipotHeader("principal")]: Schema.optionalKey(options.principal.header),
 });

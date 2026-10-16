@@ -5,16 +5,15 @@ import { TestConsole } from "effect/testing";
 
 import { runTelipot } from "./telipot";
 
-// The gateway address tests pass as `TELIPOT_API_URL`. A gateway world's client prefixes its own,
-// so `onWorld` strips this one from each request after every other prefix.
+// Tests pass this as `TELIPOT_API_URL`. A gateway world's client adds its own prefix, so `onWorld`
+// strips this one from each request.
 export const testApiUrl = "https://api.telipot.test";
 export const onWorld = (world: HttpClient.HttpClient) =>
   HttpClient.make((request) =>
     world.execute(HttpClientRequest.setUrl(request, request.url.replace(testApiUrl, ""))),
   );
 
-// Given `cwd`, what it spawns, such as `scan`'s git, starts there. Requests go out on the test's
-// `HttpClient` when it has one, such as a gateway world's, and on `fetch` otherwise.
+// Given `cwd`, what it spawns, such as `scan`'s git, starts there.
 export const telipot = Effect.fnUntraced(
   function* (
     args: ReadonlyArray<string>,

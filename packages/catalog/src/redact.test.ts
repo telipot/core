@@ -122,8 +122,7 @@ describe("redact", () => {
     });
   });
 
-  // A debug capture redacts a vendor's body on the server, so a long string
-  // must not hold it up: a pattern that rescans from every character would.
+  // A debug capture redacts vendor bodies on the server, so a rescanning pattern would stall it.
   it("redacts a long run of word characters in linear time", () => {
     const long = "a".repeat(200_000);
     const started = performance.now();

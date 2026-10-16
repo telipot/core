@@ -67,8 +67,7 @@ const count = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 // YAML, JSON and JSON Schema errors name the place on their first line.
 export const firstLine = (error: unknown) => String(error).replace(/\n[\s\S]*/, "");
 
-// Input, replays and outputs share one importer and its parse options, so a constraint means
-// the same everywhere.
+// Input, replays and outputs share one importer and its options, so a constraint means one thing.
 export const jsonSchemaDecoder = (
   schema: InputSchema,
   options?: SchemaRepresentation.FromJsonSchemaOptions,
@@ -223,7 +222,7 @@ export const checkInput = ({
       properties.set(name, schema);
       if (problems.length > before) continue;
 
-      // enum and const narrow the declared type, not replace it; defaults and examples must fit all.
+      // `enum` and `const` must fit the declared type; a default or example must fit all three.
       const { enum: _, const: __, ...base } = schema;
       const basic = jsonSchemaDecoder(base);
       if (Result.isFailure(basic)) {

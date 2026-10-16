@@ -43,8 +43,8 @@ const reach = Effect.gen(function* () {
   return { reached: [...reached], packages, features };
 });
 
-// The contract is what the SDK, the CLI, the web app and the public repository take, so it
-// reaches a feature only through its index.ts and needs no package but effect.
+// The SDK, the CLI, the web app and the public repository take the contract, so it reaches a
+// feature only through its index.ts and needs no package but effect.
 layer(BunServices.layer)("@telipot/contract", (it) => {
   it.effect("reaches each feature's index.ts and no other file in a folder", () =>
     Effect.gen(function* () {

@@ -8,8 +8,8 @@ const withinCodePoints = (input: string, maxLength: number) => {
   return true;
 };
 
-// Counts code points, as OpenAPI's maxLength does, not the UTF-16 units
-// `Schema.isMaxLength` counts. Text over the bound skips the later checks.
+// Counts code points, as OpenAPI's maxLength does, not UTF-16 units. Text over the bound skips
+// the later checks.
 const isMaxCodePoints = (maxLength: number) =>
   Schema.makeFilter<string>(
     (input) => withinCodePoints(input, maxLength),
@@ -24,8 +24,7 @@ const isWellFormed = Schema.makeFilter<string>((input) => input.isWellFormed(), 
   toJsonSchema: () => [{}, true],
 });
 
-// Postgres refuses NUL and lone surrogates but memory keeps them, so either would
-// answer 500 on one store and 200 on the other.
+// Postgres refuses NUL and lone surrogates and memory keeps them, so both are refused here.
 export const FreeText = (maxLength: number) =>
   Schema.String.check(
     isMaxCodePoints(maxLength),
@@ -37,5 +36,4 @@ export const FreeText = (maxLength: number) =>
 
 export const CatalogId = FreeText(100);
 
-// A provider's slug as it starts an environment variable's name: capitals, dashes as underscores.
 export const slugVariable = (slug: string) => slug.toUpperCase().replaceAll("-", "_");

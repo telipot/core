@@ -54,8 +54,8 @@ const inOrder = (task: WrittenTask): WrittenTask =>
 const only = (task: WrittenTask, keep: (key: string) => boolean) =>
   Object.fromEntries(Object.entries(task).filter(([key]) => keep(key)));
 
-// Reviewed fields carry whole, so what a reviewer set or removed stays; a recorded verification
-// beats a generated `untestable`. An own_account task is replayed live, so it has no test request.
+// Reviewed fields carry whole, so what a reviewer removed stays removed. An own_account task is
+// replayed live, so it keeps no test request.
 const carry = (generated: WrittenTask, before: WrittenTask | undefined): WrittenTask => {
   if (Predicate.isUndefined(before)) return generated;
   const stamped = Object.keys(before).some((key) => stamps.includes(key));
@@ -81,9 +81,7 @@ interface Route {
   readonly deprecated: boolean;
 }
 
-// A locked task no longer offered becomes a tombstone so its id keeps answering; an unlocked one
-// is dropped. Dates stay put while only reviewed fields differ, so an unchanged spec gives a
-// byte-identical file.
+// Dates stay put while only reviewed fields differ, so an unchanged spec gives the same bytes.
 export const extendedFile = Effect.fnUntraced(function* (input: {
   readonly provider: string;
   readonly openapi: string;
@@ -162,7 +160,7 @@ export const extendedFile = Effect.fnUntraced(function* (input: {
     ...retired.map(({ task }) => [task.id, task] as const),
   ]);
 
-  // A successor may itself be retired; point at the live end of the chain so the loader never follows one.
+  // The loader refuses a retired successor, so point at the live end of the chain.
   const successorOf = (id: string, seen = new Set<string>()): string | undefined => {
     if (seen.has(id)) return undefined;
     seen.add(id);

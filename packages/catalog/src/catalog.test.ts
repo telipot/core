@@ -63,7 +63,6 @@ const googleProviders = [
   { slug: "google-calendar", principal: "user" },
 ] as const;
 
-// Behind a vendor key, so the customer's to run until a vendor agreement exists.
 const keyBasedProviders = ["semrush", "hunter", "exa", "firecrawl", "apollo"];
 
 layer(catalogAt(realCatalog))("the real catalog", (it) => {
@@ -93,7 +92,6 @@ layer(catalogAt(realCatalog))("the real catalog", (it) => {
     }),
   );
 
-  // Scope is per task: Apollo's people search is any_account.
   it.effect("serves the key-based providers' tasks on the organization's key", () =>
     Effect.gen(function* () {
       const { tasks } = yield* Catalog;
@@ -127,7 +125,7 @@ layer(catalogAt(realCatalog))("the real catalog", (it) => {
     }),
   );
 
-  // The loader refuses other own_account mistakes, but cannot know each Google provider's principal.
+  // The loader cannot know each Google provider's principal, so this test pins it.
   it.effect(
     "serves Search Console and GA4 in the organization's accounts and Calendar in a user's",
     () =>
@@ -162,7 +160,7 @@ layer(catalogAt(realCatalog))("the real catalog", (it) => {
       }),
   );
 
-  // The identity gate calls this task as user:ana, so its id is fixed.
+  // The end-user connection tests run this task by id as user:ana, so its id is fixed.
   it.effect("serves google-calendar.events.list on a read scope", () =>
     Effect.gen(function* () {
       const { task } = yield* entry("google-calendar.events.list");
@@ -217,8 +215,7 @@ layer(catalogAt(realCatalog))("the real catalog", (it) => {
     }),
   );
 
-  // Neither API documents its list order, so a connection tied to the first item could switch
-  // accounts; the Google user's id is stable.
+  // Neither API documents its list order, so a connection is tied to the Google user's stable id.
   it.effect("ties a Search Console or GA4 connection to the Google account that granted it", () =>
     Effect.gen(function* () {
       for (const { slug } of googleProviders.filter(
@@ -648,7 +645,6 @@ const rules: ReadonlyArray<readonly [rule: string, file: string, path: string]> 
   ],
   ["a probe with both a path and a url", "providers/probe-two-addresses.yaml", "probe"],
   ["a probe's json_path without equals", "providers/probe-half-rule.yaml", "probe.expect"],
-  // A connection's secret would be a key to one task and OAuth tokens to another.
   ["a key and OAuth for one principal", "providers/key-and-oauth.yaml", "auth.schemes"],
   // price.test.ts holds one row per pricing rule.
   [
@@ -680,8 +676,7 @@ layer(Layer.effect(Refused, refusals("refused")))("the refused fixture catalog",
     }),
   );
 
-  // Its aliases.yaml holds a key live tasks here are found by, and its
-  // queries.yaml a sentence naming no live task.
+  // Its aliases.yaml and queries.yaml each break a search rule.
   it.effect("measures neither aliases.yaml nor queries.yaml while another rule refuses it", () =>
     Effect.gen(function* () {
       assert.sameMembers(
@@ -705,7 +700,7 @@ describe("a catalog whose fx.yaml is refused", () => {
   );
 });
 
-// These are checked only once no other rule refuses the folder. search.test.ts holds one row per rule.
+// Checked only once no other rule refuses the folder; search.test.ts holds one row per rule.
 describe("a catalog whose aliases.yaml and queries.yaml are refused", () => {
   it.effect("refuses the alias and the sentence in Catalog.validate", () =>
     Effect.gen(function* () {
@@ -736,8 +731,7 @@ layer(catalogAt(catalogFixtures["clean-input"]))(
         if (!Predicate.isObject(properties)) return assert.fail("missing input properties");
         assert.isTrue(Object.hasOwn(properties, "__proto__"));
         assert.isTrue(Object.hasOwn(properties, "constructor"));
-        // The path requires its value even when the written flag and default
-        // could suggest otherwise; resolving input does not rewrite the record.
+        // The path requires `id` whatever the file wrote, and the record is not rewritten.
         assert.strictEqual(replay.task.input.pathParams?.id?.required, false);
         assert.include(replay.inputSchema.required, "id");
         const schema = Schema.make<Schema.Codec<unknown>>(
@@ -802,7 +796,6 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
       const text = yield* entry("acme.page.text");
       assert.strictEqual(credentialed(text).principal, "organization");
       assert.strictEqual(credentialed(yield* entry("acme.x.gadgets")).principal, "organization");
-      // The record stays as written.
       assert.isUndefined(text.task.principal);
     }),
   );
@@ -959,7 +952,6 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
       const live = (filters?: Parameters<typeof catalog.live>[0]) =>
         catalog.live(filters).map(({ task }) => task.id);
 
-      // The retired page task is no longer live.
       assert.deepStrictEqual(
         live(),
         catalog.tasks.map(({ task }) => task.id).filter((id) => id !== "acme.page.old"),
@@ -980,7 +972,6 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
       ]);
 
       assert.deepStrictEqual(live({ kind: "action" }), []);
-      // Text matches an id, a name or a summary, in any case.
       assert.deepStrictEqual(live({ text: "WIDGET" }), [
         "acme.widgets.list",
         "acme.widget.get",
@@ -1086,8 +1077,7 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
     "prices credits at the provider's own rate in fx.yaml, the rate a charge settles at",
     () =>
       Effect.gen(function* () {
-        // 1.5 credits at $0.012 each, charged only when the async job succeeds;
-        // the credits it reports settle at the same rate.
+        // 1.5 credits at $0.012 each; the credits it reports settle at the same rate.
         assert.deepInclude(yield* paid("acme.report.run"), {
           type: "per_success",
           currency: "credit",
@@ -1103,8 +1093,7 @@ layer(catalogAt(catalogFixtures.clean))("the clean fixture catalog", (it) => {
 
   it.effect("prices a provider meter at its rate in fx.yaml, per result", () =>
     Effect.gen(function* () {
-      // 10 API units a result at $0.00004 a unit; the cost's `unit` names the
-      // meter, so it labels the native figure.
+      // 10 API units a result at $0.00004 a unit; the meter's name is the currency.
       assert.deepInclude(yield* paid("acme.people.enrich"), {
         type: "per_result",
         currency: "api_unit",
@@ -1221,8 +1210,7 @@ describe("the clean fixture catalog on 4 October 2026", () => {
   );
 });
 
-// The library sees one commit; `telipot catalog validate --previous-lock` hands
-// it the lock as it stood before the change.
+// The loader sees one commit; `telipot catalog validate --previous-lock` hands it the earlier lock.
 describe("the clean fixture catalog against a previous lock", () => {
   it.effect("refuses an id the lock dropped, even one renamed in its file too", () =>
     Effect.gen(function* () {

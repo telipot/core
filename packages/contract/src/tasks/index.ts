@@ -20,7 +20,7 @@ export const Price = Schema.Union([
     type: Schema.Literals(["per_call", "per_success", "per_result"]),
     // Floor is the cheapest price row; ceiling is what a call reserves.
     usd: Schema.NullOr(Schema.Struct({ floor: Schema.String, ceiling: Schema.String })),
-    // currency is an ISO code, `credit`, or the vendor's meter name.
+    // `currency` is an ISO code, `credit`, or the vendor's meter name.
     native: Schema.NullOr(
       Schema.Struct({ floor: Schema.String, ceiling: Schema.String, currency: Schema.String }),
     ),
@@ -51,7 +51,7 @@ export const Verification = Schema.Union([
 
 export type Verification = typeof Verification.Type;
 
-// core is curated by hand; extended is generated from the vendor's spec.
+// `core` is curated by hand; `extended` is generated from the vendor's spec.
 export const Tier = Schema.Literals(["core", "extended"]);
 export type Tier = typeof Tier.Type;
 
@@ -66,12 +66,12 @@ export const Task = Schema.Struct({
   summary: Schema.String,
   // The slug `Telipot-Order` takes.
   provider: Schema.String,
-  // The provider file's version this answer was read from, which a run may be pinned to.
+  // The provider file's version, which a run may pin.
   version: CatalogVersion,
   capability: Schema.NullOr(Schema.String),
   tier: Tier,
   kind: TaskKind,
-  // OpenAPI security scheme types.
+  // `public`, or the type of the task's security scheme.
   auth: Schema.Literals(["public", "api_key", "oauth2", "basic", "bearer"]),
   scope: Schema.NullOr(Schema.Literals(["any_account", "own_account"])),
   principal: Schema.NullOr(Schema.Literals(["organization", "user"])),
@@ -150,7 +150,7 @@ export class Miss extends Schema.TaggedError<Miss>()("Miss", ranCall) {
   static readonly problem = problem(this, { status: 404, code: "miss" });
 }
 
-// upstream_status and upstream_body are null when the vendor never answered.
+// `upstream_status` and `upstream_body` are null when the vendor never answered.
 export class UpstreamError extends Schema.TaggedError<UpstreamError>()("UpstreamError", {
   ...ranCall,
   upstream_status: Schema.NullOr(Schema.Int),
@@ -159,8 +159,8 @@ export class UpstreamError extends Schema.TaggedError<UpstreamError>()("Upstream
   static readonly problem = problem(this, { status: 502, code: "upstream_error" });
 }
 
-// Either our per-minute limit (nothing ran, so no call_id or body) or the
-// vendor's own 429, relayed with its body.
+// Our per-minute limit, with nothing run and so no `call_id` or body, or the vendor's own 429
+// relayed with its body.
 export class RateLimited extends Schema.TaggedError<RateLimited>()("RateLimited", {
   detail: Schema.String,
   call_id: Schema.NullOr(Schema.String),
@@ -195,8 +195,7 @@ export class GrantRequired extends Schema.TaggedError<GrantRequired>()("GrantReq
   static readonly problem = problem(this, { status: 403, code: "grant_required" });
 }
 
-// The task acts in the organization's own account on the provider, and the organization has not
-// connected one. The platform never serves such a task.
+// The organization's own account is not connected, and the platform credential never stands in.
 export class ConnectionRequired extends Schema.TaggedError<ConnectionRequired>()(
   "ConnectionRequired",
   { detail: Schema.String, connect_url: ConnectUrl },
@@ -214,9 +213,8 @@ export class ScopeRequired extends Schema.TaggedError<ScopeRequired>()("ScopeReq
   static readonly problem = problem(this, { status: 403, code: "scope_required" });
 }
 
-// Nothing else was tried. `connection` is null for a credential sent with the call; `call_id` is
-// null when the connection was already marked and no call ran; `connect_url` is null when
-// `detail` says why there is none.
+// Nothing else was tried. `connection` is null for a credential sent with the call, `call_id` when
+// the connection was already marked and no call ran, and `connect_url` when `detail` says why.
 export class ConnectionInvalid extends Schema.TaggedError<ConnectionInvalid>()(
   "ConnectionInvalid",
   {
@@ -229,8 +227,7 @@ export class ConnectionInvalid extends Schema.TaggedError<ConnectionInvalid>()(
   static readonly problem = problem(this, { status: 401, code: "connection_invalid" });
 }
 
-// A connection a run names, or a route changes, that the organization does not hold; another
-// organization's answers the same.
+// Another organization's connection answers the same.
 export class ConnectionNotFound extends Schema.TaggedError<ConnectionNotFound>()(
   "ConnectionNotFound",
   { detail: Schema.String },
@@ -238,7 +235,6 @@ export class ConnectionNotFound extends Schema.TaggedError<ConnectionNotFound>()
   static readonly problem = problem(this, { status: 404, code: "connection_not_found" });
 }
 
-// The run is pinned to a catalog version other than the one its provider is served at.
 export class CatalogVersionMismatch extends Schema.TaggedError<CatalogVersionMismatch>()(
   "CatalogVersionMismatch",
   { detail: Schema.String, served_version: CatalogVersion },
@@ -253,7 +249,7 @@ const Candidate = Schema.Struct({
   account: Schema.NullOr(Schema.String),
 });
 
-// Several connections could serve, none is the default, and the call named none of them.
+// Several connections could serve, none is the default, and the call named none.
 export class ConnectionAmbiguous extends Schema.TaggedError<ConnectionAmbiguous>()(
   "ConnectionAmbiguous",
   { detail: Schema.String, candidates: Schema.Array(Candidate) },

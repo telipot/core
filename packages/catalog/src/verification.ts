@@ -47,8 +47,8 @@ export const stamp = (
   return Result.succeed(document.toString({ lineWidth: 0 }));
 };
 
-// The entry came from this catalog, so a missing task, an extended task (its file is generated)
-// or an example outside `examples/` is a defect, refused before anything is written.
+// The entry came from this catalog, so a missing or extended task or a stray example is a defect,
+// refused before anything is written.
 export const recordVerification = Effect.fnUntraced(function* (
   directory: string,
   entry: Entry,

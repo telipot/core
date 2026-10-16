@@ -1,7 +1,6 @@
-# What one unit of each currency a provider file writes is worth in USD, so a
-# rate refresh re-prices the catalog without touching a provider file. Every
-# rate names its basis, source and date; a provider that publishes no USD price
-# for its credits or meter has `usd: null`.
+# What one unit of each currency is worth in USD, so a rate refresh never touches a provider
+# file. Each rate names its basis, source and date; credits or a meter with no published USD
+# price have `usd: null`.
 
 rates_to_usd: {}
 credit_rates_usd:

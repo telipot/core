@@ -14,14 +14,14 @@ import { HttpApiClient } from "effect/http-api";
 
 export const defaultBaseUrl = "https://api.telipot.com";
 
-// A pin that runs a provider's task at whatever version the gateway serves when the call is made.
+// The pin that runs whatever version the gateway serves when the call is made.
 export const latest = "latest";
 
 // The variable that pins a provider's catalog version when neither the call nor the client does.
 export const versionVariable = (provider: string) =>
   `TELIPOT_CATALOG_VERSION_${slugVariable(provider)}`;
 
-// A task's id starts with its provider's slug and a dot; an id with none is the route's to refuse.
+// An id with no dot is left for the route to refuse.
 const providerOf = (task: string) => task.split(".", 1)[0] ?? task;
 
 export class VersionRequired extends Schema.TaggedError<VersionRequired>()("VersionRequired", {
@@ -54,9 +54,7 @@ export interface RunOptions extends CallOptions, Omit<ReceiptOptions, "principal
 export type ConnectOptions = CallOptions &
   Omit<typeof NewConnectSession.Type, "provider" | "principal">;
 
-// The four verbs, and the backend's confirm of a connect session, over the API's own contract,
-// every request through the gateway's routes. A user-bound token is sent as it is: the gateway
-// refuses it a principal other than its own.
+// A user-bound token is sent as it is: the gateway refuses it a principal other than its own.
 export const make = Effect.fnUntraced(function* (options: ClientOptions) {
   const token = Predicate.isString(options.token) ? Redacted.make(options.token) : options.token;
   const client = yield* HttpApiClient.make(Api, {
@@ -79,8 +77,8 @@ export const make = Effect.fnUntraced(function* (options: ClientOptions) {
       (Predicate.isNotUndefined(options.versions) && Object.hasOwn(options.versions, provider)
         ? options.versions[provider]
         : undefined) ??
-      // `option` answers none for an unset variable; any other failure is the environment's
-      // provider breaking, which no caller can act on.
+      // `Config.option` is none only for an unset variable; any other failure is a broken
+      // `ConfigProvider`, which no caller can act on.
       Option.getOrUndefined(
         yield* Config.option(Config.String(versionVariable(provider))).pipe(Effect.orDie),
       ) ??
@@ -126,8 +124,8 @@ export const make = Effect.fnUntraced(function* (options: ClientOptions) {
       });
     }),
 
-    // A session names its principal. Left out, it is the end user a user-bound token is fixed
-    // to, which `/v1/me` says, or else the organization.
+    // With no `as`, the principal is the end user a user-bound token is fixed to, from `/v1/me`,
+    // or else the organization.
     connect: Effect.fnUntraced(function* (provider: string, { as, ...session }: ConnectOptions) {
       let principal = as ?? options.as;
       if (Predicate.isUndefined(principal)) {
@@ -138,8 +136,7 @@ export const make = Effect.fnUntraced(function* (options: ClientOptions) {
       return yield* client.connect.start({ payload: { ...session, provider, principal } });
     }),
 
-    // An end user's session connects nothing until the backend says whom it signed in, with the
-    // `code` the browser came back with.
+    // An end user's session connects nothing until the backend confirms whom it signed in.
     confirm: (sessionId: string, confirmation: typeof ConnectConfirmation.Type) =>
       client.connect.confirm({ params: { id: sessionId }, payload: confirmation }),
   };
@@ -147,8 +144,8 @@ export const make = Effect.fnUntraced(function* (options: ClientOptions) {
 
 export type Client = Effect.Success<ReturnType<typeof make>>;
 
-// The same as promises, for code that does not run Effect. A refused call rejects
-// with the API's own tagged error, such as `PrincipalForbidden`, its `detail` saying why.
+// The same as promises, for code that does not run Effect. A refused call rejects with the API's
+// own tagged error, such as `PrincipalForbidden`, whose `detail` says why.
 export class Telipot {
   readonly #client: Client;
 

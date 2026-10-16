@@ -170,8 +170,7 @@ const flat = (entry: Entry) => {
   return { ...pathParams, ...queryParams, ...headers, ...body };
 };
 
-// The price-table row the test request matches, not the table's ceiling.
-// A price in credits has no USD figure.
+// The price row the test request matches, not the ceiling; undefined without a USD figure.
 const listPrice = (entry: Entry) => Option.getOrUndefined(quote(entry.price, flat(entry)));
 
 // Unpriced last; equal prices keep the catalog's order.
@@ -190,8 +189,7 @@ const reportedCharge = (settling: Settle | undefined, answer: Answer): unknown =
   return undefined;
 };
 
-// A passed call is stamped and its example written before the next call is
-// made, so an interrupted run resumes without paying twice.
+// Each pass is stamped before the next call, so an interrupted run resumes without paying twice.
 export const verifyProvider = Effect.fnUntraced(
   function* (options: VerifyOptions) {
     const fs = yield* FileSystem.FileSystem;
@@ -281,8 +279,8 @@ export const verifyProvider = Effect.fnUntraced(
       : [...new Set(queue.flatMap((entry) => sentForms(entry, credential)))];
 
     const limiter = yield* RateLimiter.RateLimiter;
-    // The timeout sits under both limiters, so a wait for a limiter is not the vendor's silence.
-    // The inner account limiter retries a 429; one that outlasts it comes back as the answer.
+    // The timeout sits under both limiters, so a limiter's wait is not the vendor's silence. The
+    // account limiter retries a 429; one that outlasts it is the answer.
     const answering = HttpClient.transform(client, (effect) =>
       Effect.timeout(effect, "30 seconds"),
     );
@@ -404,7 +402,7 @@ export const verifyProvider = Effect.fnUntraced(
       yield* fs.writeFileString(logFile, `${JSON.stringify(line)}\n`, { flag: "a" });
     });
 
-    // Gitignored, never an example: lets a contributor read keys `output` lacks without paying again.
+    // Gitignored, never an example: a contributor reads keys `output` lacks without paying again.
     const keep = Effect.fnUntraced(function* (id: string, answer: Answer) {
       if (answer.status < 200 || answer.status > 299) return;
       const [file, text] = Predicate.isString(answer.body)
@@ -526,8 +524,7 @@ export const verifyProvider = Effect.fnUntraced(
         before = verdict;
       }
 
-      // A 429 on the first call leaves the task as it was; after a billed call, the task
-      // records what that call found before the run stops.
+      // A 429 on the first call leaves the task as it was; else the last billed call is recorded.
       if (Predicate.isNotUndefined(last)) {
         const { verdict, answer, charged } = last;
         if (verdict.ok) {

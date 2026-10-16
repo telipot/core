@@ -9,12 +9,12 @@ import { ProblemDetails } from "../problem";
 import { Principal, RunHeaders, ReceiptOptions } from "../receipt";
 import { Run, Task } from "../tasks";
 
-// The path the MCP server answers at on each of the API's hosts. Clients are given MCP_URL alone,
-// https://mcp.telipot.com/mcp, since every MCP access token is bound to that exact address.
+// The MCP server answers at this path on each API host, but clients are given MCP_URL alone,
+// since every MCP access token is bound to that exact address.
 export const mcpPath = "/mcp";
 
-// Every field of an answer, optional and nullable, so a client that checks a tool's output
-// against its schema never refuses one the API grows.
+// Every answer field optional and nullable, so a client that checks a tool's output against its
+// schema never refuses one the API grows.
 const loose = <Fields extends Schema.Struct.Fields>(
   fields: Fields,
   keep?: ReadonlyArray<keyof Fields>,
@@ -64,11 +64,9 @@ const RunArguments = Schema.Struct({
   }),
 });
 
-// What `quote` answers of a task: its price and which identity would pay for it.
 const quoted = ["id", "price", "identity", "credential_in_place"] as const;
 
-// The answer the route refused with, as Problem Details: branch on `code`, and open
-// `connect_url` when there is one.
+// Problem Details: branch on `code`, and open `connect_url` when there is one.
 const failure = ProblemDetails;
 
 // Only a run reaches a vendor; the other tools read and write telipot alone.

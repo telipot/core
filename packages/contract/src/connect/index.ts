@@ -39,13 +39,12 @@ export type RedirectAllowlist = typeof RedirectAllowlist.Type;
 export const NewConnectSession = Schema.Struct({
   provider: CatalogId,
   principal: Principal,
-  // Catalog scope names; left out, those the principal's tasks on the provider require, except
-  // those only actions need. A provider that takes the organization's key asks for none.
+  // Catalog scope names. When left out, those the principal's tasks on the provider need, less
+  // those only actions need; a provider on the organization's key asks for none.
   scopes: Schema.optionalKey(Schema.Array(CatalogId).check(Schema.isMaxLength(100))),
   // On the redirect allowlist, or the dashboard for the organization or a member's session. Gets
-  // `session_id` and `status` appended: `completed`, or, for an end user, unless a member's session
-  // started it and sends them back to the dashboard, `consented` and the `code` the organization's
-  // backend confirms them with.
+  // `session_id` and `status` appended: `completed`, or, for an end user not sent back to the
+  // dashboard, `consented` and the `code` the organization's backend confirms them with.
   redirect_uri: RedirectUri,
   label: Schema.optionalKey(FreeText(200)),
 }).annotate({ identifier: "NewConnectSession" });
@@ -57,9 +56,8 @@ export const ConnectSessionCreated = Schema.Struct({
   expires_at: Schema.String,
 }).annotate({ identifier: "ConnectSessionCreated", httpApiStatus: 201 });
 
-// The statuses `@telipot/credentials` reads a session in; `connect.test.ts` holds the two equal.
-// `consented`: an end user finished consent, and nothing is connected until the organization's
-// backend confirms them. `declined`: the backend named another end user, so nothing was kept.
+// `connect.test.ts` holds these equal to `@telipot/credentials`'s. `consented` connects nothing
+// until the backend confirms the end user; `declined` means it named another, so nothing was kept.
 export const ConnectSessionStatus = Schema.Literals([
   "pending",
   "consented",
@@ -75,18 +73,17 @@ export const ConnectSession = Schema.Struct({
   provider: Schema.String,
   principal: Schema.String,
   status: ConnectSessionStatus,
-  // The connection the session made, once it completes.
+  // Null until the session completes.
   connection_id: Schema.NullOr(Schema.String),
   // The link's expiry; once `consented`, the deadline for the backend's confirm.
   expires_at: Schema.String,
-  // While `consented`, the provider-side account the consent was given on and its name, so the
-  // backend can show the person it signed in which account they connect before confirming;
-  // null otherwise, and never the credential.
+  // While `consented`, the provider account consented on and its name, for the backend to show
+  // before it confirms; null otherwise.
   account: Schema.NullOr(Schema.String),
   account_label: Schema.NullOr(Schema.String),
 }).annotate({ identifier: "ConnectSession" });
 
-// What the organization's list shows of a session; never its PKCE verifier.
+// Never the session's PKCE verifier.
 export const ConnectSessionRecord = Schema.Struct({
   ...ConnectSession.fields,
   created_at: Schema.String,
@@ -100,21 +97,20 @@ export const ConnectSessionRecord = Schema.Struct({
 
 export const connectSessionsPage = 50;
 
-// Newest first. A page never splits one millisecond's sessions, so it may run a little past fifty,
-// and none is skipped between pages. The hourly sweep deletes sessions a day past expiry.
+// Newest first. A page never splits one millisecond's sessions, so it may run a little past fifty
+// and none is skipped. A session is deleted a day past its expiry.
 export const ConnectSessionList = Schema.Struct({
   sessions: Schema.Array(ConnectSessionRecord),
   next_cursor: Schema.NullOr(Schema.String),
 }).annotate({ identifier: "ConnectSessionList" });
 
-// What the organization's backend says of the browser that came back with `code`: the end user it
-// has signed in.
+// The backend's word on the browser that came back with `code`: the end user signed in there.
 export const ConnectConfirmation = Schema.Struct({
   code: FreeText(200),
   principal: EndUserPrincipal,
 }).annotate({ identifier: "ConnectConfirmation" });
 
-// A page listing one end user's own connections for them to revoke; never the organization's.
+// A page of one end user's own connections, for them to revoke; never the organization's.
 export const NewConnectionsPage = Schema.Struct({ principal: EndUserPrincipal }).annotate({
   identifier: "NewConnectionsPage",
 });
@@ -133,16 +129,15 @@ export class ConnectSessionNotFound extends Schema.TaggedError<ConnectSessionNot
   static readonly problem = problem(this, { status: 404, code: "connect_session_not_found" });
 }
 
-// The provider connects only through the organization's own OAuth app, such as Gmail, whose
-// restricted scopes Google lets no shared app ask for, and the organization has set none.
+// The provider takes only the organization's own OAuth app, as Gmail does, and none is set.
 export class OAuthAppRequired extends Schema.TaggedError<OAuthAppRequired>()("OAuthAppRequired", {
   detail: Schema.String,
 }) {
   static readonly problem = problem(this, { status: 409, code: "oauth_app_required" });
 }
 
-// Not consented and waiting for a confirm, not the code the session was sent back with, or the
-// connection the session adds to changed since the consent, so nothing was kept.
+// The session is not awaiting a confirm, the `code` is not its own, or the connection it adds to
+// changed since the consent; nothing was kept.
 export class ConnectSessionNotConfirmable extends Schema.TaggedError<ConnectSessionNotConfirmable>()(
   "ConnectSessionNotConfirmable",
   { detail: Schema.String },
@@ -150,7 +145,7 @@ export class ConnectSessionNotConfirmable extends Schema.TaggedError<ConnectSess
   static readonly problem = problem(this, { status: 409, code: "connect_session_not_confirmable" });
 }
 
-// The backend signed in another end user than the session's, so the session is declined.
+// The backend named another end user than the session's; the session is declined.
 export class ConnectPrincipalMismatch extends Schema.TaggedError<ConnectPrincipalMismatch>()(
   "ConnectPrincipalMismatch",
   { detail: Schema.String },

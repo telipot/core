@@ -57,7 +57,7 @@ export const renderer = (colour: Streams) => {
     return micro === 0 ? green(text) : text;
   };
 
-  // A price in credits has no USD figure.
+  // A task with no USD figure is counted apart.
   const headline = (provider: string, queue: Report["queue"]) => {
     const known = queue.flatMap(({ listMicroUsd }) =>
       Predicate.isUndefined(listMicroUsd) ? [] : [listMicroUsd],
@@ -252,7 +252,6 @@ export const renderer = (colour: Streams) => {
     ].join("\n\n");
   };
 
-  // A task's price and whose credential would pay, as discover and `run --quote` show it.
   const pays = (task: Task) =>
     [
       priceText(task.price),
@@ -357,8 +356,8 @@ const priceText = (price: Task["price"]) => {
   return "no price";
 };
 
-// A vendor's answer as JSON. JSON escapes C0 controls already; DEL, C1 and format characters such
-// as a bidi override are escaped too, so the text cannot rewrite a terminal, and stays the same JSON.
+// JSON escapes C0 controls already; DEL, C1 and format characters such as a bidi override are
+// escaped too, so the text cannot rewrite a terminal and stays the same JSON.
 export const vendorJson = (value: unknown) =>
   JSON.stringify(value, null, 2).replace(
     /[\u007f-\u009f\p{Cf}\p{Zl}\p{Zp}]/gu,

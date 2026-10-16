@@ -1,13 +1,12 @@
 import { BigDecimal, Effect, Predicate, Result, Schema, SchemaTransformation } from "effect";
 
-// Shape only; rules across fields, tasks or files live in rules.ts, and price rules in price.ts.
-// A pattern carries the `u` flag, or Effect leaves it out of the editor's JSON Schema (json-schema.ts).
+// A pattern carries the `u` flag, or Effect leaves it out of the editor's JSON Schema.
 
-// A date such as 2026-10-04; `@telipot/contract` holds a copy as `CatalogVersion`, kept equal by a test.
+// `@telipot/contract` copies this as `CatalogVersion`; a test keeps the two equal.
 export const IsoDate = Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/u));
 const Url = Schema.String.check(Schema.isPattern(/^https?:\/\//u));
 const Slug = Schema.String.check(Schema.isPattern(/^[a-z0-9]+(-[a-z0-9]+)*$/u));
-// Capability and task ids, so either is safe in a URL and as a file name.
+// Capability and task ids: safe in a URL and as a file name.
 export const dottedWords = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/u;
 const CapabilityId = Schema.String.check(Schema.isPattern(dottedWords));
 const Reason = Schema.NonEmptyString;
@@ -39,8 +38,7 @@ export class OAuth2Scheme extends Schema.Class<OAuth2Scheme>("@telipot/catalog/O
   authorization_url: Url,
   token_url: Url,
   revocation_url: Schema.optionalKey(Url),
-  // Added to the consent address, for a provider that needs more than RFC 6749 asks to issue a
-  // refresh token, such as Google's `access_type: offline`. The flow's own parameters win.
+  // Added to the consent URL, like Google's `access_type: offline`; the flow's own parameters win.
   authorization_params: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
   pkce: Schema.Boolean,
   refresh: Schema.Literals(["static", "rotating"]),
@@ -55,11 +53,10 @@ export class HttpScheme extends Schema.Class<HttpScheme>("@telipot/catalog/HttpS
   principals: Principals,
 }) {}
 
-// The types are OpenAPI's security scheme types in snake case.
 export const AuthScheme = Schema.Union([ApiKeyScheme, OAuth2Scheme, HttpScheme]);
 export type AuthScheme = typeof AuthScheme.Type;
 
-// Where a scheme sends the credential: the executor places it there, and no task input may.
+// The executor places the credential here, and no task input may.
 export const credentialPlace = (
   scheme:
     | Pick<ApiKeyScheme, "type" | "in" | "name">
@@ -72,8 +69,7 @@ export const credentialPlace = (
   return { location: scheme.in === "query" ? "queryParams" : "headers", name: scheme.name };
 };
 
-// Decoded to an exact decimal so no floating-point figure reaches a price.
-// Positive: free is written `type: free`, never as a zero amount.
+// An exact decimal, never a float; positive, since free is written `type: free`.
 const Amount = Schema.Finite.pipe(
   Schema.decodeTo(
     Schema.BigDecimal.check(Schema.isGreaterThanBigDecimal(BigDecimal.fromBigInt(0n))),
@@ -84,8 +80,7 @@ const Amount = Schema.Finite.pipe(
   ),
 );
 
-// Declared so no provider needs settlement code. A reported figure is in the cost's
-// currency, never a count of rows or results.
+// A reported figure is in the cost's currency, never a count of rows or results.
 export const Settle = Schema.Union([
   Schema.Struct({ type: Schema.Literal("quote") }),
   Schema.Struct({ type: Schema.Literal("reported_charge"), path: Schema.NonEmptyString }),
@@ -96,11 +91,9 @@ export type Settle = typeof Settle.Type;
 
 export const Confidence = Schema.Literals(["verified", "documented", "inferred", "unknown"]);
 export type Confidence = typeof Confidence.Type;
-// A price the provider published, so its source is cited.
 export const published: ReadonlyArray<Confidence> = ["verified", "documented"];
 
-// `value` `currency` per `per` `unit`, such as 2.00 USD per 1,000 rows. A `table` row
-// matches request fields; `fallback` is the ceiling.
+// `value` `currency` per `per` `unit`, such as 2.00 USD per 1,000 rows.
 const paid = {
   value: Schema.optionalKey(Amount),
   table: Schema.optionalKey(
@@ -168,8 +161,7 @@ const paidRules = Schema.makeFilter<{
   return issues;
 });
 
-// A task with no cost is unpriced, never free. One class per type so a decoding
-// error names the fields of the type the file wrote.
+// One class per type, so a decoding error names the fields of the type the file wrote.
 export class FreeCost extends Schema.Class<FreeCost>("@telipot/catalog/FreeCost")({
   type: Schema.Literal("free"),
 }) {}
@@ -238,20 +230,16 @@ export const blankPlaceholders = (path: string) => path.replace(placeholder, "{}
 export const fillPlaceholders = (path: string, valueOf: (name: string) => string) =>
   path.replace(placeholder, (_, name: string) => valueOf(name));
 
-// How a call writes a value into its path, query or headers: a string as it is, else as JSON.
 export const asText = (value: Schema.Json) =>
   Predicate.isString(value) ? value : JSON.stringify(value);
 
-// The path a call is sent to, each placeholder holding its value encoded.
 export const filledPath = (path: string, values: Readonly<Record<string, Schema.Json>>) =>
   fillPlaceholders(path, (name) =>
     encodeURIComponent(asText((Object.hasOwn(values, name) ? values[name] : undefined) ?? "")),
   );
 
-// A URL resolves a `.` or `..` segment away, `%2e` spelling a dot too, so `/repos/{owner}` given
-// `..` reaches `/`, a route the catalog does not describe, price or scope. `encodeURIComponent`
-// keeps dots as they are, so each segment is checked as it is sent. Answers the placeholders of
-// every segment that would be only dots.
+// A URL resolves a `.`, `..` or `%2e` segment away, so `..` in `/repos/{owner}` would reach `/`, a
+// route the catalog neither prices nor scopes. `encodeURIComponent` leaves dots as they are.
 export const offRoute = (path: string, values: Readonly<Record<string, Schema.Json>>) =>
   path.split("/").flatMap((segment) => {
     const names = placeholdersOf(segment);
@@ -332,7 +320,6 @@ const Source = Schema.Struct({
   curated: IsoDate,
 });
 
-// What a probe's answer shows: a status, a value at `json_path`, or a body matching `body_pattern`.
 const ProbeAnswer = Schema.Struct({
   status: Schema.optionalKey(Schema.Int),
   json_path: Schema.optionalKey(Schema.String),
@@ -351,16 +338,15 @@ const ProbeAnswer = Schema.Struct({
 
 export type ProbeAnswer = typeof ProbeAnswer.Type;
 
-// A free request that checks a pasted key before it is saved, on `path` under the
-// provider's base URL or at `url`. Never a paid route.
+// A free request that checks a pasted key before it is saved; never a paid route.
 export const Probe = Schema.Struct({
   path: Schema.optionalKey(Schema.String.check(Schema.isStartingWith("/"))),
   url: Schema.optionalKey(Url),
   method: Schema.Literals(["GET", "POST"]).pipe(
     Schema.withDecodingDefaultKey(Effect.succeed("GET" as const)),
   ),
-  // A scheme of `auth.schemes`; unset, the provider's one scheme an organization's key fits, or
-  // else an end user's.
+  // A name in `auth.schemes`. If unset, the probe uses the provider's only scheme for an
+  // organization's key, else its only one for an end user's.
   auth: Schema.optionalKey(Schema.String),
   expect: ProbeAnswer,
   // For a provider that answers 200 to a bad key; every task's answer is checked against it too.
@@ -390,8 +376,8 @@ export class Provider extends Schema.Class<Provider>("@telipot/catalog/Provider"
   ),
   probe: Schema.optionalKey(Probe),
   oauth_app: Schema.optionalKey(Schema.Struct({ byo: Schema.Boolean })),
-  // `normalized` ignores placeholder names; `exact` is for APIs where the placeholder is
-  // the route, such as a graph whose first segment is the node id.
+  // `normalized` ignores placeholder names; `exact` is for an API whose placeholder is the route,
+  // such as a graph's node id.
   route_match: Schema.Literals(["normalized", "exact"]).pipe(
     Schema.withDecodingDefaultKey(Effect.succeed("normalized" as const)),
   ),
@@ -401,8 +387,8 @@ export class Provider extends Schema.Class<Provider>("@telipot/catalog/Provider"
   limits: Schema.optionalKey(Schema.String),
   pricing_url: Schema.optionalKey(Url),
   async: Schema.optionalKey(JsonObject),
-  // Nango's retry descriptor. `after` is a seconds header, `at` an epoch-seconds one; a status in
-  // `error_code` (default 429 and 5xx) or a body matching `in_body` retries, unless the wait passes `max_wait`.
+  // Nango's retry descriptor: `after` names a seconds header, `at` an epoch-seconds one,
+  // `error_code` defaults to 429 and 5xx, and `max_wait` is in seconds.
   retry: Schema.optionalKey(
     Schema.Struct({
       after: Schema.optionalKey(Schema.String),
@@ -419,12 +405,11 @@ export class Provider extends Schema.Class<Provider>("@telipot/catalog/Provider"
 
 export type ProviderHeader = Omit<Provider, "endpoints">;
 
-// `core` is curated by a person, `extended` generated from the spec; a search ranks them in
-// this order.
+// In the order a search ranks them.
 export const tiers = ["core", "extended"] as const;
 export type Tier = (typeof tiers)[number];
 
-// Never edited by hand: `digest` covers every field but the reviewed ones, so any other edit is refused.
+// Generated: `digest` covers every field but the reviewed ones, so any other hand edit is refused.
 export class ExtendedProvider extends Schema.Class<ExtendedProvider>(
   "@telipot/catalog/ExtendedProvider",
 )({

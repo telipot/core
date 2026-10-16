@@ -31,7 +31,7 @@ export const ConnectionList = Schema.Struct({ connections: Schema.Array(Connecti
   identifier: "ConnectionList",
 });
 
-// Any state, revoked included, with what the list leaves out; never the credential.
+// Any state, revoked included; never the credential.
 export const ConnectionDetail = Schema.Struct({
   ...Connection.fields,
   created_at: Schema.String,
@@ -40,7 +40,7 @@ export const ConnectionDetail = Schema.Struct({
   grant: ConnectionGrant,
 }).annotate({ identifier: "ConnectionDetail" });
 
-// The organization's own key for a provider. A user's connection comes through a connect session.
+// The organization's own key; an end user's connection comes through a connect session.
 export const NewConnection = Schema.Struct({
   provider: CatalogId,
   principal: Schema.Literal("organization"),
@@ -63,8 +63,8 @@ export class CredentialRefused extends Schema.TaggedError<CredentialRefused>()(
   static readonly problem = problem(this, { status: 422, code: "credential_refused" });
 }
 
-// The provider's probe, or the task that names the key's account, went unanswered, answered
-// 429 or 5xx, or named no account, so the key could not be checked; nothing was saved.
+// The probe, or the task naming the key's account, went unanswered, answered 429 or 5xx, or named
+// no account, so the key could not be checked; nothing was saved.
 export class ProbeUnavailable extends Schema.TaggedError<ProbeUnavailable>()("ProbeUnavailable", {
   detail: Schema.String,
 }) {

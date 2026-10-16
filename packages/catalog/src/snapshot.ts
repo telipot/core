@@ -10,8 +10,8 @@ export const Publication = Schema.Struct({
 export type Publication = typeof Publication.Type;
 
 // The catalog folder as data, for a runtime with no filesystem, plus the lock's history, which
-// needs git. YAML is stored pre-parsed as JSON (listed in `json`) since parsing takes most of a
-// load; a file that does not parse is kept as written, so the loader refuses it as usual.
+// needs git. YAML listed in `json` is stored as parsed JSON, since parsing takes most of a load;
+// a file that does not parse is kept as written.
 export const Snapshot = Schema.Struct({
   format: Schema.Literal(1),
   files: Schema.Record(Schema.String, Schema.String),
@@ -21,9 +21,8 @@ export const Snapshot = Schema.Struct({
 
 export type Snapshot = typeof Snapshot.Type;
 
-// What `Catalog.layer` reads: the root files, and the provider and example folders copied whole,
-// so an empty folder stays a folder. queries.yaml is read only by `Catalog.validate`, in CI, so
-// it is left out.
+// What `Catalog.layer` reads; only `Catalog.validate` reads queries.yaml, in CI. Folders are
+// copied whole, so an empty one stays a folder.
 const rootFiles = ["capabilities.yaml", "aliases.yaml", "fx.yaml", "ids.lock.json"];
 const folders = ["providers", "examples"];
 
@@ -63,8 +62,7 @@ export const buildSnapshot = Effect.fnUntraced(function* (
   return Snapshot.make({ format: 1, files, json, publications });
 });
 
-// Serves the snapshot's files as a read-only folder, at the root `.`. Whatever it does not hold
-// fails as a missing file does.
+// A read-only folder at the root `.`; what it does not hold fails as a missing file does.
 export const snapshotFileSystem = ({ files }: Snapshot): FileSystem.FileSystem => {
   const missing = FileSystem.makeNoop({});
   const names = Object.keys(files);
@@ -98,7 +96,6 @@ export const snapshotFileSystem = ({ files }: Snapshot): FileSystem.FileSystem =
   });
 };
 
-// How the loader reads a snapshot's YAML files: JSON for those the build stored as JSON.
 export const snapshotYaml = ({ json }: Snapshot) => {
   const stored = new Set(json);
   return (text: string, file: string): unknown =>

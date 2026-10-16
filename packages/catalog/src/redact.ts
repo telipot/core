@@ -1,7 +1,6 @@
 import { Predicate, type Schema } from "effect";
 
-// The CLI's `capture` and `redact` replace through this table and `scan` finds through it,
-// so what one would replace the other flags, and what one writes the other never flags.
+// `redact`, the CLI's `capture` and `telipot catalog scan` share this table, so they agree.
 interface Contact {
   readonly kind: string;
   readonly pattern: RegExp;
@@ -11,8 +10,7 @@ interface Contact {
 const contacts: ReadonlyArray<Contact> = [
   {
     kind: "an email address",
-    // example.com is already a placeholder. The lookbehind keeps a long run with no `@`
-    // from being rescanned from every character.
+    // example.com is already a placeholder; the lookbehind stops a rescan from every character.
     pattern: /(?<![\w.+-])[\w.+-]+@(?!example\.com\b)[\w-]+(?:\.[\w-]+)+/g,
     placeholder: "contact@example.com",
   },
@@ -29,8 +27,7 @@ const contacts: ReadonlyArray<Contact> = [
   },
 ];
 
-// A placeholder matches its own pattern and replaces itself, so scrubbing text
-// that is already scrubbed changes nothing.
+// A placeholder matches its own pattern, so scrubbing twice changes nothing.
 export const scrubContact = (text: string) =>
   contacts.reduce((safe, { pattern, placeholder }) => safe.replace(pattern, placeholder), text);
 
@@ -48,7 +45,6 @@ const camelCaseKey = /[a-z0-9]Key(?:Id)?$/;
 // The key alone decides, whatever the value looks like.
 export const isCredentialKey = (key: string) => credentialWord.test(key) || camelCaseKey.test(key);
 
-// Contact details are scrubbed from keys as well as values.
 export const redact = (value: Schema.Json): Schema.Json => {
   if (Predicate.isString(value)) return scrubContact(value);
   if (Array.isArray(value)) return value.map(redact);

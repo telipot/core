@@ -1,6 +1,5 @@
 export * from "./catalog";
-// How a task's call is made from its input and credential, which the public repository shares
-// with the executor: the request, and what is masked of the credential.
+// Building a call and masking its credential, shared by the executor and `telipot catalog verify`.
 export {
   type CallInput,
   PathOffRoute,

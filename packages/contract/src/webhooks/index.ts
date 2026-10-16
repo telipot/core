@@ -42,8 +42,8 @@ export const Webhook = Schema.Struct({
   created_at: Schema.String,
 }).annotate({ identifier: "Webhook" });
 
-// The only answer that carries the signing secret, `whsec_` and its base64, which verifies
-// every delivery as the Standard Webhooks specification describes.
+// The only answer carrying the signing secret, `whsec_` and its base64, which verifies every
+// delivery as Standard Webhooks describes.
 export const WebhookCreated = Schema.Struct({
   ...Webhook.fields,
   secret: Schema.String,
@@ -53,11 +53,10 @@ export const WebhookList = Schema.Struct({ webhooks: Schema.Array(Webhook) }).an
   identifier: "WebhookList",
 });
 
-// One event sent to one webhook: `pending` while it is retried, `delivered` once an attempt
-// was answered 2xx, `failed` once the last retry was not.
+// `pending` while retried, `delivered` once an attempt got a 2xx, `failed` once the last did not.
 export const WebhookDelivery = Schema.Struct({
   id: Schema.String,
-  // The `webhook-id` every attempt carries, the same on each retry.
+  // The `webhook-id` header, the same on every attempt.
   event_id: Schema.String,
   event: WebhookEvent,
   state: WebhookDeliveryState,
@@ -80,9 +79,8 @@ export class WebhookNotFound extends Schema.TaggedError<WebhookNotFound>()("Webh
   static readonly problem = problem(this, { status: 404, code: "webhook_not_found" });
 }
 
-// Not https, or its host is, or resolves to, an address that is not public: private, shared,
-// loopback, link-local (the cloud metadata services among them), multicast or reserved. Checked
-// again before every delivery.
+// Not https, or the host is or resolves to a non-public address, cloud metadata among them.
+// Checked again before every delivery.
 export class WebhookTargetRefused extends Schema.TaggedError<WebhookTargetRefused>()(
   "WebhookTargetRefused",
   { detail: Schema.String },
@@ -90,7 +88,6 @@ export class WebhookTargetRefused extends Schema.TaggedError<WebhookTargetRefuse
   static readonly problem = problem(this, { status: 422, code: "webhook_target_refused" });
 }
 
-// The organization already keeps as many webhooks as it may; one must be removed first.
 export class WebhookLimitReached extends Schema.TaggedError<WebhookLimitReached>()(
   "WebhookLimitReached",
   { detail: Schema.String },

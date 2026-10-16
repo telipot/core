@@ -81,8 +81,8 @@ layer(BunServices.layer)("bind", (it) => {
 
       // A pair with no password sends nothing beyond the whole credential to mask.
       assert.deepStrictEqual(sentForms(pair, "ben:"), ["ben:", btoa("ben:")]);
-      // A short password, masked wherever it appears, would rewrite the answer itself, so it is
-      // masked only where a value is that password.
+      // A short password masked anywhere would rewrite the answer, so only a value that is the
+      // whole password is masked.
       const answer = { accountId: "tr_ben", labels: ["tab", "lab"], count: 1, name: "Ben" };
       for (const short of ["a", "ab", "1", "e"]) {
         assert.deepStrictEqual(
@@ -320,8 +320,8 @@ layer(BunServices.layer)("bind", (it) => {
         { echoed: ["***"], count: 3 },
       );
 
-      // JSON escapes a quote, a backslash and a control character, so an answer holds them
-      // written differently from the credential.
+      // JSON escapes quotes, backslashes and control characters, so an echo is written differently
+      // from the credential.
       const escaped = 'k"1\\2\n3';
       assert.deepStrictEqual(
         withoutCredential(

@@ -96,8 +96,8 @@ const passwordOf = (entry: Entry, credential: string) => {
 // masked anywhere, `a` would turn `accountId` into `***ccountId`.
 const shortestMaskedAlone = 8;
 
-// Every encoding the credential is sent in, so a stored answer can be scrubbed of any echo.
-// A vendor that echoes its URL may spell a query value as `encodeURIComponent` does.
+// Every form the credential is sent in, so any echo can be scrubbed. A vendor that echoes its URL
+// may spell a query value as `encodeURIComponent` does.
 export const sentForms = (entry: Entry, credential: string): ReadonlyArray<string> => {
   const { headers = {}, params = [] } = injectFor(entry.access, credential);
   const password = passwordOf(entry, credential);
@@ -116,8 +116,8 @@ export const sentForms = (entry: Entry, credential: string): ReadonlyArray<strin
   ];
 };
 
-// A vendor may echo the credential, so every form of it is masked in keys and values. A failure
-// also masks the field named where the scheme places the credential; an answer keeps it.
+// Masks every sent form in keys and values. A failure also masks the field named where the scheme
+// places the credential; an answer keeps it.
 export const withoutCredential = (
   entry: Entry,
   credential: string,
@@ -128,7 +128,7 @@ export const withoutCredential = (
   const password = passwordOf(entry, credential);
   const short = password.length < shortestMaskedAlone ? password : "";
   // Walking a large answer costs more than parsing it, so one that echoes no form is relayed as
-  // is. The parsed body is searched, not the vendor's text, which may hide `/` as `\/`.
+  // is. The parsed body is searched, since a vendor's text may escape `/` as `\/`.
   if (!failure) {
     const written = JSON.stringify(body);
     const echoes = (form: string) => written.includes(JSON.stringify(form).slice(1, -1));

@@ -107,7 +107,7 @@ const resourceMethods = (resource: Resource): ReadonlyArray<typeof Method.Type> 
   ...Object.values(resource.resources ?? {}).flatMap(resourceMethods),
 ];
 
-// `flatPath` spells each placeholder as a segment, where `path` may use reserved expansion, `{+name}`.
+// `flatPath` spells each placeholder as one segment; `path` may use reserved expansion, `{+name}`.
 const discoveryRoutes = (document: typeof Discovery.Type): ReadonlyArray<PublishedRoute> => {
   const server = new URL(document.servicePath, document.rootUrl);
   return resourceMethods(document).flatMap(({ httpMethod, path, flatPath }) => {
@@ -130,8 +130,7 @@ const discoveryRoutes = (document: typeof Discovery.Type): ReadonlyArray<Publish
 const routesOf = (read: () => ReadonlyArray<PublishedRoute>) =>
   Result.try({ try: read, catch: () => notAUrl });
 
-// Reads Swagger 2 and Google Discovery besides OpenAPI 3, so `telipot catalog drift` can
-// compare a task with the routes its provider was generated from.
+// Reads Swagger 2 and Google Discovery besides OpenAPI 3, for `telipot catalog drift`.
 export const publishedRoutes = (
   text: string,
   url: string,

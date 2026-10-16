@@ -8,13 +8,12 @@ import { problem } from "../problem";
 import { EndUserPrincipal } from "../receipt";
 import { RateLimited } from "../tasks";
 
-// The one client the auth provider issues a device code to: `telipot login`, whose approval
-// becomes an organization's token.
+// The only client the auth provider issues a device code to: `telipot login`.
 export const cliClientId = "telipot-cli";
 export const cliTokenName = "telipot CLI";
 export const cliTokenLifetime = 90 * 86_400;
 
-// In seconds: a token leaked from a browser dies within the hour unless asked to last longer.
+// In seconds: a token leaked from a browser dies within the hour by default.
 export const userBoundTokenLifetime = { default: 3600, minimum: 60, maximum: 86_400 } as const;
 
 export const NewUserBoundToken = Schema.Struct({
@@ -39,7 +38,7 @@ export const UserBoundToken = Schema.Struct({
   expires_at: Schema.String,
 }).annotate({ identifier: "UserBoundToken", httpApiStatus: 201 });
 
-// Never the token itself. The token stops once its `issued_by` actor is gone or loses the role.
+// Never the token itself; it stops once its `issued_by` actor is gone or loses the role.
 export const HeldUserBoundToken = Schema.Struct({
   id: Schema.String,
   principal: Schema.String,

@@ -4,8 +4,8 @@ base_url: https://api.example.com
 docs_url: https://docs.example.com
 source: { docs: https://docs.example.com, openapi: null, curated: 2026-10-11 }
 version: 2026-10-11
-# Refused for nothing: with no probe, no rule on the scheme a probe sends a key in reaches it,
-# however many schemes an end user's key may go in.
+# Refused for nothing: with no probe, no rule on a probe's scheme applies, however many schemes
+# an end user's key may go in.
 auth:
   schemes:
     org_key: { type: api_key, in: header, name: X-API-Key, principals: [organization] }

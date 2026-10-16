@@ -109,7 +109,7 @@ layer(BunServices.layer)("extendedFile", (it) => {
       assert.strictEqual(list.name, "Widgets by owner");
       assert.strictEqual(list.capability, "widgets.list");
       assert.strictEqual(list.kind, "action");
-      // The digest leaves reviewed fields out, so the edit changed nothing else.
+      // The digest leaves reviewed fields out.
       assert.strictEqual(again.file.digest, first.file.digest);
       assert.strictEqual(again.file.version, "2026-10-06");
     }),
@@ -233,8 +233,7 @@ layer(BunServices.layer)("extendedFile", (it) => {
     "keeps as written a task whose route the spec still offers but no task can be made of",
     () =>
       Effect.gen(function* () {
-        // As when a scheme was renamed in the core file: the spec has the route, and
-        // a 410 for an id that works would be worse than a refusal from the loader.
+        // As after a core scheme rename: a 410 for a working id is worse than the loader's refusal.
         const first = yield* regenerate();
         const again = yield* regenerate({
           previous: written(first.text),

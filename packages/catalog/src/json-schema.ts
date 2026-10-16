@@ -5,8 +5,7 @@ import { Provider } from "./schema";
 export const providerSchemaFile = "provider.schema.json";
 export const schemaModeline = `yaml-language-server: $schema=../${providerSchemaFile}`;
 
-// What an editor checks a provider file against as it is typed. Cross-file rules and price
-// rules are not in it, so `telipot catalog validate` stays the authority.
+// Leaves out cross-file and price rules, so `telipot catalog validate` stays the authority.
 export const providerJsonSchema = () => {
   const { schema, definitions } = Schema.toJsonSchemaDocument(Provider, {
     onExcessProperty: "error",

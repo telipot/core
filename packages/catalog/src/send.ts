@@ -12,8 +12,8 @@ import { type CallInput, holdsAt, request } from "./bind";
 import type { Entry } from "./rules";
 import { type AuthScheme, credentialPlace } from "./schema";
 
-// Sending a bound call once, which the gateway's executor and `telipot catalog verify` share, so
-// a replayed answer comes back under the same byte limit and redirect rule as a real call.
+// Shared by the executor and `telipot catalog verify`, so a replayed answer meets the same byte
+// limit and redirect rule as a real call.
 
 const ParsedJson = Schema.fromJsonString(Schema.Json);
 
@@ -21,8 +21,7 @@ export class AnswerTooLarge extends Schema.TaggedError<AnswerTooLarge>()("Answer
   limit: Schema.Int,
 }) {}
 
-// Refused past `limit` while reading, so one vendor cannot fill the server's memory.
-// A 204 can come with no body stream.
+// Refused past `limit` while reading, so one vendor cannot fill memory; a 204 may have no stream.
 export const textWithin = (response: HttpClientResponse.HttpClientResponse, limit: number) =>
   response.stream.pipe(
     Stream.catchIf(
@@ -58,9 +57,8 @@ export const unredirected = <E>(client: HttpClient.HttpClient.With<E>) =>
     Effect.provideService(FetchHttpClient.RequestInit, { redirect: "manual" }),
   );
 
-// The client's own span records the full URL and every request header. A credential's header
-// is redacted there; a credential in the query would sit in `url.full`, so that request is
-// traced by a span of ours that names its origin and path only.
+// The client's span records the full URL and headers: a credential's header is redacted there,
+// and a request with one in the query gets a span of ours naming only its origin and path.
 export const executeKeepingCredentialOut = <E>(
   client: HttpClient.HttpClient.With<E>,
   sent: HttpClientRequest.HttpClientRequest,
@@ -94,8 +92,7 @@ export const executeKeepingCredentialOut = <E>(
 
 const schemeOf = ({ access }: Entry) => (access._tag === "Public" ? undefined : access.scheme);
 
-// No timeout, retry or outcome here: the gateway's executor adds those, and
-// `telipot catalog verify` reads the answer itself.
+// No timeout, retry or outcome: the executor adds those, and `verify` judges the answer itself.
 export const sendOnce = <E>(client: HttpClient.HttpClient.With<E>, maxBytes: number) => {
   const sender = unredirected(client);
   return Effect.fnUntraced(function* ({

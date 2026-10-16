@@ -8,22 +8,22 @@ import { problem } from "../problem";
 import { IdentityMode, Principal, Receipt, Usd } from "../receipt";
 import { TaskKind } from "../tasks";
 
-// miss is the vendor's declared "no result"; fault is any other answer or none;
-// pending means the vendor finishes the job later.
+// `miss` is the vendor's declared "no result", `fault` any other answer or none, and `pending` a
+// job the vendor finishes later.
 export const Outcome = Schema.Literals(["hit", "miss", "fault", "pending"]);
 export type Outcome = typeof Outcome.Type;
 
 const { connection, ...served } = Receipt.fields;
 
-// Never holds a body. `request_hash` is hex HMAC-SHA-256 of the input with keys sorted, under
-// REQUEST_HASH_SECRET, so a client cannot compute it.
+// Never holds a body. `request_hash` is hex HMAC-SHA-256 of the input, keys sorted, under
+// REQUEST_HASH_SECRET, so no client can compute it.
 export const Call = Schema.Struct({
   ...served,
   at: Schema.String,
   connection_id: connection,
   organization_id: Schema.String,
   token_id: Schema.NullOr(Schema.String),
-  // True when a user-bound token fixed the principal; false for any other caller.
+  // True when a user-bound token fixed the principal.
   principal_bound: Schema.Boolean,
   provider: Schema.String,
   kind: TaskKind,
@@ -62,11 +62,10 @@ export class CaptureNotFound extends Schema.TaggedError<CaptureNotFound>()("Capt
   static readonly problem = problem(this, { status: 404, code: "capture_not_found" });
 }
 
-// About how many calls a page of `GET /v1/calls`, or captures one of `GET /v1/captures`, holds.
+// About how many calls, or captures, a page holds.
 export const callsPage = 50;
 
-// A call that named no principal acted for the organization, so `principal=organization` finds
-// it too.
+// A call that named no principal matches `principal=organization`.
 export const CallFilters = Schema.Struct({
   task: Schema.optionalKey(CatalogId),
   provider: Schema.optionalKey(CatalogId),
@@ -79,19 +78,17 @@ export const CallFilters = Schema.Struct({
 export type CallFilters = typeof CallFilters.Type;
 
 // Newest first. A page never splits one millisecond's calls, so it may run a little past fifty,
-// and none is skipped or repeated though calls land between pages.
+// and none is skipped or repeated as calls land between pages.
 export const CallList = Schema.Struct({
   calls: Schema.Array(Call),
   next_cursor: Schema.NullOr(Schema.String),
 }).annotate({ identifier: "CallList" });
 
-// The UTC days usage counts, the last of them today so far.
 export const usageDays = { choices: ["1", "7", "30"], default: "7" } as const;
 
 // How many tasks, and principals, usage ranks by calls.
 export const usageTop = 10;
 
-// A count for each member of a closed set, zeros included.
 const countsOf = <const Members extends ReadonlyArray<string>>(members: Members) =>
   Schema.Struct(
     Object.fromEntries(members.map((member) => [member, Schema.Int])) as {
@@ -102,8 +99,8 @@ const countsOf = <const Members extends ReadonlyArray<string>>(members: Members)
 const perOutcome = countsOf(Outcome.literals);
 
 // From the start of the first UTC day to now. `by_day` (oldest first) and `by_identity` include
-// zeros; `by_task` and `by_principal` are most called first. A call naming no principal counts as
-// `organization`.
+// zeros; `by_task` and `by_principal` are most called first. A call naming no principal counts
+// as `organization`.
 export const Usage = Schema.Struct({
   from: Schema.String,
   to: Schema.String,
@@ -135,14 +132,14 @@ export const Usage = Schema.Struct({
 
 export type Usage = typeof Usage.Type;
 
-// A capture without its bodies, which only `GET /v1/calls/{id}/capture` answers.
+// Only `GET /v1/calls/{id}/capture` answers the bodies.
 export const CaptureSummary = Capture.mapFields((fields) =>
   Struct.omit(fields, ["request", "response"]),
 ).annotate({ identifier: "CaptureSummary" });
 
 export type CaptureSummary = typeof CaptureSummary.Type;
 
-// The captures not yet deleted, newest first, paged as `CallList` is.
+// Newest first, paged as `CallList` is.
 export const CaptureList = Schema.Struct({
   captures: Schema.Array(CaptureSummary),
   next_cursor: Schema.NullOr(Schema.String),

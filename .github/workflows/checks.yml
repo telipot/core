@@ -1,7 +1,6 @@
 name: Checks
 
-# Every pull request, from anyone: the catalog's own rules, the scan for secrets and contact
-# details, types and tests. No secret is used or available, and the checkout leaves no token.
+# Runs on every pull request, from anyone: no secret is used, and the checkout leaves no token.
 on:
   push:
     branches: [main]
@@ -24,7 +23,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          # The Developer Certificate of Origin: each commit's author signs it off with `git commit -s`.
+          # Each commit's author signs off the Developer Certificate of Origin with `git commit -s`.
           unsigned=0
           for commit in $(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA"); do
             email=$(git log -1 --format=%ae "$commit")

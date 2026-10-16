@@ -89,7 +89,6 @@ describe("stamp", () => {
 });
 
 layer(BunServices.layer)("recordVerification", (it) => {
-  // The catalog at a copy of the clean fixture, read back after each write.
   const entryIn = (directory: string, id: string) =>
     Effect.gen(function* () {
       return Option.getOrThrow((yield* Catalog).get(id));
@@ -102,7 +101,6 @@ layer(BunServices.layer)("recordVerification", (it) => {
       const directory = yield* copyDirectory(catalogFixtures.clean);
       const named = path.join(directory, "examples/acme.page.text.json");
       assert.isTrue(yield* fs.exists(named));
-      // The fixture's task names its example, so the pass replaces that file.
       const entry = yield* entryIn(directory, "acme.page.text");
       assert.strictEqual(entry.task.example_response, "examples/acme.page.text.json");
       yield* recordVerification(directory, entry, {
@@ -235,8 +233,7 @@ layer(BunServices.layer)("recordVerification", (it) => {
       const path = yield* Path.Path;
       const directory = yield* copyDirectory(catalogFixtures.clean);
       const entry = yield* entryIn(directory, "acme.page.text");
-      // The loader refuses such a path; a caller that builds its own entry is
-      // held by recordVerification itself.
+      // The loader refuses such a path; `recordVerification` refuses it in a hand-built entry too.
       const task: Task = Object.assign(Object.create(Task.prototype) as Task, entry.task, {
         example_response: "../astray.json",
       });

@@ -3,8 +3,7 @@ import { Hex } from "effect/encoding";
 
 import { type ExtendedProvider, type Provider, type Task, blankPlaceholders } from "./schema";
 
-// The fields a reviewer may correct in an extended file. Re-ingestion carries
-// them across by id, so the digest leaves them out.
+// A reviewer may correct these in an extended file, so the digest leaves them out.
 const reviewedFields = [
   "kind",
   "name",
@@ -27,8 +26,7 @@ const canonical = (value: unknown): unknown => {
   );
 };
 
-// Hashes the written form, so a new decoding default changes no digest. WebCrypto runs on every
-// runtime, so reading the catalog needs no platform service.
+// Hashes the written form, so a new decoding default changes no digest; WebCrypto runs anywhere.
 export const extendedDigest = Effect.fnUntraced(function* (file: typeof ExtendedProvider.Encoded) {
   const { digest: _, endpoints, ...header } = file;
   const content = {
@@ -65,6 +63,6 @@ export const curatedBy = (core: Curated, task: Pick<Task, "method" | "path">) =>
   return matches.find((curated) => Predicate.isUndefined(curated.status)) ?? matches[0];
 };
 
-// An extended task on a route core curates. Core wins, but the twin's id stays answerable to the lock.
+// An extended task on a route core curates. Core wins; the twin's id stays in the lock.
 export const isTwin = (core: Curated, task: Pick<Task, "method" | "path">) =>
   Predicate.isNotUndefined(curatedBy(core, task));

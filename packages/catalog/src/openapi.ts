@@ -20,8 +20,7 @@ import {
 type EncodedTask = typeof Task.Encoded;
 type Location = (typeof inputLocations)[number];
 
-// `place` is where the credential goes, so a parameter there is not caller input. An OAuth
-// task acts as the organization unless its scheme's `principals` leave the organization out.
+// A parameter at `place` carries the credential, so it is not caller input.
 interface SchemeFacts {
   readonly type: AuthScheme["type"];
   readonly place?: ReturnType<typeof credentialPlace>;
@@ -69,8 +68,7 @@ export interface Scaffold {
   readonly schemes: Schemes;
 }
 
-// `catalog/patches/<provider>.json`: a JSON Patch (RFC 6902) adding what the vendor's
-// document should have said, such as its security or the Links between operations.
+// `catalog/patches/<provider>.json`: a JSON Patch adding what the vendor's document left out.
 export const SpecPatch = Schema.Array(
   Schema.Union([
     Schema.Struct({
@@ -282,8 +280,8 @@ const titleOf = (slug: string) =>
 const isNullType = (node: Node) =>
   Array.isArray(node.type) ? node.type.every((type) => type === "null") : node.type === "null";
 
-// OpenAPI 3.1 writes an optional string as `anyOf: [string, null]`, so a shapeless node
-// takes its first non-null member's shape; the node's own keywords win.
+// OpenAPI 3.1 writes an optional string as `anyOf: [string, null]`, so a shapeless node takes its
+// first non-null member's shape; the node's own keywords win.
 const nodeOf = (root: unknown, schema: unknown, depth = 0): Node | undefined => {
   const node = asNode(deref(root, schema));
   if (Predicate.isUndefined(node) || depth > 4) return node;
@@ -474,8 +472,7 @@ const declare = (scheme: NonNullable<ReturnType<typeof asScheme>>): Declared | u
   return undefined;
 };
 
-// A connection keeps one secret, and the catalog refuses a principal that connects both ways,
-// so where the vendor also takes an organization's key, its OAuth is for users.
+// A principal connects one way only, so beside an organization's key, OAuth serves users.
 const declaredSchemes = ({ spec, root }: OpenApi): Readonly<Record<string, Declared>> => {
   const declared = Object.fromEntries(
     Object.entries(spec.components?.securitySchemes ?? {}).flatMap(([name, value]) => {
@@ -491,7 +488,7 @@ const declaredSchemes = ({ spec, root }: OpenApi): Readonly<Record<string, Decla
   );
 };
 
-// OpenAPI: an operation's `security` replaces the document's, and `[]` or `{}` needs no credential.
+// An operation's `security` replaces the document's, and its `[]` or `{}` needs no credential.
 // An empty or absent document list declares nothing, since OpenAPI lets it be incomplete.
 const authOf = (
   operation: typeof Operation.Type,
@@ -602,8 +599,7 @@ const bodyOf = (root: unknown, requestBody: unknown) => {
 
 export const notAUrl = "it names a server that is not a URL";
 
-// As OpenAPI says, a relative server resolves against where the document was fetched,
-// and no server means `/`.
+// As OpenAPI says: a relative server resolves against the document's URL, and none means `/`.
 export const resolveServer = (
   server: typeof Server.Type | undefined,
   url: string,
@@ -761,7 +757,6 @@ const failed = /fail|error|cancel|abort|expire|timeout|reject/i;
 const succeeded = /^(?:succe|complet|done|finish|ready)/i;
 
 // OpenAPI cannot say when a job is over, so status values are read by their words.
-// Without both a success and a failure value, the status is ignored.
 const outcomesOf = (root: unknown, node: Node | undefined) => {
   const statuses = nodeOf(root, node?.properties?.status)?.enum?.filter(Predicate.isString) ?? [];
   const failure = statuses.filter((status) => failed.test(status));
@@ -790,8 +785,7 @@ interface Poll {
   readonly outcomes: NonNullable<ReturnType<typeof outcomesOf>>;
 }
 
-// A submission's success response Links to the GET that reads the job, passing one path
-// parameter from the body. Two fitting links leave the choice to a person, so none is written.
+// A success response's Link to the GET that reads the job back makes a submission asynchronous.
 const asyncOf = (
   { root }: OpenApi,
   candidates: ReadonlyArray<Candidate>,
@@ -943,7 +937,7 @@ export const tasksOf = (
   const reserved = new Set(history?.reserved ?? []);
   const allocated = new Set<string>();
   // A published id stays with its literal method and path, even if the vendor renames the
-  // operation. Placeholders are not normalized here: a renamed one must not inherit verification.
+  // operation. Placeholders are not normalized, so a renamed one inherits no verification.
   const prior = new Map<string, EncodedTask>();
   for (const task of (history?.previous ?? []).toSorted(
     Order.mapInput(
@@ -1049,8 +1043,7 @@ const withSpec = (provider: string, openapi: OpenApi): Facts => {
   };
 };
 
-// `null` marks what the spec does not say; `validate` refuses it until a person writes it.
-// `endpoints` stays empty: a person curates them from the extended file.
+// `null` marks what the spec does not say, which `validate` refuses until a person writes it.
 export const scaffold = (provider: string, today: string, openapi?: OpenApi): Scaffold => {
   const facts = Predicate.isUndefined(openapi)
     ? withoutSpec(provider)

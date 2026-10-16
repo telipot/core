@@ -8,8 +8,8 @@ export class Caller extends Schema.Class<Caller>("Caller")({
   organizationId: Schema.String,
   credential: Schema.Union([
     Schema.TaggedStruct("Session", { userId: Schema.String }),
-    // A backend-only token may send a vendor credential for one call. A user-bound token acts
-    // only as `principal`, the end user it was issued for; the organization's own has none.
+    // A `backendOnly` token may send a vendor credential for one call. A user-bound one acts only
+    // as `principal`, the end user it was issued for.
     Schema.TaggedStruct("Token", {
       tokenId: Schema.String,
       debugCapture: Schema.Boolean,
@@ -19,8 +19,8 @@ export class Caller extends Schema.Class<Caller>("Caller")({
   ]),
 }) {}
 
-// A member by user id, or the organization's own token by its id. Records write an end user as
-// `user:<id>` and the provider as `provider` instead.
+// `member:<user id>`, or `token:<token id>` for the organization's own token. Records write an end
+// user as `user:<id>` and the provider as `provider` instead.
 export const Actor = Schema.TemplateLiteral([
   Schema.Literals(["member", "token"]),
   ":",
@@ -29,7 +29,7 @@ export const Actor = Schema.TemplateLiteral([
 
 export type Actor = typeof Actor.Type;
 
-// The actions a member's role is checked for, by resource; grows as resources arrive.
+// The actions a member's role is checked for, by resource.
 export const connectionActions = ["create", "read", "update", "delete"] as const;
 export interface Permission {
   readonly connection: ReadonlyArray<(typeof connectionActions)[number]>;
@@ -64,7 +64,6 @@ export class UntrustedOrigin extends Schema.TaggedError<UntrustedOrigin>()("Untr
   static readonly problem = problem(this, { status: 403, code: "untrusted_origin" });
 }
 
-// The caller's role in the organization does not allow the change.
 export class RoleForbidden extends Schema.TaggedError<RoleForbidden>()("RoleForbidden", {
   detail: Schema.String,
 }) {
@@ -79,8 +78,7 @@ export class PrincipalForbidden extends Schema.TaggedError<PrincipalForbidden>()
   static readonly problem = problem(this, { status: 403, code: "principal_forbidden" });
 }
 
-// A user-bound token reaches only the endpoints it has the power for, so every other answers
-// `RoleForbidden` before its handler runs.
+// A user-bound token gets `RoleForbidden` from every endpoint it has no power for.
 export class CallerAuth extends HttpApiMiddleware.Service<
   CallerAuth,
   { provides: CurrentCaller }
@@ -101,9 +99,8 @@ export class Callers extends Context.Service<
     readonly resolve: (
       headers: Headers.Headers,
     ) => Effect.Effect<Caller, Unauthenticated | InvalidToken | NoActiveOrganization>;
-    // A token alone, never a cookie: an MCP access token for the member while they still belong to
-    // the organization they consented for, or a token `resolve` takes. `resolve` refuses MCP access
-    // tokens, so they reach no other route.
+    // A token alone, never a cookie: one `resolve` takes, or an MCP access token, accepted only
+    // here and only while the member belongs to the organization they consented for.
     readonly resolveForMcp: (
       headers: Headers.Headers,
     ) => Effect.Effect<Caller, Unauthenticated | InvalidToken>;
