@@ -1,0 +1,1210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "telipot provider file",
+  "$ref": "#/$defs/@telipot~1catalog~1ProviderEncoded",
+  "$defs": {
+    "@telipot/catalog/ApiKeySchemeEncoded": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["api_key"]
+        },
+        "in": {
+          "type": "string",
+          "enum": ["header", "query", "basic"]
+        },
+        "name": {
+          "type": "string"
+        },
+        "principals": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "string",
+              "enum": ["organization", "user"]
+            }
+          ],
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": ["organization", "user"]
+          }
+        }
+      },
+      "required": ["type", "in", "name", "principals"],
+      "additionalProperties": false
+    },
+    "@telipot/catalog/OAuth2SchemeEncoded": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["oauth2"]
+        },
+        "authorization_url": {
+          "type": "string",
+          "pattern": "^https?:\\/\\/"
+        },
+        "token_url": {
+          "type": "string",
+          "pattern": "^https?:\\/\\/"
+        },
+        "revocation_url": {
+          "type": "string",
+          "pattern": "^https?:\\/\\/"
+        },
+        "authorization_params": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "pkce": {
+          "type": "boolean"
+        },
+        "refresh": {
+          "type": "string",
+          "enum": ["static", "rotating"]
+        },
+        "token_type": {
+          "type": "string"
+        },
+        "principals": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "string",
+              "enum": ["organization", "user"]
+            }
+          ],
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": ["organization", "user"]
+          }
+        },
+        "scopes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "type",
+        "authorization_url",
+        "token_url",
+        "pkce",
+        "refresh",
+        "principals",
+        "scopes"
+      ],
+      "additionalProperties": false
+    },
+    "@telipot/catalog/HttpSchemeEncoded": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["basic", "bearer"]
+        },
+        "principals": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "string",
+              "enum": ["organization", "user"]
+            }
+          ],
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": ["organization", "user"]
+          }
+        }
+      },
+      "required": ["type", "principals"],
+      "additionalProperties": false
+    },
+    "@telipot/catalog/FreeCostEncoded": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["free"]
+        }
+      },
+      "required": ["type"],
+      "additionalProperties": false
+    },
+    "@telipot/catalog/PerCallCostEncoded": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["per_call"]
+        },
+        "value": {
+          "type": "number"
+        },
+        "table": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "when": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      }
+                    ]
+                  }
+                },
+                "value": {
+                  "type": "number"
+                },
+                "times": {
+                  "type": "string"
+                }
+              },
+              "required": ["when", "value"],
+              "additionalProperties": false
+            }
+          ],
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "when": {
+                "type": "object",
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                }
+              },
+              "value": {
+                "type": "number"
+              },
+              "times": {
+                "type": "string"
+              }
+            },
+            "required": ["when", "value"],
+            "additionalProperties": false
+          }
+        },
+        "fallback": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number"
+            }
+          },
+          "required": ["value"],
+          "additionalProperties": false
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^([A-Z]{3}|credit|meter)$"
+        },
+        "per": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_url": {
+          "type": "string",
+          "pattern": "^https?:\\/\\/"
+        },
+        "checked": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["verified", "documented", "inferred", "unknown"]
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        },
+        "settle": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["quote"]
+                }
+              },
+              "required": ["type"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["reported_charge"]
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": ["type", "path"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["usage"]
+                },
+                "header": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": ["type", "header"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": ["type", "currency", "checked", "confidence"],
+      "additionalProperties": false
+    },
+    "@telipot/catalog/PerSuccessCostEncoded": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["per_success"]
+        },
+        "value": {
+          "type": "number"
+        },
+        "table": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "when": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      }
+                    ]
+                  }
+                },
+                "value": {
+                  "type": "number"
+                },
+                "times": {
+                  "type": "string"
+                }
+              },
+              "required": ["when", "value"],
+              "additionalProperties": false
+            }
+          ],
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "when": {
+                "type": "object",
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                }
+              },
+              "value": {
+                "type": "number"
+              },
+              "times": {
+                "type": "string"
+              }
+            },
+            "required": ["when", "value"],
+            "additionalProperties": false
+          }
+        },
+        "fallback": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number"
+            }
+          },
+          "required": ["value"],
+          "additionalProperties": false
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^([A-Z]{3}|credit|meter)$"
+        },
+        "per": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_url": {
+          "type": "string",
+          "pattern": "^https?:\\/\\/"
+        },
+        "checked": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["verified", "documented", "inferred", "unknown"]
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        },
+        "settle": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["quote"]
+                }
+              },
+              "required": ["type"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["reported_charge"]
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": ["type", "path"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["usage"]
+                },
+                "header": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": ["type", "header"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": ["type", "currency", "checked", "confidence"],
+      "additionalProperties": false
+    },
+    "@telipot/catalog/PerResultCostEncoded": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["per_result"]
+        },
+        "value": {
+          "type": "number"
+        },
+        "table": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "when": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      }
+                    ]
+                  }
+                },
+                "value": {
+                  "type": "number"
+                },
+                "times": {
+                  "type": "string"
+                }
+              },
+              "required": ["when", "value"],
+              "additionalProperties": false
+            }
+          ],
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "when": {
+                "type": "object",
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                }
+              },
+              "value": {
+                "type": "number"
+              },
+              "times": {
+                "type": "string"
+              }
+            },
+            "required": ["when", "value"],
+            "additionalProperties": false
+          }
+        },
+        "fallback": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number"
+            }
+          },
+          "required": ["value"],
+          "additionalProperties": false
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^([A-Z]{3}|credit|meter)$"
+        },
+        "per": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_url": {
+          "type": "string",
+          "pattern": "^https?:\\/\\/"
+        },
+        "checked": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["verified", "documented", "inferred", "unknown"]
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        },
+        "settle": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["quote"]
+                }
+              },
+              "required": ["type"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["reported_charge"]
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": ["type", "path"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["usage"]
+                },
+                "header": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": ["type", "header"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": ["type", "currency", "checked", "confidence"],
+      "additionalProperties": false
+    },
+    "@telipot/catalog/TaskEncoded": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "capability": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["data", "action", "account", "utility"]
+        },
+        "auth": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["any_account", "own_account"]
+        },
+        "principal": {
+          "type": "string",
+          "enum": ["organization", "user"]
+        },
+        "required_scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"]
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^\\/"
+        },
+        "base_url": {
+          "type": "string",
+          "pattern": "^https?:\\/\\/"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "summary": {
+          "type": "string"
+        },
+        "input": {
+          "type": "object",
+          "properties": {
+            "pathParams": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["string", "integer", "number", "boolean", "array", "object"]
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "example": {},
+                  "note": {
+                    "type": "string"
+                  },
+                  "enum": {
+                    "type": "array",
+                    "prefixItems": [{}],
+                    "minItems": 1
+                  },
+                  "const": {},
+                  "min": {
+                    "type": "number"
+                  },
+                  "max": {
+                    "type": "number"
+                  },
+                  "default": {}
+                },
+                "required": ["type"],
+                "additionalProperties": false
+              }
+            },
+            "queryParams": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["string", "integer", "number", "boolean", "array", "object"]
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "example": {},
+                  "note": {
+                    "type": "string"
+                  },
+                  "enum": {
+                    "type": "array",
+                    "prefixItems": [{}],
+                    "minItems": 1
+                  },
+                  "const": {},
+                  "min": {
+                    "type": "number"
+                  },
+                  "max": {
+                    "type": "number"
+                  },
+                  "default": {}
+                },
+                "required": ["type"],
+                "additionalProperties": false
+              }
+            },
+            "headers": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["string", "integer", "number", "boolean", "array", "object"]
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "example": {},
+                  "note": {
+                    "type": "string"
+                  },
+                  "enum": {
+                    "type": "array",
+                    "prefixItems": [{}],
+                    "minItems": 1
+                  },
+                  "const": {},
+                  "min": {
+                    "type": "number"
+                  },
+                  "max": {
+                    "type": "number"
+                  },
+                  "default": {}
+                },
+                "required": ["type"],
+                "additionalProperties": false
+              }
+            },
+            "body": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["string", "integer", "number", "boolean", "array", "object"]
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "example": {},
+                  "note": {
+                    "type": "string"
+                  },
+                  "enum": {
+                    "type": "array",
+                    "prefixItems": [{}],
+                    "minItems": 1
+                  },
+                  "const": {},
+                  "min": {
+                    "type": "number"
+                  },
+                  "max": {
+                    "type": "number"
+                  },
+                  "default": {}
+                },
+                "required": ["type"],
+                "additionalProperties": false
+              }
+            },
+            "bodyType": {
+              "type": "string",
+              "enum": ["json", "form"]
+            }
+          },
+          "additionalProperties": false
+        },
+        "test_request": {
+          "type": "object",
+          "properties": {
+            "pathParams": {
+              "type": "object"
+            },
+            "queryParams": {
+              "type": "object"
+            },
+            "headers": {
+              "type": "object"
+            },
+            "body": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "expect": {
+          "type": "object",
+          "properties": {
+            "json_path": {
+              "type": "string"
+            },
+            "equals": {}
+          },
+          "required": ["json_path", "equals"],
+          "additionalProperties": false
+        },
+        "cost": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/@telipot~1catalog~1FreeCostEncoded"
+            },
+            {
+              "$ref": "#/$defs/@telipot~1catalog~1PerCallCostEncoded"
+            },
+            {
+              "$ref": "#/$defs/@telipot~1catalog~1PerSuccessCostEncoded"
+            },
+            {
+              "$ref": "#/$defs/@telipot~1catalog~1PerResultCostEncoded"
+            }
+          ]
+        },
+        "async": {
+          "type": "object"
+        },
+        "miss": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "integer",
+              "minimum": 400,
+              "maximum": 499
+            },
+            "means": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": ["status", "means"],
+          "additionalProperties": false
+        },
+        "resource_ownership": {
+          "type": "object"
+        },
+        "verified": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "unverified": {
+          "type": "string",
+          "minLength": 1
+        },
+        "untestable": {
+          "type": "string",
+          "minLength": 1
+        },
+        "skipped": {
+          "type": "string",
+          "minLength": 1
+        },
+        "example_response": {
+          "type": "string",
+          "pattern": "^examples\\/[A-Za-z0-9._-]+\\.json$"
+        },
+        "docs_url": {
+          "type": "string",
+          "pattern": "^https?:\\/\\/"
+        },
+        "output": {
+          "type": "object"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["retired", "broken"]
+        },
+        "status_note": {
+          "type": "string",
+          "minLength": 1
+        },
+        "superseded_by": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "auth", "method", "path", "name", "summary", "input"],
+      "additionalProperties": false
+    },
+    "@telipot/catalog/ProviderEncoded": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "base_url": {
+          "type": "string",
+          "pattern": "^https?:\\/\\/"
+        },
+        "docs_url": {
+          "type": "string",
+          "pattern": "^https?:\\/\\/"
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "docs": {
+              "type": "string",
+              "pattern": "^https?:\\/\\/"
+            },
+            "openapi": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^https?:\\/\\/"
+                    },
+                    {
+                      "type": "array",
+                      "prefixItems": [
+                        {
+                          "type": "string",
+                          "pattern": "^https?:\\/\\/"
+                        }
+                      ],
+                      "minItems": 1,
+                      "items": {
+                        "type": "string",
+                        "pattern": "^https?:\\/\\/"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "curated": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          "required": ["docs", "openapi", "curated"],
+          "additionalProperties": false
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "auth": {
+          "type": "object",
+          "properties": {
+            "schemes": {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/@telipot~1catalog~1ApiKeySchemeEncoded"
+                  },
+                  {
+                    "$ref": "#/$defs/@telipot~1catalog~1OAuth2SchemeEncoded"
+                  },
+                  {
+                    "$ref": "#/$defs/@telipot~1catalog~1HttpSchemeEncoded"
+                  }
+                ]
+              }
+            }
+          },
+          "required": ["schemes"],
+          "additionalProperties": false
+        },
+        "identity": {
+          "type": "object",
+          "properties": {
+            "task": {
+              "type": "string"
+            },
+            "account_path": {
+              "type": "string"
+            },
+            "label_path": {
+              "type": "string"
+            }
+          },
+          "required": ["task", "account_path", "label_path"],
+          "additionalProperties": false
+        },
+        "probe": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^\\/"
+            },
+            "url": {
+              "type": "string",
+              "pattern": "^https?:\\/\\/"
+            },
+            "method": {
+              "type": "string",
+              "enum": ["GET", "POST"]
+            },
+            "auth": {
+              "type": "string"
+            },
+            "expect": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "json_path": {
+                  "type": "string"
+                },
+                "equals": {},
+                "body_pattern": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "reject": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "json_path": {
+                  "type": "string"
+                },
+                "equals": {},
+                "body_pattern": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "required": ["expect"],
+          "additionalProperties": false
+        },
+        "oauth_app": {
+          "type": "object",
+          "properties": {
+            "byo": {
+              "type": "boolean"
+            }
+          },
+          "required": ["byo"],
+          "additionalProperties": false
+        },
+        "route_match": {
+          "type": "string",
+          "enum": ["normalized", "exact"]
+        },
+        "retention": {
+          "type": "string",
+          "enum": ["zero", "standard"]
+        },
+        "limits": {
+          "type": "string"
+        },
+        "pricing_url": {
+          "type": "string",
+          "pattern": "^https?:\\/\\/"
+        },
+        "async": {
+          "type": "object"
+        },
+        "retry": {
+          "type": "object",
+          "properties": {
+            "after": {
+              "type": "string"
+            },
+            "at": {
+              "type": "string"
+            },
+            "in_body": {
+              "type": "string"
+            },
+            "error_code": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "max_wait": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "terms": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "pattern": "^https?:\\/\\/"
+            },
+            "note": {
+              "type": "string"
+            }
+          },
+          "required": ["url", "note"],
+          "additionalProperties": false
+        },
+        "proposed_capabilities": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z0-9-]+(\\.[a-z0-9-]+)+$": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/@telipot~1catalog~1TaskEncoded"
+          }
+        }
+      },
+      "required": [
+        "provider",
+        "display_name",
+        "base_url",
+        "docs_url",
+        "source",
+        "version",
+        "endpoints"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

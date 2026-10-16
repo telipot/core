@@ -1,4 +1,11 @@
-import { Catalog, CatalogInvalid, type CatalogIssue, IdsLock, formatIssue } from "@telipot/catalog";
+import {
+  Catalog,
+  CatalogInvalid,
+  type CatalogIssue,
+  IdsLock,
+  formatIssue,
+  providerJsonSchema,
+} from "@telipot/catalog";
 import { Console, Effect, Option, Predicate } from "effect";
 import { Argument, CliError, Command, Flag } from "effect/cli";
 
@@ -194,7 +201,11 @@ const build = Command.make(
   }),
 ).pipe(Command.withDescription("Write the catalog folder as one JSON snapshot"));
 
+const schema = Command.make("schema", {}, () =>
+  Console.log(JSON.stringify(providerJsonSchema(), null, 2)),
+).pipe(Command.withDescription("Print the JSON Schema an editor checks a provider file against"));
+
 export const catalog = Command.make("catalog").pipe(
   Command.withDescription("Work on the catalog folder"),
-  Command.withSubcommands([validate, verify, driftCommand, scan, newProvider, build]),
+  Command.withSubcommands([validate, verify, driftCommand, scan, newProvider, build, schema]),
 );

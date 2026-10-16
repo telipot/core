@@ -1,18 +1,19 @@
 import { BigDecimal, Effect, Result, Schema, SchemaTransformation } from "effect";
 
 // Shape only; rules across fields, tasks or files live in rules.ts, and price rules in price.ts.
+// A pattern carries the `u` flag, or Effect leaves it out of the editor's JSON Schema (json-schema.ts).
 
 // A date such as 2026-10-04; `@telipot/contract` holds a copy as `CatalogVersion`, kept equal by a test.
-export const IsoDate = Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/));
-const Url = Schema.String.check(Schema.isPattern(/^https?:\/\//));
-const Slug = Schema.String.check(Schema.isPattern(/^[a-z0-9]+(-[a-z0-9]+)*$/));
+export const IsoDate = Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/u));
+const Url = Schema.String.check(Schema.isPattern(/^https?:\/\//u));
+const Slug = Schema.String.check(Schema.isPattern(/^[a-z0-9]+(-[a-z0-9]+)*$/u));
 // Capability and task ids, so either is safe in a URL and as a file name.
-export const dottedWords = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/;
+export const dottedWords = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/u;
 const CapabilityId = Schema.String.check(Schema.isPattern(dottedWords));
 const Reason = Schema.NonEmptyString;
 // No deeper than `examples/`, so neither the loader nor `telipot catalog verify` reaches past it.
 export const ExamplePath = Schema.String.check(
-  Schema.isPattern(/^examples\/[A-Za-z0-9._-]+\.json$/),
+  Schema.isPattern(/^examples\/[A-Za-z0-9._-]+\.json$/u),
 );
 
 const isPattern = Schema.makeFilter<string>(
@@ -118,7 +119,7 @@ const paid = {
   ),
   fallback: Schema.optionalKey(Schema.Struct({ value: Amount })),
   // ISO 4217, `credit` for the provider's credits, or `meter` for the meter `unit` names.
-  currency: Schema.String.check(Schema.isPattern(/^([A-Z]{3}|credit|meter)$/)),
+  currency: Schema.String.check(Schema.isPattern(/^([A-Z]{3}|credit|meter)$/u)),
   per: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)).pipe(
     Schema.withDecodingDefaultKey(Effect.succeed(1)),
   ),
@@ -442,7 +443,7 @@ const rate = <S extends Schema.Top>(usd: S) =>
 
 // Credits are keyed by provider, since one provider's credit is worth nothing at another's.
 export const FxFile = Schema.Struct({
-  rates_to_usd: Schema.Record(Schema.String.check(Schema.isPattern(/^[A-Z]{3}$/)), rate(Amount)),
+  rates_to_usd: Schema.Record(Schema.String.check(Schema.isPattern(/^[A-Z]{3}$/u)), rate(Amount)),
   credit_rates_usd: Schema.Record(Slug, rate(Schema.NullOr(Amount))),
   meter_rates_usd: Schema.Record(Slug, Schema.Record(Schema.String, rate(Schema.NullOr(Amount)))),
 });

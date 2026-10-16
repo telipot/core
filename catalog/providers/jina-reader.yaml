@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../provider.schema.json
 provider: jina-reader
 display_name: Jina Reader
 base_url: https://r.jina.ai

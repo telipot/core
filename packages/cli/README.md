@@ -101,6 +101,7 @@ A run uses the version served now unless you pin one. A pinned version the gatew
 | `telipot catalog verify <provider>`              | Calls each task's test request with your own key, stopping before `--budget` when you give one, and records what passed |
 | `telipot catalog scan --base <commit>`           | Refuses a change that adds a credential, or a contact detail to an example                                              |
 | `telipot catalog drift [dir]`                    | Names a task whose route moved in the vendor's published spec                                                           |
+| `telipot catalog schema`                         | Prints the JSON Schema an editor checks a provider file against, as `catalog/provider.schema.json` holds it             |
 
 How to add or fix a provider is in the [repository README](../../README.md#contribute).
 

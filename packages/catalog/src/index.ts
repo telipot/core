@@ -51,3 +51,4 @@ export {
 
 export { type Replayed, recordVerification } from "./verification";
 export { type PublishedRoute, publishedRoutes } from "./published";
+export { providerJsonSchema, providerSchemaFile, schemaModeline } from "./json-schema";

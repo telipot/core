@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../provider.schema.json
 provider: firecrawl
 display_name: Firecrawl
 base_url: https://api.firecrawl.dev/v2

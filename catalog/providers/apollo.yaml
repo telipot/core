@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../provider.schema.json
 provider: apollo
 display_name: Apollo
 base_url: https://api.apollo.io/api/v1

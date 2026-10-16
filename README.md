@@ -46,6 +46,7 @@ This repository holds all of that as data. Each provider is one YAML file, and e
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `catalog/providers/`                   | One YAML file per provider: its tasks, routes, auth, scopes and prices. A generated `*.extended.yaml` beside it holds a vendor's wider OpenAPI surface |
 | `catalog/examples/`                    | One sanitized response per verified task                                                                                                               |
+| `catalog/provider.schema.json`         | The provider file's JSON Schema, which each file names in its first line, so an editor underlines a wrong field as it is typed                         |
 | `catalog/capabilities.yaml`            | Provider-neutral jobs, such as `email.find`, that several providers' tasks can serve                                                                   |
 | `catalog/aliases.yaml`, `queries.yaml` | The words tasks are found by, and the sentences discovery is tested against                                                                            |
 | `catalog/fx.yaml`                      | Documented conversions from vendor credits to USD                                                                                                      |

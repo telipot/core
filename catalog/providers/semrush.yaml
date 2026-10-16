@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../provider.schema.json
 # Semrush, Analytics API version 3 (api.semrush.com). Curated from the vendor's documentation; Semrush
 # publishes no OpenAPI. Every report is one GET: the Analytics API reports share the path / on
 # api.semrush.com and are chosen by the fixed query parameter `type`; the Backlinks reports live under

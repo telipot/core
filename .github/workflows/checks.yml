@@ -18,6 +18,22 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Every commit is signed off
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # The Developer Certificate of Origin: each commit's author signs it off with `git commit -s`.
+          unsigned=0
+          for commit in $(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA"); do
+            email=$(git log -1 --format=%ae "$commit")
+            if ! git log -1 --format='%(trailers:key=Signed-off-by,valueonly)' "$commit" | grep -qiF "<$email>"; then
+              echo "::error::commit $(git rev-parse --short "$commit") has no Signed-off-by line from its author"
+              unsigned=1
+            fi
+          done
+          exit $unsigned
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json

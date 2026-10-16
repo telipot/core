@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../provider.schema.json
 provider: google-analytics
 display_name: Google Analytics 4
 base_url: https://analyticsdata.googleapis.com

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../provider.schema.json
 provider: hunter
 display_name: Hunter
 base_url: https://api.hunter.io/v2

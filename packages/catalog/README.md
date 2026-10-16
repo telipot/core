@@ -115,6 +115,7 @@ What may leave in a body, a committed example or a debug capture, is decided her
 
 - `src/catalog.ts`: Reads every file, parses its YAML or JSON and decodes it. A file that cannot be read, parsed or decoded is recorded and left out. Holds the `Catalog` service and builds it once no rule refuses the catalog: every task by id, the live ones cheapest first for `serving`, and the search over them, with `aliases.yaml` and `queries.yaml` checked against it.
 - `src/schema.ts`: Shape: types, patterns, required fields. Unknown keys are refused.
+- `src/json-schema.ts`: The provider file's shape as JSON Schema 2020-12, generated from `schema.ts`, for an editor to check a file as it is typed. It leaves out every rule in `rules.ts` and `price.ts`, so `validate` stays the authority. `catalog/provider.schema.json` holds it, each provider file names it in its first line, and a test refuses a commit where either drifts. Nothing here is read by the loader.
 - `src/rules.ts`: Every rule that relates one field to another, a task to its provider, or one file to another. Decides which tasks are served, every core task and each extended task that is not a twin, and builds each one's `Entry` from the values it checked.
 - `src/price.ts`: The pricing rules, which `rules.ts` runs on each task, and the price it is served with.
 - `src/input.ts`: Proves a task's declared fields, path placeholders and verification replay agree, and builds the input schema from those same fields.

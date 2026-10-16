@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../provider.schema.json
 provider: exa
 display_name: Exa
 base_url: https://api.exa.ai

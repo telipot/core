@@ -2,6 +2,7 @@ import { JsonPatch, JsonPointer, Order, Predicate, Record, Result, Schema } from
 import { Document, parse } from "yaml";
 import { type Curated, curatedBy } from "./extended";
 import { bounds, firstLine } from "./input";
+import { schemaModeline } from "./json-schema";
 import {
   ApiKeyScheme,
   type AuthScheme,
@@ -1099,6 +1100,8 @@ export const scaffold = (provider: string, today: string, openapi?: OpenApi): Sc
   // Write a shared value out twice, never as a YAML anchor and alias.
   const document = new Document(header, { aliasDuplicateObjects: false });
   document.commentBefore = [
+    ` ${schemaModeline}`,
+    "",
     " Review before `telipot catalog validate` passes, then delete this block:",
     ...reviews.map(({ path, note }) => `   ${path}: ${note}`),
   ].join("\n");

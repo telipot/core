@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../provider.schema.json
 provider: google-search-console
 display_name: Google Search Console
 base_url: https://searchconsole.googleapis.com

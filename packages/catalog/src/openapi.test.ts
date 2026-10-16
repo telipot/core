@@ -3,6 +3,7 @@ import { openApiFixtures } from "@telipot/fixtures/openapi";
 import { Result } from "effect";
 import { readFileSync } from "node:fs";
 import { parse } from "yaml";
+import { schemaModeline } from "./json-schema";
 import { type OpenApi, type SpecPatch, readOpenApi, scaffold, schemesOf, tasksOf } from "./openapi";
 
 // The parts of a written provider file these tests read into.
@@ -103,7 +104,7 @@ describe("scaffold", () => {
       "identity",
     ]);
 
-    assert.match(filled().text, /^# Review before/);
+    assert.isTrue(filled().text.startsWith(`# ${schemaModeline}\n\n# Review before`));
   });
 
   it("returns the schemes it declared, by name and type", () => {
