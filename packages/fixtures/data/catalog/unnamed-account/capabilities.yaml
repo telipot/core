@@ -1,0 +1,5 @@
+platforms:
+  ledger: Ledgers
+capabilities:
+  ledger.entries.list: Entries in a ledger
+  ledger.profile: The ledger a key reads

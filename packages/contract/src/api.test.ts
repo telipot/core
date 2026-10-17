@@ -2,7 +2,7 @@ import { assert, describe, it } from "@effect/vitest";
 import { Predicate, Schema } from "effect";
 import { OpenApi } from "effect/http-api";
 
-import { Api } from "./index";
+import { Api, ConnectSession, ConnectSessionStatus } from "./index";
 
 const WithProperties = Schema.Struct({ properties: Schema.Record(Schema.String, Schema.Unknown) });
 
@@ -127,5 +127,29 @@ describe("Api", () => {
         if (operation) assert.property(operation.responses, "401", `${method} ${path}`);
       }
     }
+  });
+});
+
+describe("ConnectSession", () => {
+  const read = Schema.decodeUnknownSync(ConnectSession);
+  const session = (status: string) => ({
+    session_id: "cs_01J0000000000000000000000",
+    provider: "google-calendar",
+    principal: "user:ana",
+    status,
+    connection_id: null,
+    expires_at: "2026-10-17T09:00:00.000Z",
+    account: null,
+    account_label: null,
+  });
+
+  // A newer server's, or one a rollback's client never knew, so the rest of a list still reads.
+  it("reads a status this client does not know as unknown, and every other as it is", () => {
+    assert.strictEqual(read(session("paused")).status, "unknown");
+    for (const status of ConnectSessionStatus.literals) {
+      assert.strictEqual(read(session(status)).status, status);
+    }
+
+    assert.throws(() => read(session("x".repeat(65))));
   });
 });

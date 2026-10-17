@@ -31,17 +31,18 @@ const document = readFileSync(openApiFixtures.widgetly, "utf8");
 
 All vendors, accounts, and captured responses in this package are synthetic. `data/catalog` holds complete directory trees, including provider files, taxonomy, aliases, examples, and id locks when the scenario needs them.
 
-| Catalog name     | Scenario                                                                         | Owning tests                                       |
-| ---------------- | -------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `clean`          | Valid catalog, curated and generated tasks, prices, examples, and identity rules | Catalog loader/generation and CLI catalog commands |
-| `clean-input`    | Valid input schemas and verification requests across supported field types       | Catalog input rules                                |
-| `refused`        | Deliberate rule failures, with one case per validation rule                      | Catalog validation and CLI error reporting         |
-| `refused-fx`     | Invalid exchange, credit, and meter rates                                        | Catalog pricing validation                         |
-| `refused-search` | Invalid aliases and query expectations                                           | Catalog search validation                          |
-| `gateway`        | Public, organization, and end-user task scenarios                                | API gateway and auth harnesses                     |
-| `oauth`          | OAuth providers on telipot's app, on only an organization's own, and on none     | `OAuthClients` and the resolver in connections     |
-| `paged`          | One provider with 51 public tasks, one past a page of `GET /v1/tasks`            | The API's task list paging                         |
-| `verify`         | Replay requests, captured responses, pricing, redaction, and verification states | CLI verification                                   |
+| Catalog name      | Scenario                                                                         | Owning tests                                       |
+| ----------------- | -------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `clean`           | Valid catalog, curated and generated tasks, prices, examples, and identity rules | Catalog loader/generation and CLI catalog commands |
+| `clean-input`     | Valid input schemas and verification requests across supported field types       | Catalog input rules                                |
+| `refused`         | Deliberate rule failures, with one case per validation rule                      | Catalog validation and CLI error reporting         |
+| `refused-fx`      | Invalid exchange, credit, and meter rates                                        | Catalog pricing validation                         |
+| `refused-search`  | Invalid aliases and query expectations                                           | Catalog search validation                          |
+| `gateway`         | Public, organization, and end-user task scenarios                                | API gateway and auth harnesses                     |
+| `oauth`           | OAuth providers on telipot's app, on only an organization's own, and on none     | `OAuthClients` and the resolver in connections     |
+| `paged`           | One provider with 51 public tasks, one past a page of `GET /v1/tasks`            | The API's task list paging                         |
+| `unnamed-account` | An end user's key that names no account, beside an organization key that does    | The connect session an end user's backend confirms |
+| `verify`          | Replay requests, captured responses, pricing, redaction, and verification states | CLI verification                                   |
 
 | OpenAPI name | Scenario                                                       | Owning tests                                     |
 | ------------ | -------------------------------------------------------------- | ------------------------------------------------ |

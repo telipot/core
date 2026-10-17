@@ -1,0 +1,44 @@
+provider: ledger
+display_name: Ledger
+base_url: https://api.ledger.example
+docs_url: https://docs.ledger.example
+source: { docs: https://docs.ledger.example, openapi: null, curated: 2026-10-17 }
+version: 2026-10-17
+# The organization's key says which ledger it reads; an end user's own key reaches their entries
+# but says nothing of whose they are, so an end user's credential names no account.
+auth:
+  schemes:
+    org_key: { type: api_key, in: header, name: X-Ledger-Key, principals: [organization] }
+    user_key: { type: bearer, principals: [user] }
+identity: { task: ledger.account.get, account_path: account.id, label_path: account.name }
+endpoints:
+  - id: ledger.entries.list
+    capability: ledger.entries.list
+    platform: ledger
+    auth: user_key
+    scope: own_account
+    principal: user
+    method: GET
+    path: /entries
+    name: Entries in a ledger
+    summary: Lists the end user's ledger entries
+    input: {}
+    untestable: needs a ledger only the end user holds
+    output: { type: object }
+    cost: { type: free }
+  - id: ledger.account.get
+    capability: ledger.profile
+    platform: ledger
+    auth: org_key
+    scope: own_account
+    principal: organization
+    kind: account
+    method: GET
+    path: /account
+    name: The ledger an organization's key reads
+    summary: Returns which ledger the key reads, and its name
+    input: {}
+    skipped: no key for the replay yet
+    output: { type: object }
+    example_response: examples/ledger.account.get.json
+    cost: { type: free }

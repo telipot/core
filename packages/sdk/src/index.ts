@@ -136,9 +136,17 @@ export const make = Effect.fnUntraced(function* (options: ClientOptions) {
       return yield* client.connect.start({ payload: { ...session, provider, principal } });
     }),
 
-    // An end user's session connects nothing until the backend confirms whom it signed in.
+    // Its status, and while `consented` the account its consent was given on, to show the person
+    // signed in before confirming them.
+    session: (sessionId: string) => client.connect.session({ params: { id: sessionId } }),
+
+    // An end user's session connects nothing until the backend confirms whom it signed in, and
+    // the account it showed them.
     confirm: (sessionId: string, confirmation: typeof ConnectConfirmation.Type) =>
       client.connect.confirm({ params: { id: sessionId }, payload: confirmation }),
+
+    // When the person signed in says the account is not theirs; nothing is kept.
+    decline: (sessionId: string) => client.connect.decline({ params: { id: sessionId } }),
   };
 });
 
@@ -175,7 +183,15 @@ export class Telipot {
     return Effect.runPromise(this.#client.connect(...args));
   }
 
+  session(...args: Parameters<Client["session"]>) {
+    return Effect.runPromise(this.#client.session(...args));
+  }
+
   confirm(...args: Parameters<Client["confirm"]>) {
     return Effect.runPromise(this.#client.confirm(...args));
+  }
+
+  decline(...args: Parameters<Client["decline"]>) {
+    return Effect.runPromise(this.#client.decline(...args));
   }
 }

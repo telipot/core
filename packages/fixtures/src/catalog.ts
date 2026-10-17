@@ -9,6 +9,8 @@ export const catalogFixtures = Object.freeze({
   gateway: fileURLToPath(new URL("../data/catalog/gateway/", import.meta.url)),
   oauth: fileURLToPath(new URL("../data/catalog/oauth/", import.meta.url)),
   paged: fileURLToPath(new URL("../data/catalog/paged/", import.meta.url)),
+  // An end user's key that names no account: only the organization's key reads the identity task.
+  "unnamed-account": fileURLToPath(new URL("../data/catalog/unnamed-account/", import.meta.url)),
   verify: fileURLToPath(new URL("../data/catalog/verify/", import.meta.url)),
 });
 

@@ -1,6 +1,6 @@
 # @telipot/sdk
 
-The TypeScript SDK: the four verbs, `discover`, `inspect`, `run` and `connect`, and the backend's `confirm` of an end user's connect session, over `HttpApiClient.make(Api)` from `effect/http-api`. It reads `@telipot/contract` and nothing else, so every request goes through the gateway's own routes, the ones its tests send, and a refusal comes back as the API's own tagged error, such as `PrincipalForbidden` or `CatalogVersionMismatch`, with its `detail`.
+The TypeScript SDK: the four verbs, `discover`, `inspect`, `run` and `connect`, and the backend's `session`, `confirm` and `decline` of an end user's connect session, over `HttpApiClient.make(Api)` from `effect/http-api`. It reads `@telipot/contract` and nothing else, so every request goes through the gateway's own routes, the ones its tests send, and a refusal comes back as the API's own tagged error, such as `PrincipalForbidden` or `CatalogVersionMismatch`, with its `detail`.
 
 ```ts
 import { Telipot } from "@telipot/sdk";
@@ -24,6 +24,8 @@ In Effect, `make(options)` gives the same methods as Effects, on the `HttpClient
 - **The principal.** `as` on the client is whom every call acts as; `as` on a call overrides it. Left out, the organization, or the end user a user-bound token is fixed to. The SDK sends what it is given and checks nothing: on a user-bound token, the gateway refuses any other principal with `principal_forbidden`.
 - **The catalog version.** A run is pinned per provider, by its slug, at the call (`version`), the client (`versions`), or the variable `versionVariable(provider)` names, `TELIPOT_CATALOG_VERSION_<SLUG>`, the slug in capitals with dashes as underscores, in that order. `latest` sends no pin. A provider nothing pins is refused with `VersionRequired` before any request, unless the client sets `latest: true`. The gateway refuses a pin it no longer serves with `catalog_version_mismatch`, naming the one it does.
 - **`connect`** opens a connect session for the principal and answers the link to hand them. Unnamed, the principal is the end user a user-bound token is fixed to, read from `/v1/me`, or else the organization.
-- **`confirm`** tells telipot which end user your backend has signed in to the browser an end user's session sent back, with the `code` it came back with. Only then is the connection made, and only for the session's own end user; another declines it.
+- **`session`** reads a connect session's `status`, and, while `consented`, the `account` and `account_label` its consent was given on, for your backend to show the person it has signed in before it confirms them.
+- **`confirm`** tells telipot which end user your backend has signed in to the browser an end user's session sent back, with the `code` it came back with and the `account` it showed them. Only then is the connection made, and only for the session's own end user on that account; another end user declines it, and another account changes nothing.
+- **`decline`** keeps nothing of a consent the person signed in says is not theirs.
 
 The hosted repository runs every verb against the gateway itself.

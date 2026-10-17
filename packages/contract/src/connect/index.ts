@@ -1,4 +1,4 @@
-import { Schema } from "effect";
+import { Schema, SchemaTransformation } from "effect";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 
 import { PrincipalForbidden, RoleForbidden } from "../caller";
@@ -57,7 +57,9 @@ export const ConnectSessionCreated = Schema.Struct({
 }).annotate({ identifier: "ConnectSessionCreated", httpApiStatus: 201 });
 
 // `connect.test.ts` holds these equal to `@telipot/credentials`'s. `consented` connects nothing
-// until the backend confirms the end user; `declined` means it named another, so nothing was kept.
+// until the backend confirms the end user; `declined` means the backend declined it, or named
+// another end user, or the consent named no account, so nothing was kept. A client reading a
+// status it does not know treats it as finished with nothing kept: more may come.
 export const ConnectSessionStatus = Schema.Literals([
   "pending",
   "consented",
@@ -68,11 +70,28 @@ export const ConnectSessionStatus = Schema.Literals([
 
 export type ConnectSessionStatus = typeof ConnectSessionStatus.Type;
 
+const isConnectSessionStatus = Schema.is(ConnectSessionStatus);
+
+// A session's status as a client reads it. One this client does not know, such as a status a
+// newer server added, or one a rolled-back client never knew, reads as `unknown`, so the rest of a
+// list still reads.
+export const ReadConnectSessionStatus = Schema.String.check(Schema.isMaxLength(64)).pipe(
+  Schema.decodeTo(
+    Schema.Literals([...ConnectSessionStatus.literals, "unknown"]),
+    SchemaTransformation.transform({
+      decode: (status) => (isConnectSessionStatus(status) ? status : "unknown"),
+      encode: (status) => status,
+    }),
+  ),
+);
+
+export type ReadConnectSessionStatus = typeof ReadConnectSessionStatus.Type;
+
 export const ConnectSession = Schema.Struct({
   session_id: Schema.String,
   provider: Schema.String,
   principal: Schema.String,
-  status: ConnectSessionStatus,
+  status: ReadConnectSessionStatus,
   // Null until the session completes.
   connection_id: Schema.NullOr(Schema.String),
   // The link's expiry; once `consented`, the deadline for the backend's confirm.
@@ -104,10 +123,14 @@ export const ConnectSessionList = Schema.Struct({
   next_cursor: Schema.NullOr(Schema.String),
 }).annotate({ identifier: "ConnectSessionList" });
 
-// The backend's word on the browser that came back with `code`: the end user signed in there.
+// The backend's word on the browser that came back with `code`: the end user signed in there,
+// shown the session's `account`, agreed it is theirs. Someone who finished a forwarded link can
+// send the end user back with their own account's code, so the backend shows it first.
 export const ConnectConfirmation = Schema.Struct({
   code: FreeText(200),
   principal: EndUserPrincipal,
+  // The session's `account`, as the backend read it while `consented`.
+  account: FreeText(320),
 }).annotate({ identifier: "ConnectConfirmation" });
 
 // A page of one end user's own connections, for them to revoke; never the organization's.
@@ -143,6 +166,15 @@ export class ConnectSessionNotConfirmable extends Schema.TaggedError<ConnectSess
   { detail: Schema.String },
 ) {
   static readonly problem = problem(this, { status: 409, code: "connect_session_not_confirmable" });
+}
+
+// The backend confirmed another account than the one the consent was given on; nothing changed,
+// and the consent still waits.
+export class ConnectAccountMismatch extends Schema.TaggedError<ConnectAccountMismatch>()(
+  "ConnectAccountMismatch",
+  { detail: Schema.String },
+) {
+  static readonly problem = problem(this, { status: 409, code: "connect_account_mismatch" });
 }
 
 // The backend named another end user than the session's; the session is declined.
@@ -194,6 +226,19 @@ export class ConnectApi extends HttpApiGroup.make("connect")
         ConnectSessionNotFound.problem,
         ConnectSessionNotConfirmable.problem,
         ConnectPrincipalMismatch.problem,
+        ConnectAccountMismatch.problem,
+      ],
+    }),
+  )
+  .add(
+    // When the person the backend signed in says the account is not theirs; nothing is kept.
+    HttpApiEndpoint.post("decline", "/connect/sessions/:id/decline", {
+      params: { id: FreeText(100) },
+      success: ConnectSession,
+      error: [
+        RoleForbidden.problem,
+        ConnectSessionNotFound.problem,
+        ConnectSessionNotConfirmable.problem,
       ],
     }),
   )
