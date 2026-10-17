@@ -1,5 +1,5 @@
 import { Api, cliClientId } from "@telipot/contract";
-import { make } from "@telipot/sdk";
+import { defaultBaseUrl, make } from "@telipot/sdk";
 import { Console, Duration, Effect, Option, Predicate, Redacted, Schema } from "effect";
 import { Argument, CliError, Command, Flag } from "effect/cli";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
@@ -40,6 +40,9 @@ const toUserError = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
       ? cause
       : new CliError.UserError({ cause, userMessage: said(cause) }),
   );
+
+// The dashboard that telipot's own gateway, `defaultBaseUrl`, belongs to.
+const dashboardUrl = "https://app.telipot.com";
 
 // A command run by a person runs whatever version is served unless they pin one.
 const client = Effect.gen(function* () {
@@ -133,7 +136,7 @@ const connect = Command.make(
     as,
     redirectUri: Flag.String("redirect-uri").pipe(
       Flag.withDescription("Where the person lands once connected; on your redirect allowlist"),
-      Flag.withDefault("https://app.telipot.com"),
+      Flag.withDefault(dashboardUrl),
     ),
   },
   Effect.fnUntraced(function* ({ provider, as: principal, redirectUri }) {
@@ -235,6 +238,10 @@ const whoami = Command.make(
   }, toUserError),
 ).pipe(Command.withDescription("The organization and principal the token signs in as"));
 
+// Another gateway's dashboard is somewhere this CLI does not know.
+const apiKeysPage = (gateway: string) =>
+  gateway === defaultBaseUrl ? ` (${dashboardUrl}/api-keys)` : "";
+
 // A token in TELIPOT_TOKEN belongs to whoever set it, so only the one `telipot login` saved ends.
 const logout = Command.make(
   "logout",
@@ -246,10 +253,30 @@ const logout = Command.make(
       yield* Console.log(notLoggedIn);
     } else {
       const account = yield* accountOn(saved.value.token);
-      // A token that expired, or was revoked from the dashboard, has ended already.
-      yield* account.tokens
-        .revokeCurrent()
-        .pipe(Effect.catchTag(["InvalidToken", "TokenNotFound"], () => Effect.void));
+      const ended = yield* account.tokens.revokeCurrent().pipe(
+        Effect.as(true),
+        // A token that expired, or was revoked from the dashboard, has ended already.
+        Effect.catchTag("InvalidToken", () => Effect.succeed(true)),
+        // A gateway older than this route reads `current` as the id of a token it does not hold,
+        // so the saved one has ended only if the gateway now refuses it.
+        Effect.catchTag("TokenNotFound", () =>
+          account.me().pipe(
+            Effect.as(false),
+            Effect.catchTag("InvalidToken", () => Effect.succeed(true)),
+          ),
+        ),
+      );
+
+      if (!ended) {
+        const page = apiKeysPage(yield* apiUrl);
+        return yield* new CliError.UserError({
+          cause: undefined,
+          userMessage: [
+            `telipot did not revoke the token, so it still works and ${saved.value.file} is kept.`,
+            `Revoke it on the dashboard's API keys page${page}, then run telipot logout again.`,
+          ].join(" "),
+        });
+      }
 
       yield* forgetToken(saved.value.file);
       yield* Console.log(signedOut(saved.value.file));

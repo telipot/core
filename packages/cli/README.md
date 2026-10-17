@@ -47,7 +47,7 @@ telipot run hackernews.news.search --input-json '{"query":"agent tools"}' --quot
 telipot run hackernews.news.search --input-json '{"query":"agent tools"}'
 ```
 
-`login` shows a device code. Approve it on the dashboard, and the CLI keeps the organization token it is traded for, which lasts 90 days. `logout` revokes that token and removes it. `--quote` prints the price and runs nothing.
+`login` shows a device code. Approve it on the dashboard, and the CLI keeps the organization token it is traded for, which lasts 90 days. `logout` revokes that token and removes it, or keeps it and says so when the gateway did not revoke it. `--quote` prints the price and runs nothing.
 
 ## Commands
 
