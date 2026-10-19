@@ -96,18 +96,21 @@ const problemOf = <E>(
     ),
   );
 
+// An answer the gateway refused, or one that did not decode: either may carry a problem body.
+const isAnswered = <E>(
+  error: E,
+): error is E &
+  HttpClientError.HttpClientError & {
+    readonly reason: HttpClientError.StatusCodeError | HttpClientError.DecodeError;
+  } =>
+  HttpClientError.isHttpClientError(error) &&
+  (error.reason._tag === "StatusCodeError" || error.reason._tag === "DecodeError");
+
 // The answer's body was read already, so reading it again here costs nothing.
 const keepingProblems = <A, E, R>(
   effect: Effect.Effect<A, E, R>,
 ): Effect.Effect<A, E | UnknownProblem, R> =>
-  effect.pipe(
-    Effect.catch((error): Effect.Effect<never, E | UnknownProblem> =>
-      HttpClientError.isHttpClientError(error) &&
-      (error.reason._tag === "StatusCodeError" || error.reason._tag === "DecodeError")
-        ? problemOf(error.reason.response, error)
-        : Effect.fail(error),
-    ),
-  );
+  effect.pipe(Effect.catchIf(isAnswered, (error) => problemOf(error.reason.response, error)));
 
 export interface ClientOptions {
   readonly token: string | Redacted.Redacted;

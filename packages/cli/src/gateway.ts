@@ -292,16 +292,17 @@ const logout = Command.make(
       const account = yield* accountOn(saved.value.token);
       const ended = yield* account.tokens.revokeCurrent().pipe(
         Effect.as(true),
-        // A token that expired, or was revoked from the dashboard, has ended already.
-        Effect.catchTag("InvalidToken", () => Effect.succeed(true)),
-        // A gateway older than this route reads `current` as the id of a token it does not hold,
-        // so the saved one has ended only if the gateway now refuses it.
-        Effect.catchTag("TokenNotFound", () =>
-          account.me().pipe(
-            Effect.as(false),
-            Effect.catchTag("InvalidToken", () => Effect.succeed(true)),
-          ),
-        ),
+        Effect.catchTags({
+          // A token that expired, or was revoked from the dashboard, has ended already.
+          InvalidToken: () => Effect.succeed(true),
+          // A gateway older than this route reads `current` as the id of a token it does not
+          // hold, so the saved one has ended only if the gateway now refuses it.
+          TokenNotFound: () =>
+            account.me().pipe(
+              Effect.as(false),
+              Effect.catchTag("InvalidToken", () => Effect.succeed(true)),
+            ),
+        }),
       );
 
       if (!ended) {

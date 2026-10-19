@@ -7,9 +7,11 @@ import { Telipot } from "@telipot/sdk";
 
 const token = process.env.TELIPOT_TOKEN;
 if (!token) throw new Error("Set TELIPOT_TOKEN first.");
+
 const client = new Telipot({ token, latest: true });
 const { candidates } = await client.discover({ task: "Hacker News stories about agent tools" });
 const { output, receipt } = await client.run("hackernews.news.search", { query: "agent tools" });
+
 const ana = await client.run(
   "google-calendar.events.list",
   {},
