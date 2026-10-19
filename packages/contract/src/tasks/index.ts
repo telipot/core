@@ -4,9 +4,10 @@ import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 import { PrincipalForbidden } from "../caller";
 import { CatalogId, FreeText } from "../free-text";
 import { problem } from "../problem";
+import { readable } from "../readable";
 import {
   CatalogVersion,
-  IdentityMode,
+  ReadIdentityMode,
   PrincipalHeaders,
   RunHeaders,
   Receipt,
@@ -59,6 +60,9 @@ export type Tier = typeof Tier.Type;
 export const TaskKind = Schema.Literals(["data", "action", "account", "utility"]);
 export type TaskKind = typeof TaskKind.Type;
 
+// `public`, or the type of the task's security scheme.
+export const TaskAuth = Schema.Literals(["public", "api_key", "oauth2", "basic", "bearer"]);
+
 const JsonSchema = Schema.Record(Schema.String, Schema.Json);
 export const Task = Schema.Struct({
   id: Schema.String,
@@ -69,12 +73,11 @@ export const Task = Schema.Struct({
   // The provider file's version, which a run may pin.
   version: CatalogVersion,
   capability: Schema.NullOr(Schema.String),
-  tier: Tier,
-  kind: TaskKind,
-  // `public`, or the type of the task's security scheme.
-  auth: Schema.Literals(["public", "api_key", "oauth2", "basic", "bearer"]),
-  scope: Schema.NullOr(Schema.Literals(["any_account", "own_account"])),
-  principal: Schema.NullOr(Schema.Literals(["organization", "user"])),
+  tier: readable(Tier),
+  kind: readable(TaskKind),
+  auth: readable(TaskAuth),
+  scope: Schema.NullOr(readable(Schema.Literals(["any_account", "own_account"]))),
+  principal: Schema.NullOr(readable(Schema.Literals(["organization", "user"]))),
   required_scopes: Schema.Array(Schema.String),
   input: JsonSchema,
   output: Schema.NullOr(JsonSchema),
@@ -83,7 +86,7 @@ export const Task = Schema.Struct({
   example: Schema.Json,
   terms: Schema.NullOr(Schema.Struct({ url: Schema.String, note: Schema.String })),
   verification: Schema.NullOr(Verification),
-  identity: Schema.NullOr(IdentityMode),
+  identity: Schema.NullOr(ReadIdentityMode),
   credential_in_place: Schema.Boolean,
 }).annotate({ identifier: "Task" });
 
@@ -111,6 +114,10 @@ export type TaskPage = typeof TaskPage.Type;
 export class TaskNotFound extends Schema.TaggedError<TaskNotFound>()("TaskNotFound", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 404, code: "task_not_found" });
 }
 
@@ -122,11 +129,19 @@ const tombstone = {
 
 // Gone for good: an agent drops the id.
 export class TaskRetired extends Schema.TaggedError<TaskRetired>()("TaskRetired", tombstone) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 410, code: "task_retired" });
 }
 
 // Down until fixed: an agent keeps the id and uses another task meanwhile.
 export class TaskBroken extends Schema.TaggedError<TaskBroken>()("TaskBroken", tombstone) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 410, code: "task_broken" });
 }
 
@@ -147,6 +162,10 @@ const ranCall = { detail: Schema.String, call_id: Schema.String };
 
 // The vendor's declared "no result" answer; nothing failed.
 export class Miss extends Schema.TaggedError<Miss>()("Miss", ranCall) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 404, code: "miss" });
 }
 
@@ -156,6 +175,10 @@ export class UpstreamError extends Schema.TaggedError<UpstreamError>()("Upstream
   upstream_status: Schema.NullOr(Schema.Int),
   upstream_body: Schema.NullOr(Schema.Json),
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 502, code: "upstream_error" });
 }
 
@@ -165,7 +188,13 @@ export class RateLimited extends Schema.TaggedError<RateLimited>()("RateLimited"
   detail: Schema.String,
   call_id: Schema.NullOr(Schema.String),
   upstream_body: Schema.NullOr(Schema.Json),
+  // Seconds to wait, as `Retry-After` says, when the server or the vendor names them.
+  retry_after: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 429, code: "rate_limited" });
 }
 
@@ -176,6 +205,10 @@ export class NoCredential extends Schema.TaggedError<NoCredential>()("NoCredenti
   detail: Schema.String,
   connect_url: ConnectUrl,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 402, code: "no_credential" });
 }
 
@@ -184,6 +217,10 @@ export class PrincipalRequired extends Schema.TaggedError<PrincipalRequired>()(
   "PrincipalRequired",
   { detail: Schema.String },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 400, code: "principal_required" });
 }
 
@@ -192,6 +229,10 @@ export class GrantRequired extends Schema.TaggedError<GrantRequired>()("GrantReq
   detail: Schema.String,
   connect_url: ConnectUrl,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 403, code: "grant_required" });
 }
 
@@ -200,6 +241,10 @@ export class ConnectionRequired extends Schema.TaggedError<ConnectionRequired>()
   "ConnectionRequired",
   { detail: Schema.String, connect_url: ConnectUrl },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 403, code: "connection_required" });
 }
 
@@ -210,6 +255,10 @@ export class ScopeRequired extends Schema.TaggedError<ScopeRequired>()("ScopeReq
   missing: Schema.Array(Schema.String),
   connect_url: ConnectUrl,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 403, code: "scope_required" });
 }
 
@@ -224,6 +273,10 @@ export class ConnectionInvalid extends Schema.TaggedError<ConnectionInvalid>()(
     connect_url: Schema.NullOr(Schema.String),
   },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 401, code: "connection_invalid" });
 }
 
@@ -232,6 +285,10 @@ export class ConnectionNotFound extends Schema.TaggedError<ConnectionNotFound>()
   "ConnectionNotFound",
   { detail: Schema.String },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 404, code: "connection_not_found" });
 }
 
@@ -239,6 +296,10 @@ export class CatalogVersionMismatch extends Schema.TaggedError<CatalogVersionMis
   "CatalogVersionMismatch",
   { detail: Schema.String, served_version: CatalogVersion },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 409, code: "catalog_version_mismatch" });
 }
 
@@ -254,6 +315,10 @@ export class ConnectionAmbiguous extends Schema.TaggedError<ConnectionAmbiguous>
   "ConnectionAmbiguous",
   { detail: Schema.String, candidates: Schema.Array(Candidate) },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 409, code: "connection_ambiguous" });
 }
 
@@ -262,6 +327,10 @@ export class IdempotencyInFlight extends Schema.TaggedError<IdempotencyInFlight>
   "IdempotencyInFlight",
   { detail: Schema.String },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 409, code: "idempotency_in_flight" });
 }
 
@@ -270,6 +339,10 @@ export class ConnectionForbidden extends Schema.TaggedError<ConnectionForbidden>
   "ConnectionForbidden",
   { detail: Schema.String, connection: Schema.String },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 403, code: "connection_forbidden" });
 }
 

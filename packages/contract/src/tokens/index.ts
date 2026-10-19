@@ -7,6 +7,7 @@ import { FreeText } from "../free-text";
 import { problem } from "../problem";
 import { EndUserPrincipal } from "../receipt";
 import { RateLimited } from "../tasks";
+import { Timestamp } from "../timestamp";
 
 // The only client the auth provider issues a device code to: `telipot login`.
 export const cliClientId = "telipot-cli";
@@ -35,14 +36,14 @@ export const UserBoundToken = Schema.Struct({
   id: Schema.String,
   token: Schema.String,
   principal: Schema.String,
-  expires_at: Schema.String,
+  expires_at: Timestamp,
 }).annotate({ identifier: "UserBoundToken", httpApiStatus: 201 });
 
 // Never the token itself; it stops once its `issued_by` actor is gone or loses the role.
 export const HeldUserBoundToken = Schema.Struct({
   id: Schema.String,
   principal: Schema.String,
-  expires_at: Schema.String,
+  expires_at: Timestamp,
   issued_by: Schema.String,
 }).annotate({ identifier: "HeldUserBoundToken" });
 
@@ -59,6 +60,10 @@ export const HeldUserBoundTokens = Schema.Struct({
 export class TokenNotFound extends Schema.TaggedError<TokenNotFound>()("TokenNotFound", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 404, code: "token_not_found" });
 }
 

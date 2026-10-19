@@ -386,6 +386,7 @@ const rules: ReadonlyArray<readonly [rule: string, file: string, path: string]> 
     "endpoints[0].requried_scopes",
   ],
   ["a provider without a version", "providers/no-version.yaml", "version"],
+  ["a version on a day that does not exist", "providers/impossible-version.yaml", "version"],
   ["a provider without a base URL", "providers/no-base-url.yaml", "base_url"],
   ["a file that is not valid YAML", "providers/syntax.yaml", ""],
   ["a provider named unlike its file", "providers/misnamed.yaml", "provider"],

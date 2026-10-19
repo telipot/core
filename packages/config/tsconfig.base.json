@@ -34,7 +34,28 @@
           "schemaSyncInEffect": "error",
           "catchUnfailableEffect": "error",
           "globalErrorInEffectFailure": "error",
-          "globalErrorInEffectCatch": "error"
+          "globalErrorInEffectCatch": "error",
+          // Clean today, so held there: no env, fetch, timer or console inside an Effect.
+          "processEnvInEffect": "error",
+          "globalFetchInEffect": "error",
+          "globalTimersInEffect": "error",
+          "globalConsoleInEffect": "error",
+          // No catch, provide or Promise that loses a failure, a service or a value unseen.
+          "redundantOrDie": "error",
+          "catchToIgnore": "error",
+          "catchAllToMapError": "error",
+          "catchRefailToTapError": "error",
+          "unknownInEffectCatch": "error",
+          "unnecessaryEffectGen": "error",
+          "effectSucceedWithVoid": "error",
+          "leakingRequirements": "error",
+          "layerMergeAllWithDependencies": "error",
+          "multipleEffectProvide": "error",
+          "lazyPromiseInEffectSync": "error",
+          "promiseInEffectSuccess": "error",
+          "effectInVoidSuccess": "error",
+          // Off until it can be held: the router and web streams type their failures as `unknown`.
+          "anyUnknownInErrorContext": "off"
         }
       }
     ]

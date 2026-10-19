@@ -189,6 +189,8 @@ export class Google extends Context.Service<
           Base64Url.encode(new TextEncoder().encode(JSON.stringify(value)));
 
         const idToken = (clientId: string, { account, scopes }: Authorization) => {
+          // The real clock, not the caller's: oauth4webapi checks `exp` against it, and a test
+          // clock still at 1970 would make every token expired.
           const issuedAt = Math.floor(Date.now() / 1000);
           const { sub, email } = googleAccounts[account];
           return [

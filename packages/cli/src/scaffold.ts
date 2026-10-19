@@ -39,8 +39,11 @@ export const scaffoldProvider = Effect.fnUntraced(function* (options: {
   const { provider, directory, openapi } = options;
 
   const inDirectory = (file: string) => path.join(directory, file);
+  // A file that is missing is not there; one that cannot be checked refuses, so none is overwritten.
   const exists = (file: string) =>
-    fs.exists(inDirectory(file)).pipe(Effect.orElseSucceed(() => false));
+    fs
+      .exists(inDirectory(file))
+      .pipe(Effect.mapError((cause) => refuse(`${file} cannot be checked`, cause)));
 
   const readFile = (file: string) =>
     fs

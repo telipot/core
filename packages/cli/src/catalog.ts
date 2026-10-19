@@ -68,6 +68,10 @@ const verify = Command.make(
     directory,
     budget: Flag.Finite("budget").pipe(
       Flag.withDescription("Stop before a call whose list price would pass this many USD"),
+      Flag.filter(
+        (usd) => usd >= 0,
+        (usd) => `--budget takes 0 or more USD, not ${usd}`,
+      ),
       Flag.optional,
     ),
     dryRun: Flag.Boolean("dry-run").pipe(
@@ -80,10 +84,18 @@ const verify = Command.make(
     ),
     accountRate: Flag.Int("account-rate").pipe(
       Flag.withDescription("Calls per second to the provider's account"),
+      Flag.filter(
+        (rate) => rate >= 1,
+        (rate) => `--account-rate takes 1 or more, not ${rate}`,
+      ),
       Flag.withDefault(2),
     ),
     routeRate: Flag.Int("route-rate").pipe(
       Flag.withDescription("Calls per minute to one route"),
+      Flag.filter(
+        (rate) => rate >= 1,
+        (rate) => `--route-rate takes 1 or more, not ${rate}`,
+      ),
       Flag.withDefault(30),
     ),
   },

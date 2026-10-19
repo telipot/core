@@ -5,8 +5,10 @@ import { RoleForbidden } from "../caller";
 import { Cursor } from "../cursor";
 import { CatalogId, FreeText } from "../free-text";
 import { problem } from "../problem";
-import { IdentityMode, Principal, Receipt, Usd } from "../receipt";
+import { readable } from "../readable";
+import { IdentityMode, Principal, ReadIdentityMode, Receipt, Usd } from "../receipt";
 import { TaskKind } from "../tasks";
+import { Timestamp } from "../timestamp";
 
 // `miss` is the vendor's declared "no result", `fault` any other answer or none, and `pending` a
 // job the vendor finishes later.
@@ -19,15 +21,15 @@ const { connection, ...served } = Receipt.fields;
 // REQUEST_HASH_SECRET, so no client can compute it.
 export const Call = Schema.Struct({
   ...served,
-  at: Schema.String,
+  at: Timestamp,
   connection_id: connection,
   organization_id: Schema.String,
   token_id: Schema.NullOr(Schema.String),
   // True when a user-bound token fixed the principal.
   principal_bound: Schema.Boolean,
   provider: Schema.String,
-  kind: TaskKind,
-  outcome: Outcome,
+  kind: readable(TaskKind),
+  outcome: readable(Outcome),
   upstream_status: Schema.NullOr(Schema.Int),
   tag: Schema.NullOr(Schema.String),
   idempotency_key: Schema.NullOr(Schema.String),
@@ -39,6 +41,10 @@ export type Call = typeof Call.Type;
 export class CallNotFound extends Schema.TaggedError<CallNotFound>()("CallNotFound", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 404, code: "call_not_found" });
 }
 
@@ -46,8 +52,8 @@ export class CallNotFound extends Schema.TaggedError<CallNotFound>()("CallNotFou
 export const Capture = Schema.Struct({
   call_id: Schema.String,
   task: Schema.String,
-  at: Schema.String,
-  expires_at: Schema.String,
+  at: Timestamp,
+  expires_at: Timestamp,
   request: Schema.Json,
   response_status: Schema.NullOr(Schema.Int),
   response: Schema.NullOr(Schema.Json),
@@ -59,6 +65,10 @@ export type Capture = typeof Capture.Type;
 export class CaptureNotFound extends Schema.TaggedError<CaptureNotFound>()("CaptureNotFound", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 404, code: "capture_not_found" });
 }
 
@@ -114,7 +124,7 @@ export const Usage = Schema.Struct({
       by_identity: countsOf(IdentityMode.literals),
     }),
   ),
-  by_identity: Schema.Array(Schema.Struct({ identity: IdentityMode, calls: Schema.Int })),
+  by_identity: Schema.Array(Schema.Struct({ identity: ReadIdentityMode, calls: Schema.Int })),
   by_task: Schema.Array(
     Schema.Struct({
       task: Schema.String,

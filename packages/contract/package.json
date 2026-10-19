@@ -9,7 +9,9 @@
     "./free-text": "./src/free-text.ts",
     "./origins": "./src/origins.ts",
     "./problem": "./src/problem.ts",
+    "./readable": "./src/readable.ts",
     "./receipt": "./src/receipt.ts",
+    "./timestamp": "./src/timestamp.ts",
     "./*": "./src/*/index.ts"
   },
   "scripts": {

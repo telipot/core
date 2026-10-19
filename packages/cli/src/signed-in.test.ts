@@ -1,6 +1,7 @@
 import { BunServices } from "@effect/platform-bun";
 import { assert, layer } from "@effect/vitest";
-import { ConfigProvider, Effect, Exit, FileSystem, Option, Redacted } from "effect";
+import { ConfigProvider, Effect, FileSystem, Option, Redacted } from "effect";
+import { CliError } from "effect/cli";
 
 import { credentialsFile, forgetToken, loginToken, savedToken, saveToken } from "./signed-in";
 
@@ -56,7 +57,9 @@ layer(BunServices.layer, { excludeTestServices: true })("the credentials file", 
 
       assert.isFalse(yield* fs.exists(file));
       assert.isTrue(Option.isNone(yield* loginToken.pipe(inHome({ HOME: home }))));
-      assert.isTrue(Exit.isFailure(yield* Effect.exit(savedToken.pipe(inHome({ HOME: home })))));
+      const refused = yield* Effect.flip(savedToken.pipe(inHome({ HOME: home })));
+      assert.instanceOf(refused, CliError.UserError);
+      assert.include(refused.userMessage, "Not signed in");
     }),
   );
 

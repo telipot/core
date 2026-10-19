@@ -53,13 +53,12 @@ const pick = (from: object, keys: ReadonlyArray<string>) =>
   );
 
 // Described by its code, so /openapi.json names every code. Other fields become extension members,
-// so they must be plain JSON.
+// so they must be plain JSON. Each error also answers its `detail` as `message`, for a JS caller
+// that logs it.
 export const problem = <
   E extends Schema.Top & {
     readonly fields: Schema.Struct.Fields;
     readonly Type: { readonly detail: string };
-    // oxlint-disable-next-line typescript/no-explicit-any -- each error's constructor takes its own fields, and only `any` admits every one
-    new (props: any): E["Type"];
   },
 >(
   error: E,
@@ -73,7 +72,7 @@ export const problem = <
         // Checked, not typed as a literal, so every error shares one `ProblemDetails` schema.
         decode: (body) =>
           body.code === options.code
-            ? Effect.succeed(new error(pick(body, ["detail", ...extensions])))
+            ? error.makeEffect(pick(body, ["detail", ...extensions]))
             : Effect.fail(
                 new SchemaIssue.InvalidValue({ message: `expected code ${options.code}` }, body),
               ),
@@ -97,6 +96,10 @@ export const problem = <
 export class InvalidInput extends Schema.TaggedError<InvalidInput>()("InvalidInput", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 400, code: "invalid_input" });
 }
 
@@ -105,6 +108,10 @@ export const maxBodyBytes = 1024 * 1024;
 export class PayloadTooLarge extends Schema.TaggedError<PayloadTooLarge>()("PayloadTooLarge", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 413, code: "payload_too_large" });
 }
 
@@ -112,12 +119,20 @@ export class PayloadTooLarge extends Schema.TaggedError<PayloadTooLarge>()("Payl
 export class InternalError extends Schema.TaggedError<InternalError>()("InternalError", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 500, code: "internal_error" });
 }
 
 export class RouteNotFound extends Schema.TaggedError<RouteNotFound>()("RouteNotFound", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 404, code: "route_not_found" });
 }
 

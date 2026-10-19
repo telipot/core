@@ -2,11 +2,43 @@ import { assert, describe, it } from "@effect/vitest";
 import { Predicate, Schema } from "effect";
 import { OpenApi } from "effect/http-api";
 
-import { Api, ConnectSession, ConnectSessionStatus } from "./index";
+import {
+  Api,
+  Call,
+  ConnectSession,
+  ConnectSessionStatus,
+  Filters,
+  IdentityMode,
+  Receipt,
+  Task,
+  TaskAuth,
+  TaskKind,
+  Tier,
+} from "./index";
 
 const WithProperties = Schema.Struct({ properties: Schema.Record(Schema.String, Schema.Unknown) });
 
 describe("Api", () => {
+  it("names bearer authentication on every /v1 operation, and on none outside it", () => {
+    const spec = OpenApi.fromApi(Api);
+    assert.strictEqual(spec.info.version, "1.0.0");
+    assert.deepInclude(spec.components.securitySchemes["bearer"], {
+      type: "http",
+      scheme: "Bearer",
+    });
+
+    for (const [path, operations] of Object.entries(spec.paths)) {
+      for (const operation of Object.values(operations)) {
+        if (!Predicate.hasProperty(operation, "security")) continue;
+        assert.deepStrictEqual(
+          operation.security,
+          path.startsWith("/v1/") ? [{ bearer: [] }] : [],
+          path,
+        );
+      }
+    }
+  });
+
   it("describes the error shape once in the OpenAPI document", () => {
     const spec = OpenApi.fromApi(Api);
     assert.deepStrictEqual(Object.keys(spec.components.schemas).toSorted(), [
@@ -151,5 +183,47 @@ describe("ConnectSession", () => {
     }
 
     assert.throws(() => read(session("x".repeat(65))));
+  });
+});
+
+describe("an answer's growing sets", () => {
+  const receipt = (fields: Record<string, string>) =>
+    Schema.decodeSync(Receipt)({
+      call_id: "call_1",
+      task: "acme.x.get",
+      identity: "user",
+      principal: "user:ana",
+      connection: null,
+      account: null,
+      credential_source: "byoc",
+      quoted_usd: "0",
+      charged_usd: "0",
+      latency_ms: 12,
+      ...fields,
+    });
+
+  // Every field a newer server may add a value to reads that value as unknown, not a failure.
+  it("read a value this client does not know as unknown, and every other as it is", () => {
+    assert.strictEqual(receipt({ identity: "delegated" }).identity, "unknown");
+    assert.strictEqual(receipt({ credential_source: "pooled" }).credential_source, "unknown");
+    for (const identity of IdentityMode.literals) {
+      assert.strictEqual(receipt({ identity }).identity, identity);
+    }
+
+    for (const [field, known] of [
+      ["kind", TaskKind],
+      ["tier", Tier],
+      ["auth", TaskAuth],
+    ] as const) {
+      const read = Schema.decodeUnknownSync(Task.fields[field]);
+      assert.strictEqual(read("newer"), "unknown");
+      for (const value of known.literals) assert.strictEqual(read(value), value);
+    }
+
+    assert.strictEqual(Schema.decodeSync(Call.fields.outcome)("retried"), "unknown");
+  });
+
+  it("stay strict in a request", () => {
+    assert.isFalse(Schema.is(Filters.fields.kind)("newer"));
   });
 });

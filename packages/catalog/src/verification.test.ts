@@ -216,8 +216,10 @@ layer(BunServices.layer)("recordVerification", (it) => {
       ];
 
       for (const found of founds) {
-        assert.isTrue(
-          Exit.isFailure(yield* Effect.exit(recordVerification(directory, entry, found))),
+        const exit = yield* Effect.exit(recordVerification(directory, entry, found));
+        assert.deepStrictEqual(
+          Exit.findDefect(exit),
+          Result.succeed("acme.x.gadgets is in a generated file"),
         );
       }
 
@@ -254,7 +256,11 @@ layer(BunServices.layer)("recordVerification", (it) => {
         }),
       );
 
-      assert.isTrue(Exit.isFailure(passed));
+      assert.deepStrictEqual(
+        Exit.findDefect(passed),
+        Result.succeed("acme.page.text's example is not in examples/"),
+      );
+
       assert.isFalse(yield* fs.exists(path.join(directory, "../astray.json")));
     }),
   );

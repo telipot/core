@@ -1,5 +1,5 @@
 import type { Caller, ConnectSessionCreated, Discovery, Receipt, Task } from "@telipot/contract";
-import { Config, Effect, Predicate } from "effect";
+import { Config, Effect, Predicate, Stdio } from "effect";
 import { plain } from "./capture";
 import type { ScaffoldReport } from "./scaffold";
 import type { CostSource, Progress, Report } from "./verify";
@@ -364,6 +364,12 @@ export const vendorJson = (value: unknown) =>
     (character) => `\\u${character.codePointAt(0)?.toString(16).padStart(4, "0")}`,
   );
 
-export const rendering = Effect.suspend(() =>
-  colourFor({ stdout: process.stdout.isTTY, stderr: process.stderr.isTTY }),
-).pipe(Effect.map(renderer));
+export const rendering = Effect.gen(function* () {
+  const stdio = yield* Stdio.Stdio;
+  return renderer(
+    yield* colourFor({
+      stdout: yield* stdio.stdoutIsTerminal,
+      stderr: yield* stdio.stderrIsTerminal,
+    }),
+  );
+});

@@ -17,6 +17,8 @@ export class GenerationRefused extends Schema.TaggedError<GenerationRefused>()(
   "GenerationRefused",
   {
     message: Schema.String,
+    // What the parser said, when it said anything.
+    cause: Schema.optional(Schema.Defect()),
   },
 ) {}
 
@@ -55,7 +57,7 @@ const CoreView = Schema.Struct({
 const yaml = (text: string, file: string) =>
   Effect.try({
     try: () => parse(text) as unknown,
-    catch: () => new GenerationRefused({ message: `${file} cannot be read as YAML` }),
+    catch: (cause) => new GenerationRefused({ message: `${file} cannot be read as YAML`, cause }),
   });
 
 // No fetching or writing. Published ids are reconciled before reviewed facts are attached.

@@ -164,34 +164,32 @@ const run = Effect.fnUntraced(function* (
 
 layer(BunServices.layer, { excludeTestServices: true })("telipot catalog scan", (it) => {
   it.effect("fails a change that adds a credential and passes one that does not", () =>
-    Effect.scoped(
-      Effect.gen(function* () {
-        const fs = yield* FileSystem.FileSystem;
-        const repository = yield* fs.makeTempDirectoryScoped();
-        const git = (...args: Array<string>) =>
-          run("git", ["-c", "user.name=t", "-c", "user.email=t@t.test", ...args], repository);
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const repository = yield* fs.makeTempDirectoryScoped();
+      const git = (...args: Array<string>) =>
+        run("git", ["-c", "user.name=t", "-c", "user.email=t@t.test", ...args], repository);
 
-        yield* git("init", "-q");
-        yield* fs.writeFileString(`${repository}/notes.txt`, "one\n");
-        yield* git("add", ".");
-        yield* git("commit", "-q", "-m", "first");
-        const base = (yield* git("rev-parse", "HEAD")).stdout.trim();
+      yield* git("init", "-q");
+      yield* fs.writeFileString(`${repository}/notes.txt`, "one\n");
+      yield* git("add", ".");
+      yield* git("commit", "-q", "-m", "first");
+      const base = (yield* git("rev-parse", "HEAD")).stdout.trim();
 
-        yield* fs.writeFileString(`${repository}/notes.txt`, "one\ntwo\n");
-        yield* git("commit", "-qam", "clean");
-        const clean = yield* telipot(["catalog", "scan", "--base", base], { cwd: repository });
-        assert.strictEqual(clean.exitCode, 0, clean.stderr);
+      yield* fs.writeFileString(`${repository}/notes.txt`, "one\ntwo\n");
+      yield* git("commit", "-qam", "clean");
+      const clean = yield* telipot(["catalog", "scan", "--base", base], { cwd: repository });
+      assert.strictEqual(clean.exitCode, 0, clean.stderr);
 
-        const token = planted["a GitHub token"];
-        yield* fs.writeFileString(`${repository}/leak.txt`, `a\n${token}\n`);
-        yield* git("add", ".");
-        yield* git("commit", "-qm", "leak");
-        const leaked = yield* telipot(["catalog", "scan", "--base", base], { cwd: repository });
-        assert.notStrictEqual(leaked.exitCode, 0);
-        assert.include(leaked.stderr, "leak.txt:2: looks like a GitHub token");
-        assert.notInclude(leaked.stderr, token);
-        assert.notInclude(leaked.stdout, token);
-      }),
-    ),
+      const token = planted["a GitHub token"];
+      yield* fs.writeFileString(`${repository}/leak.txt`, `a\n${token}\n`);
+      yield* git("add", ".");
+      yield* git("commit", "-qm", "leak");
+      const leaked = yield* telipot(["catalog", "scan", "--base", base], { cwd: repository });
+      assert.notStrictEqual(leaked.exitCode, 0);
+      assert.include(leaked.stderr, "leak.txt:2: looks like a GitHub token");
+      assert.notInclude(leaked.stderr, token);
+      assert.notInclude(leaked.stdout, token);
+    }),
   );
 });

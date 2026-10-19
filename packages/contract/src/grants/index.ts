@@ -3,14 +3,15 @@ import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 
 import { Cursor } from "../cursor";
 import { Principal } from "../receipt";
+import { Timestamp } from "../timestamp";
 
 // A revoked connection's grant stays as its tombstone. `revoked_by` is an `Actor`, a `user:`
 // principal or `provider`; null on a grant revoked before it was recorded.
 export const ConnectionGrant = Schema.Struct({
   id: Schema.String,
   scopes: Schema.Array(Schema.String),
-  created_at: Schema.String,
-  revoked_at: Schema.NullOr(Schema.String),
+  created_at: Timestamp,
+  revoked_at: Schema.NullOr(Timestamp),
   revoked_by: Schema.NullOr(Schema.String),
 });
 

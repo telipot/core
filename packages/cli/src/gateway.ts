@@ -1,6 +1,18 @@
 import { Api, cliClientId } from "@telipot/contract";
 import { defaultBaseUrl, make } from "@telipot/sdk";
-import { Console, Duration, Effect, Option, Predicate, Redacted, Schema } from "effect";
+import {
+  Clock,
+  Config,
+  Console,
+  Duration,
+  Effect,
+  Option,
+  PlatformError,
+  Predicate,
+  Redacted,
+  Schedule,
+  Schema,
+} from "effect";
 import { Argument, CliError, Command, Flag } from "effect/cli";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
 import { HttpApiClient } from "effect/http-api";
@@ -26,8 +38,18 @@ const said = (error: unknown) => {
     return `${plain(error.detail)}${link}`;
   }
 
-  if (Predicate.hasProperty(error, "_tag") && error._tag === "HttpClientError") {
+  if (Predicate.isTagged(error, "HttpClientError")) {
     return "telipot could not be reached. Check TELIPOT_API_URL and your connection.";
+  }
+
+  // A setting such as TELIPOT_API_URL that is not what it should be; a token's value is redacted.
+  if (error instanceof Config.ConfigError) {
+    // The schema's own words, such as `Expected an http or https address at ["TELIPOT_API_URL"]`.
+    return `A setting is not right: ${plain(error.cause.message).replace(/\s+/g, " ")}`;
+  }
+
+  if (PlatformError.isPlatformError(error)) {
+    return `telipot could not use its files: ${plain(error.message)}`;
   }
 
   return "telipot answered in a way this version of telipot does not read. Update it.";
@@ -156,6 +178,7 @@ const DeviceCode = Schema.Struct({
   user_code: Schema.String,
   verification_uri_complete: Schema.String,
   interval: Schema.Int,
+  expires_in: Schema.Int,
 });
 
 const Issued = Schema.Struct({ access_token: Schema.String });
@@ -164,7 +187,8 @@ const Refused = Schema.Struct({
   error_description: Schema.optionalKey(Schema.String),
 });
 
-// RFC 8628 from the device's side: poll every `interval` seconds, five more after each `slow_down`.
+// RFC 8628 from the device's side: poll every `interval` seconds, five more after each `slow_down`,
+// until the code expires. A poll whose connection drops is sent again.
 const login = Command.make(
   "login",
   {},
@@ -172,6 +196,11 @@ const login = Command.make(
     const { deviceCode, signedIn } = yield* rendering;
     const http = (yield* HttpClient.HttpClient).pipe(
       HttpClient.mapRequest(HttpClientRequest.prependUrl(yield* apiUrl)),
+      HttpClient.retryTransient({
+        retryOn: "errors-only",
+        times: 3,
+        schedule: Schedule.exponential("1 second"),
+      }),
     );
 
     const send = (path: string, body: Readonly<Record<string, string>>) =>
@@ -185,7 +214,15 @@ const login = Command.make(
     yield* Console.log(deviceCode(plain(code.verification_uri_complete), plain(code.user_code)));
 
     let interval = Duration.seconds(code.interval);
+    const expiresAt = (yield* Clock.currentTimeMillis) + code.expires_in * 1000;
     while (true) {
+      if ((yield* Clock.currentTimeMillis) + Duration.toMillis(interval) > expiresAt) {
+        return yield* new CliError.UserError({
+          cause: undefined,
+          userMessage: "The code expired before it was approved. Run telipot login again.",
+        });
+      }
+
       yield* Effect.sleep(interval);
       const answer = yield* send("/api/auth/device/token", {
         grant_type: "urn:ietf:params:oauth:grant-type:device_code",

@@ -5,7 +5,7 @@ import type { Entry } from "./rules";
 import { catalogFixtures } from "@telipot/fixtures/catalog";
 import { Effect, Predicate, Result } from "effect";
 
-import { bind, sentForms, valueAt, withoutCredential } from "./bind";
+import { bind, holdsAt, sentForms, valueAt, withoutCredential } from "./bind";
 
 const bindOrThrow = (...args: Parameters<typeof bind>) => Result.getOrThrow(bind(...args));
 
@@ -350,6 +350,15 @@ layer(BunServices.layer)("valueAt", (it) => {
       assert.strictEqual(valueAt(body, "ok"), false);
       assert.isUndefined(valueAt(body, "statuses[1].status"));
       assert.isUndefined(valueAt(body, "constructor"));
+    }),
+  );
+
+  it.effect("holds an expected object whatever order its keys come in", () =>
+    Effect.sync(() => {
+      const body = { account: { plan: "pro", seats: 3 } };
+      assert.isTrue(holdsAt(body, "account", { seats: 3, plan: "pro" }));
+      assert.isFalse(holdsAt(body, "account", { seats: 4, plan: "pro" }));
+      assert.isFalse(holdsAt(body, "account.missing", null));
     }),
   );
 });

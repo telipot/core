@@ -5,8 +5,10 @@ import { PrincipalForbidden, RoleForbidden } from "../caller";
 import { CatalogId, FreeText } from "../free-text";
 import { ConnectionGrant } from "../grants";
 import { problem } from "../problem";
+import { readable } from "../readable";
 import { Principal, VendorCredential } from "../receipt";
 import { ConnectionNotFound, RateLimited } from "../tasks";
+import { Timestamp } from "../timestamp";
 
 // The states `@telipot/db` checks a row against; `connections.test.ts` holds the two equal.
 export const ConnectionState = Schema.Literals(["active", "needs_reauth", "revoked", "expired"]);
@@ -19,7 +21,7 @@ export const Connection = Schema.Struct({
   // The provider-side identity, or null where the provider names none.
   account: Schema.NullOr(Schema.String),
   label: Schema.NullOr(Schema.String),
-  state: ConnectionState,
+  state: readable(ConnectionState),
   // Serves when the principal holds several on the provider and a call names none of them.
   default: Schema.Boolean,
   scopes: Schema.Array(Schema.String),
@@ -34,9 +36,9 @@ export const ConnectionList = Schema.Struct({ connections: Schema.Array(Connecti
 // Any state, revoked included; never the credential.
 export const ConnectionDetail = Schema.Struct({
   ...Connection.fields,
-  created_at: Schema.String,
+  created_at: Timestamp,
   // Null for a credential that renews or never expires.
-  expires_at: Schema.NullOr(Schema.String),
+  expires_at: Schema.NullOr(Timestamp),
   grant: ConnectionGrant,
 }).annotate({ identifier: "ConnectionDetail" });
 
@@ -60,6 +62,10 @@ export class CredentialRefused extends Schema.TaggedError<CredentialRefused>()(
   "CredentialRefused",
   { detail: Schema.String },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 422, code: "credential_refused" });
 }
 
@@ -68,6 +74,10 @@ export class CredentialRefused extends Schema.TaggedError<CredentialRefused>()(
 export class ProbeUnavailable extends Schema.TaggedError<ProbeUnavailable>()("ProbeUnavailable", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 503, code: "probe_unavailable" });
 }
 

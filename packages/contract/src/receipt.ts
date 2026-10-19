@@ -1,6 +1,7 @@
 import { Predicate, Schema, SchemaTransformation } from "effect";
 
 import { CatalogId, FreeText } from "./free-text";
+import { readable } from "./readable";
 
 // The user id is the customer's own: case-sensitive and never parsed.
 export const Principal = Schema.String.check(
@@ -20,6 +21,11 @@ export type IdentityMode = typeof IdentityMode.Type;
 // `byoc` is the customer's own credential; `managed` is the platform credential.
 export const CredentialSource = Schema.Literals(["none", "byoc", "managed"]);
 
+// As answers carry them: a value this client does not know reads as `unknown`.
+export const ReadIdentityMode = readable(IdentityMode);
+export type ReadIdentityMode = typeof ReadIdentityMode.Type;
+export const ReadCredentialSource = readable(CredentialSource);
+
 // A decimal string, not a JSON number, so it stays exact.
 export const Usd = Schema.String.check(
   Schema.isPattern(/^\d{1,12}(\.\d{1,12})?$/, { expected: "US dollars, such as 0.006" }),
@@ -34,9 +40,16 @@ export const VendorCredential = Schema.RedactedFromValue(
   ),
 );
 
-// A provider file's `version`: the date its reviewed fields last changed.
+// A provider file's `version`: the date its reviewed fields last changed, a day that exists.
 export const CatalogVersion = Schema.String.check(
   Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/, { expected: "a catalog version, such as 2026-10-04" }),
+  Schema.makeFilter(
+    (day: string) => {
+      const read = new Date(`${day}T00:00:00Z`);
+      return !Number.isNaN(read.getTime()) && read.toISOString().startsWith(day);
+    },
+    { expected: "a catalog version, such as 2026-10-04" },
+  ),
 ).annotate({ identifier: "CatalogVersion" });
 
 const Slugs = Schema.Array(CatalogId).check(Schema.isMaxLength(50));
@@ -150,11 +163,11 @@ export const optionsOf = (
 export const Receipt = Schema.Struct({
   call_id: Schema.String,
   task: Schema.String,
-  identity: IdentityMode,
+  identity: ReadIdentityMode,
   principal: Schema.NullOr(Schema.String),
   connection: Schema.NullOr(Schema.String),
   account: Schema.NullOr(Schema.String),
-  credential_source: CredentialSource,
+  credential_source: ReadCredentialSource,
   quoted_usd: Usd,
   charged_usd: Usd,
   latency_ms: Schema.Int,

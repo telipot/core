@@ -315,6 +315,16 @@ describe("a quote", () => {
             charged >= 120_000 && charged <= 2_500_000,
             `${model} ${resolution} ${duration}`,
           );
+
+          // A call never costs more than it reserves, at any count of units.
+          for (const units of [1, 3, 1000]) {
+            const reserved = Option.getOrThrow(reserve(video, units));
+            const unitsQuoted = Option.getOrThrow(
+              quote(video, { model, resolution, duration }, units),
+            );
+
+            assert.isAtMost(unitsQuoted, reserved, `${model} ${resolution} ${duration} ×${units}`);
+          }
         }
       }
     }

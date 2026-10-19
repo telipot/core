@@ -3,12 +3,13 @@ import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 
 import { Cursor } from "../cursor";
 import { FreeText } from "../free-text";
+import { Timestamp } from "../timestamp";
 
 // The organization from its first connection, an end user from the first call or connect session
 // naming them. Counts skip revoked connections.
 export const PrincipalSummary = Schema.Struct({
   principal: Schema.String,
-  created_at: Schema.String,
+  created_at: Timestamp,
   connections: Schema.Int,
   // Turned down by the provider; they need a new sign-in or key.
   needs_reauth: Schema.Int,

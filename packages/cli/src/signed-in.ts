@@ -1,9 +1,9 @@
-import { defaultBaseUrl } from "@telipot/sdk";
-import { Config, Effect, FileSystem, Option, Path, Redacted, Schema } from "effect";
+import { baseUrlConfig, tokenConfig } from "@telipot/sdk";
+import { Config, Effect, FileSystem, Option, Path, type Redacted, Schema } from "effect";
 import { CliError } from "effect/cli";
 
 // Every command but `catalog` talks to this gateway.
-export const apiUrl = Config.String("TELIPOT_API_URL").pipe(Config.withDefault(defaultBaseUrl));
+export const apiUrl = baseUrlConfig;
 
 export const credentialsFile = Effect.gen(function* () {
   const path = yield* Path.Path;
@@ -19,7 +19,10 @@ export const credentialsFile = Effect.gen(function* () {
   return path.join(root, "telipot", "credentials");
 });
 
-export const Credentials = Schema.fromJsonString(Schema.Struct({ token: Schema.String }));
+// The token stays redacted from the moment it is read.
+export const Credentials = Schema.fromJsonString(
+  Schema.Struct({ token: Schema.RedactedFromValue(Schema.String) }),
+);
 
 // Readable by its owner alone, so removed and created anew: a write keeps an existing file's mode,
 // and `wx` refuses to follow a link someone put in its place meanwhile.
@@ -31,16 +34,15 @@ export const saveToken = Effect.fnUntraced(function* (token: Redacted.Redacted) 
   // A folder that was there already keeps its mode through `makeDirectory`.
   yield* fs.chmod(path.dirname(file), 0o700);
   yield* fs.remove(file, { force: true });
-  yield* fs.writeFileString(
-    file,
-    `${yield* Schema.encodeEffect(Credentials)({ token: Redacted.value(token) })}\n`,
-    { flag: "wx", mode: 0o600 },
-  );
+  yield* fs.writeFileString(file, `${yield* Schema.encodeEffect(Credentials)({ token })}\n`, {
+    flag: "wx",
+    mode: 0o600,
+  });
 
   return file;
 });
 
-export const environmentToken = Config.option(Config.Redacted("TELIPOT_TOKEN"));
+export const environmentToken = Config.option(tokenConfig);
 
 export const loginToken = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
@@ -56,7 +58,7 @@ export const loginToken = Effect.gen(function* () {
     ),
   );
 
-  return Option.some({ file, token: Redacted.make(token) });
+  return Option.some({ file, token });
 });
 
 // `TELIPOT_TOKEN` wins over the file, so a script or CI runs on a token of its own.

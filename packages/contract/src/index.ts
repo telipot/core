@@ -28,9 +28,11 @@ export * from "./origins";
 export * from "./principals";
 export * from "./problem";
 export * from "./providers";
+export * from "./readable";
 export * from "./receipt";
 export * from "./system";
 export * from "./tasks";
+export * from "./timestamp";
 export * from "./tokens";
 export * from "./webhooks";
 
@@ -56,4 +58,4 @@ export class Api extends HttpApi.make("telipot")
   .add(System)
   .addHttpApi(V1)
   .middleware(Problems)
-  .annotateMerge(OpenApi.annotations({ title: "telipot API" })) {}
+  .annotateMerge(OpenApi.annotations({ title: "telipot API", version: "1.0.0" })) {}

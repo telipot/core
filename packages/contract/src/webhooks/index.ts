@@ -5,7 +5,9 @@ import { RoleForbidden } from "../caller";
 import { Connection } from "../connections";
 import { FreeText } from "../free-text";
 import { problem } from "../problem";
+import { readable } from "../readable";
 import { RateLimited } from "../tasks";
+import { Timestamp } from "../timestamp";
 
 // The events `@telipot/connections` starts; `webhooks.test.ts` holds the two equal.
 export const WebhookEvent = Schema.Literals([
@@ -18,12 +20,12 @@ export const WebhookEvent = Schema.Literals([
 
 // Signed as the `webhook-id`, `webhook-timestamp` and `webhook-signature` headers say.
 export const WebhookEventBody = Schema.Struct({
-  type: WebhookEvent,
+  type: readable(WebhookEvent),
   timestamp: Schema.String,
   data: Schema.Struct({
     connection: Connection,
     // When a credential that cannot be renewed stops working, or null.
-    expires_at: Schema.NullOr(Schema.String),
+    expires_at: Schema.NullOr(Timestamp),
   }),
 }).annotate({ identifier: "WebhookEventBody" });
 
@@ -39,7 +41,7 @@ export const NewWebhook = Schema.Struct({ url: FreeText(2000) }).annotate({
 export const Webhook = Schema.Struct({
   id: Schema.String,
   url: Schema.String,
-  created_at: Schema.String,
+  created_at: Timestamp,
 }).annotate({ identifier: "Webhook" });
 
 // The only answer carrying the signing secret, `whsec_` and its base64, which verifies every
@@ -58,15 +60,15 @@ export const WebhookDelivery = Schema.Struct({
   id: Schema.String,
   // The `webhook-id` header, the same on every attempt.
   event_id: Schema.String,
-  event: WebhookEvent,
-  state: WebhookDeliveryState,
+  event: readable(WebhookEvent),
+  state: readable(WebhookDeliveryState),
   attempts: Schema.Int,
   // The last attempt's status, or null when it got no answer.
   last_status: Schema.NullOr(Schema.Int),
   // Why the last attempt got no 2xx, or null.
   last_error: Schema.NullOr(Schema.String),
-  created_at: Schema.String,
-  updated_at: Schema.String,
+  created_at: Timestamp,
+  updated_at: Timestamp,
 }).annotate({ identifier: "WebhookDelivery" });
 
 export const WebhookDeliveryList = Schema.Struct({
@@ -76,6 +78,10 @@ export const WebhookDeliveryList = Schema.Struct({
 export class WebhookNotFound extends Schema.TaggedError<WebhookNotFound>()("WebhookNotFound", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 404, code: "webhook_not_found" });
 }
 
@@ -85,6 +91,10 @@ export class WebhookTargetRefused extends Schema.TaggedError<WebhookTargetRefuse
   "WebhookTargetRefused",
   { detail: Schema.String },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 422, code: "webhook_target_refused" });
 }
 
@@ -92,6 +102,10 @@ export class WebhookLimitReached extends Schema.TaggedError<WebhookLimitReached>
   "WebhookLimitReached",
   { detail: Schema.String },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 409, code: "webhook_limit_reached" });
 }
 

@@ -1,12 +1,14 @@
-import { Schema, SchemaTransformation } from "effect";
+import { Schema } from "effect";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 
 import { PrincipalForbidden, RoleForbidden } from "../caller";
 import { Cursor } from "../cursor";
 import { CatalogId, FreeText } from "../free-text";
 import { problem } from "../problem";
+import { readable } from "../readable";
 import { EndUserPrincipal, Principal } from "../receipt";
 import { RateLimited } from "../tasks";
+import { Timestamp } from "../timestamp";
 
 const loopback = ["localhost", "127.0.0.1"] as const;
 
@@ -53,7 +55,7 @@ export const ConnectSessionCreated = Schema.Struct({
   session_id: Schema.String,
   // The hosted page to send the person to; it works once, until `expires_at`.
   url: Schema.String,
-  expires_at: Schema.String,
+  expires_at: Timestamp,
 }).annotate({ identifier: "ConnectSessionCreated", httpApiStatus: 201 });
 
 // `connect.test.ts` holds these equal to `@telipot/credentials`'s. `consented` connects nothing
@@ -70,20 +72,8 @@ export const ConnectSessionStatus = Schema.Literals([
 
 export type ConnectSessionStatus = typeof ConnectSessionStatus.Type;
 
-const isConnectSessionStatus = Schema.is(ConnectSessionStatus);
-
-// A session's status as a client reads it. One this client does not know, such as a status a
-// newer server added, or one a rolled-back client never knew, reads as `unknown`, so the rest of a
-// list still reads.
-export const ReadConnectSessionStatus = Schema.String.check(Schema.isMaxLength(64)).pipe(
-  Schema.decodeTo(
-    Schema.Literals([...ConnectSessionStatus.literals, "unknown"]),
-    SchemaTransformation.transform({
-      decode: (status) => (isConnectSessionStatus(status) ? status : "unknown"),
-      encode: (status) => status,
-    }),
-  ),
-);
+// A session's status as a client reads it, `unknown` for one this client does not know.
+export const ReadConnectSessionStatus = readable(ConnectSessionStatus);
 
 export type ReadConnectSessionStatus = typeof ReadConnectSessionStatus.Type;
 
@@ -95,7 +85,7 @@ export const ConnectSession = Schema.Struct({
   // Null until the session completes.
   connection_id: Schema.NullOr(Schema.String),
   // The link's expiry; once `consented`, the deadline for the backend's confirm.
-  expires_at: Schema.String,
+  expires_at: Timestamp,
   // While `consented`, the provider account consented on and its name, for the backend to show
   // before it confirms; null otherwise.
   account: Schema.NullOr(Schema.String),
@@ -105,7 +95,7 @@ export const ConnectSession = Schema.Struct({
 // Never the session's PKCE verifier.
 export const ConnectSessionRecord = Schema.Struct({
   ...ConnectSession.fields,
-  created_at: Schema.String,
+  created_at: Timestamp,
   label: Schema.NullOr(Schema.String),
   // The catalog's names for the scopes it asks.
   scopes: Schema.Array(Schema.String),
@@ -141,7 +131,7 @@ export const NewConnectionsPage = Schema.Struct({ principal: EndUserPrincipal })
 export const ConnectionsPageCreated = Schema.Struct({
   // The page to hand the end user; it opens as often as they like until `expires_at`.
   url: Schema.String,
-  expires_at: Schema.String,
+  expires_at: Timestamp,
 }).annotate({ identifier: "ConnectionsPageCreated", httpApiStatus: 201 });
 
 // Another organization's session answers the same.
@@ -149,6 +139,10 @@ export class ConnectSessionNotFound extends Schema.TaggedError<ConnectSessionNot
   "ConnectSessionNotFound",
   { detail: Schema.String },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 404, code: "connect_session_not_found" });
 }
 
@@ -156,6 +150,10 @@ export class ConnectSessionNotFound extends Schema.TaggedError<ConnectSessionNot
 export class OAuthAppRequired extends Schema.TaggedError<OAuthAppRequired>()("OAuthAppRequired", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 409, code: "oauth_app_required" });
 }
 
@@ -165,6 +163,10 @@ export class ConnectSessionNotConfirmable extends Schema.TaggedError<ConnectSess
   "ConnectSessionNotConfirmable",
   { detail: Schema.String },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 409, code: "connect_session_not_confirmable" });
 }
 
@@ -174,6 +176,10 @@ export class ConnectAccountMismatch extends Schema.TaggedError<ConnectAccountMis
   "ConnectAccountMismatch",
   { detail: Schema.String },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 409, code: "connect_account_mismatch" });
 }
 
@@ -182,6 +188,10 @@ export class ConnectPrincipalMismatch extends Schema.TaggedError<ConnectPrincipa
   "ConnectPrincipalMismatch",
   { detail: Schema.String },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 409, code: "connect_principal_mismatch" });
 }
 

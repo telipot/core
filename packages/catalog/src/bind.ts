@@ -9,7 +9,7 @@ import {
   offRoute,
   offRouteMessage,
 } from "./schema";
-import { Predicate, Result, Schema } from "effect";
+import { Equal, Predicate, Result, Schema } from "effect";
 import { HttpClientRequest } from "effect/http";
 import { Base64 } from "effect/encoding";
 
@@ -221,5 +221,6 @@ export const valueAt = (value: unknown, path: string): unknown =>
     value,
   );
 
+// Structural, so an object's keys may come in any order.
 export const holdsAt = (value: unknown, path: string, equals: unknown) =>
-  JSON.stringify(valueAt(value, path)) === JSON.stringify(equals);
+  Equal.equals(valueAt(value, path), equals);

@@ -2,9 +2,23 @@ import { BigDecimal, Effect, Predicate, Result, Schema, SchemaTransformation } f
 
 // A pattern carries the `u` flag, or Effect leaves it out of the editor's JSON Schema.
 
+// A day that exists: `2026-02-30` has the shape, and Date would read it as March 2.
+const isRealDay = Schema.makeFilter<string>(
+  (day) => {
+    const read = new Date(`${day}T00:00:00Z`);
+    return !Number.isNaN(read.getTime()) && read.toISOString().startsWith(day);
+  },
+  { expected: "a day that exists" },
+);
+
 // `@telipot/contract` copies this as `CatalogVersion`; a test keeps the two equal.
-export const IsoDate = Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/u));
-const Url = Schema.String.check(Schema.isPattern(/^https?:\/\//u));
+export const IsoDate = Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/u), isRealDay);
+
+const Url = Schema.String.check(
+  Schema.isPattern(/^https?:\/\//u),
+  Schema.makeFilter((url: string) => URL.canParse(url), { expected: "an address" }),
+);
+
 const Slug = Schema.String.check(Schema.isPattern(/^[a-z0-9]+(-[a-z0-9]+)*$/u));
 // Capability and task ids: safe in a URL and as a file name.
 export const dottedWords = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/u;

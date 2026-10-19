@@ -1,6 +1,12 @@
 import { Context, type Effect, type Option, Schema } from "effect";
 import type { Headers } from "effect/http";
-import { HttpApiEndpoint, HttpApiGroup, HttpApiMiddleware } from "effect/http-api";
+import {
+  HttpApiEndpoint,
+  HttpApiGroup,
+  HttpApiMiddleware,
+  HttpApiSecurity,
+  OpenApi,
+} from "effect/http-api";
 import { problem } from "../problem";
 import { EndUserPrincipal } from "../receipt";
 
@@ -42,12 +48,20 @@ export class CurrentCaller extends Context.Service<CurrentCaller, Caller>()(
 export class Unauthenticated extends Schema.TaggedError<Unauthenticated>()("Unauthenticated", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 401, code: "unauthenticated" });
 }
 
 export class InvalidToken extends Schema.TaggedError<InvalidToken>()("InvalidToken", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 401, code: "invalid_token" });
 }
 
@@ -55,18 +69,30 @@ export class NoActiveOrganization extends Schema.TaggedError<NoActiveOrganizatio
   "NoActiveOrganization",
   { detail: Schema.String },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 403, code: "no_active_organization" });
 }
 
 export class UntrustedOrigin extends Schema.TaggedError<UntrustedOrigin>()("UntrustedOrigin", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 403, code: "untrusted_origin" });
 }
 
 export class RoleForbidden extends Schema.TaggedError<RoleForbidden>()("RoleForbidden", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 403, code: "role_forbidden" });
 }
 
@@ -75,6 +101,10 @@ export class PrincipalForbidden extends Schema.TaggedError<PrincipalForbidden>()
   "PrincipalForbidden",
   { detail: Schema.String },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 403, code: "principal_forbidden" });
 }
 
@@ -83,6 +113,16 @@ export class CallerAuth extends HttpApiMiddleware.Service<
   CallerAuth,
   { provides: CurrentCaller }
 >()("@telipot/contract/caller/CallerAuth", {
+  // How /openapi.json says to authenticate. The middleware reads the request itself, since the
+  // dashboard's own pages send a session cookie instead.
+  security: {
+    bearer: HttpApiSecurity.bearer.pipe(
+      HttpApiSecurity.annotate(
+        OpenApi.Description,
+        "The organization's tlp_ key, a user-bound token, or an MCP access token.",
+      ),
+    ),
+  },
   error: [
     Unauthenticated.problem,
     InvalidToken.problem,

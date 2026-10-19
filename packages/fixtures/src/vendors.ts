@@ -39,20 +39,27 @@ export interface Received {
   readonly credential?: string;
 }
 
-// `text` is sent as written, labelled JSON unless `headers` say otherwise.
-export type Fault =
+// Any fault may wait `delay` first; one that is only a delay then answers the task's example.
+// `text` is sent as written, labelled JSON unless `headers` say otherwise. The `never` fields keep
+// one fault from mixing two shapes, which would drop part of it.
+export type Fault = { readonly delay?: Duration.Input } & (
   | {
       readonly status: number;
       readonly headers?: Readonly<Record<string, string>>;
       readonly body?: Schema.Json;
+      readonly text?: never;
+      readonly unreachable?: never;
     }
   | {
       readonly status: number;
       readonly headers?: Readonly<Record<string, string>>;
       readonly text: string;
+      readonly body?: never;
+      readonly unreachable?: never;
     }
-  | { readonly delay: Duration.Input }
-  | { readonly unreachable: true };
+  | { readonly delay: Duration.Input; readonly status?: never; readonly unreachable?: never }
+  | { readonly unreachable: true; readonly status?: never }
+);
 
 export const json = (
   request: HttpClientRequest.HttpClientRequest,
@@ -264,7 +271,8 @@ export class Vendors extends Context.Service<
             }
 
             const fault = yield* nextFault(route.task);
-            if (Predicate.isNotUndefined(fault) && "unreachable" in fault) {
+            if (Predicate.isNotUndefined(fault?.delay)) yield* Effect.sleep(fault.delay);
+            if (fault?.unreachable === true) {
               return yield* new HttpClientError.HttpClientError({
                 reason: new HttpClientError.TransportError({
                   request,
@@ -273,12 +281,14 @@ export class Vendors extends Context.Service<
               });
             }
 
-            if (Predicate.isNotUndefined(fault) && "status" in fault) {
-              const body = "text" in fault ? fault.text : JSON.stringify(fault.body ?? {});
+            if (Predicate.isNotUndefined(fault?.status)) {
+              const body = Predicate.isNotUndefined(fault.text)
+                ? fault.text
+                : JSON.stringify(fault.body ?? {});
+
               return json(request, fault.status, body, fault.headers);
             }
 
-            if (Predicate.isNotUndefined(fault)) yield* Effect.sleep(fault.delay);
             return json(request, 200, JSON.stringify(route.example));
           }),
         );

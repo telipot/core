@@ -250,8 +250,7 @@ const pointAt = (root: unknown, fragment: string) =>
     root,
   );
 
-const isReference = (node: unknown): node is { readonly $ref: string } =>
-  Predicate.isObject(node) && Predicate.isString(node.$ref);
+const isReference = Schema.is(Schema.Struct({ $ref: Schema.String }));
 
 // A reference to another document, to nothing, or in a circle gives undefined.
 const deref = (root: unknown, node: unknown): unknown => {

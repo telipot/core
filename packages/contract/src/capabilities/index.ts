@@ -19,6 +19,10 @@ export class CapabilityNotFound extends Schema.TaggedError<CapabilityNotFound>()
   "CapabilityNotFound",
   { detail: Schema.String },
 ) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 404, code: "capability_not_found" });
 }
 

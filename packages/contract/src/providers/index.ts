@@ -4,7 +4,8 @@ import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from "effect/http-api";
 import { RoleForbidden } from "../caller";
 import { CatalogId, FreeText } from "../free-text";
 import { problem } from "../problem";
-import { Task } from "../tasks";
+import { readable } from "../readable";
+import { TaskAuth } from "../tasks";
 
 // Visible ASCII, as a provider issues them, so either can travel in a Basic header.
 const ClientText = (maxLength: number) =>
@@ -30,8 +31,8 @@ export const ProviderSummary = Schema.Struct({
   slug: Schema.String,
   name: Schema.String,
   docs_url: Schema.String,
-  retention: Schema.Literals(["zero", "standard"]),
-  auth: Schema.Array(Task.fields.auth.pick(["api_key", "oauth2", "basic", "bearer"])),
+  retention: readable(Schema.Literals(["zero", "standard"])),
+  auth: Schema.Array(readable(TaskAuth.pick(["api_key", "oauth2", "basic", "bearer"]))),
   connects: Schema.Struct({
     organization_key: Schema.Boolean,
     organization_oauth: Schema.Boolean,
@@ -64,6 +65,10 @@ export type ProviderList = typeof ProviderList.Type;
 export class ProviderNotFound extends Schema.TaggedError<ProviderNotFound>()("ProviderNotFound", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 404, code: "provider_not_found" });
 }
 
@@ -71,6 +76,10 @@ export class ProviderNotFound extends Schema.TaggedError<ProviderNotFound>()("Pr
 export class OAuthAppNotFound extends Schema.TaggedError<OAuthAppNotFound>()("OAuthAppNotFound", {
   detail: Schema.String,
 }) {
+  override get message() {
+    return this.detail;
+  }
+
   static readonly problem = problem(this, { status: 404, code: "oauth_app_not_found" });
 }
 

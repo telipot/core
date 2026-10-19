@@ -168,3 +168,20 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot logout", (it) =
     }),
   );
 });
+
+layer(BunServices.layer, { excludeTestServices: true })("telipot's own errors", (it) => {
+  it.effect("names the setting that is wrong, rather than asking for an update", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const home = yield* fs.makeTempDirectoryScoped();
+      const { exitCode, stderr } = yield* telipot(["discover", "send an email"], {
+        env: { HOME: home, TELIPOT_TOKEN: "tlp_x", TELIPOT_API_URL: "not an address" },
+      }).pipe(Effect.provide(gateway({}).layer));
+
+      assert.strictEqual(exitCode, 1);
+      assert.include(stderr, "A setting is not right");
+      assert.include(stderr, "TELIPOT_API_URL");
+      assert.notInclude(stderr, "Update it");
+    }),
+  );
+});
