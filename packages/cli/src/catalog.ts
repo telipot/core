@@ -9,6 +9,7 @@ import {
 import { Console, Effect, Option, Predicate } from "effect";
 import { Argument, CliError, Command, Flag } from "effect/cli";
 
+import { plain } from "./capture";
 import { addedSince, findCredentials, formatFinding } from "./credentials";
 import { drift } from "./drift";
 import { rendering } from "./render";
@@ -152,7 +153,13 @@ const scan = Command.make(
   },
   Effect.fnUntraced(function* ({ base }) {
     const { ok } = yield* rendering;
-    const found = findCredentials(yield* addedSince(base));
+    const added = yield* addedSince(base).pipe(
+      Effect.catchTag("GitRefused", (cause) =>
+        Effect.fail(refuse(cause, `git diff against ${base} failed: ${plain(cause.stderr)}`)),
+      ),
+    );
+
+    const found = findCredentials(added);
     if (found.length > 0) {
       return yield* refuse(found, found.map(formatFinding).join("\n  "));
     }

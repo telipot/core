@@ -1,25 +1,7 @@
 import { IdsLock, type Publication, buildSnapshot } from "@telipot/catalog";
-import { Effect, FileSystem, Path, Schema, Stream } from "effect";
-import { ChildProcess, ChildProcessSpawner } from "effect/process";
+import { Effect, FileSystem, Path, Schema } from "effect";
 
-class GitRefused extends Schema.TaggedError<GitRefused>()("GitRefused", {
-  args: Schema.Array(Schema.String),
-  exitCode: Schema.Int,
-}) {}
-
-const git = Effect.fnUntraced(function* (directory: string, args: ReadonlyArray<string>) {
-  const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-  const child = yield* spawner.spawn(
-    ChildProcess.make("git", ["-C", directory, ...args], { stdin: "ignore", stderr: "ignore" }),
-  );
-
-  const [output, exitCode] = yield* Effect.all(
-    [Stream.mkString(Stream.decodeText(child.stdout)), child.exitCode],
-    { concurrency: "unbounded" },
-  );
-
-  return Number(exitCode) === 0 ? output : yield* new GitRefused({ args, exitCode });
-}, Effect.scoped);
+import { git } from "./git";
 
 const decodeLock = Schema.decodeUnknownEffect(Schema.fromJsonString(IdsLock));
 

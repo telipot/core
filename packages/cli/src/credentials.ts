@@ -1,6 +1,7 @@
-import { Effect, Predicate, Stream } from "effect";
-import { ChildProcess, ChildProcessSpawner } from "effect/process";
+import { Predicate } from "effect";
 import { contactIn } from "@telipot/catalog";
+
+import { git } from "./git";
 
 // A finding names the kind and never prints the value. A `loose` kind skips placeholders.
 interface Look {
@@ -105,23 +106,6 @@ export const findCredentials = (diff: string): ReadonlyArray<Finding> => {
   return found;
 };
 
-export const addedSince = Effect.fnUntraced(function* (base: string) {
-  const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-  const child = yield* spawner.spawn(
-    ChildProcess.make("git", [
-      "diff",
-      "--no-color",
-      "--unified=0",
-      "--diff-filter=AMR",
-      base,
-      "HEAD",
-    ]),
-  );
-
-  const [diff, exitCode] = yield* Effect.all(
-    [Stream.mkString(Stream.decodeText(child.stdout)), child.exitCode],
-    { concurrency: "unbounded" },
-  );
-
-  return Number(exitCode) === 0 ? diff : yield* Effect.die(`git diff against ${base} failed`);
-}, Effect.scoped);
+// What the working folder's commits added since `base`.
+export const addedSince = (base: string) =>
+  git(".", ["diff", "--no-color", "--unified=0", "--diff-filter=AMR", base, "HEAD"]);

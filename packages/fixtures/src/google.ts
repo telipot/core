@@ -146,6 +146,8 @@ export class Google extends Context.Service<
     readonly refreshes: Effect.Effect<number>;
     // The accounts whose grant the revocation endpoint ended, in order.
     readonly revocations: Effect.Effect<ReadonlyArray<GoogleAccount>>;
+    // While on, the revocation endpoint answers 503 and ends nothing, as when Google is down.
+    readonly failRevocations: (failing: boolean) => Effect.Effect<void>;
   }
 >()("@telipot/fixtures/google/Google") {
   static readonly layer = (google: {
@@ -181,6 +183,7 @@ export class Google extends Context.Service<
         let rotation: Rotation = "off";
         let refreshes = 0;
         const revocations: Array<GoogleAccount> = [];
+        let revocationsFail = false;
         const clients = new Map(google.clients.map((client) => [client.id, client]));
         // Answers `openid` with an ID token a client checks by issuer, audience and expiry. Its
         // signature is the fixture's own, never checked.
@@ -426,6 +429,9 @@ export class Google extends Context.Service<
         });
 
         const revoke = (request: HttpClientRequest.HttpClientRequest) => {
+          if (revocationsFail)
+            return json(request, 503, JSON.stringify({ error: "backend_error" }));
+
           const presented = formOf(request.body).get("token") ?? "";
           const grant = (tokens.get(presented) ?? refreshTokens.get(presented))?.grant;
           if (Predicate.isUndefined(grant)) {
@@ -501,6 +507,7 @@ export class Google extends Context.Service<
             }),
           refreshes: Effect.sync(() => refreshes),
           revocations: Effect.sync(() => [...revocations]),
+          failRevocations: (failing) => Effect.sync(() => void (revocationsFail = failing)),
         });
       }),
     );

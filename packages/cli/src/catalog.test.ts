@@ -724,6 +724,18 @@ layer(BunServices.layer, { excludeTestServices: true })("telipot catalog new", (
   );
 });
 
+layer(BunServices.layer, { excludeTestServices: true })("telipot catalog scan", (it) => {
+  it.effect("says git could not read a base, rather than dying", () =>
+    Effect.gen(function* () {
+      const { exitCode, stderr } = yield* telipot(["catalog", "scan", "--base", "no-such-commit"]);
+
+      assert.strictEqual(exitCode, 1);
+      assert.include(stderr, "git diff against no-such-commit failed:");
+      assert.include(stderr, "unknown revision");
+    }),
+  );
+});
+
 layer(BunServices.layer, { excludeTestServices: true })("telipot catalog build", (it) => {
   it.effect("writes a snapshot that loads the same catalog as the folder", () =>
     Effect.gen(function* () {

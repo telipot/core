@@ -82,6 +82,7 @@ export type Progress =
 
 class VerifyRefused extends Schema.TaggedError<VerifyRefused>()("VerifyRefused", {
   message: Schema.String,
+  cause: Schema.optionalKey(Schema.Defect()),
 }) {}
 
 interface Failure {
@@ -267,8 +268,11 @@ export const verifyProvider = Effect.fnUntraced(
       ? yield* Config.Redacted(variable).pipe(
           Effect.map(Redacted.value),
           Effect.mapError(
-            () =>
-              new VerifyRefused({ message: `set ${variable} to a ${options.provider} credential` }),
+            (cause) =>
+              new VerifyRefused({
+                message: `set ${variable} to a ${options.provider} credential`,
+                cause,
+              }),
           ),
         )
       : undefined;
